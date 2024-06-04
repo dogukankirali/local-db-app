@@ -1,0 +1,18 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: local-db-app-fe
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+  backend:
+    build: ./backend
+    container_name: local-db-app-be
+    ports:
+      - "3007:3007"
+    stdin_open: true
+    tty: true
