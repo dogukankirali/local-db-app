@@ -27,7 +27,21 @@ export module AnimeService {
 
   export function deleteAnime(data: TEATable.IAnime): Promise<any> {
     try {
+      console.log(data);
       return axios.delete(`${path}/deleteAnime?id=${data.ID}`);
+    } catch (err) {
+      console.error(err);
+      return Promise.reject(err);
+    }
+  }
+
+  export function createAniemWithFile(formData: FormData): Promise<any> {
+    try {
+      return axios.post(`${path}/createAnimeWithFile`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
     } catch (err) {
       console.error(err);
       return Promise.reject(err);

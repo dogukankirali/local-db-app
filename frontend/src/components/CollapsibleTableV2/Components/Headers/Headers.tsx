@@ -6,6 +6,7 @@ import { StyledMUIFilterButton, StyledTeaButton } from "../StyledComponents";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import Constants from "../../../../constants/Constants";
+import FileUpload from "../../../Common/FileUpload";
 
 export default function TableHeaders(props: {
   genres: any;

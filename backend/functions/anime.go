@@ -2,6 +2,7 @@ package functions
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -375,30 +376,83 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 func CreateAnimeTableDataWithFile(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.ParseMultipartForm(32 << 20) // limit your max input length!
-		var buf bytes.Buffer
-		// in your case file would be fileupload
-		file, header, err := r.FormFile("file")
+		var genres []models.Genre
+
+		file, _, err := r.FormFile("file")
 		if err != nil {
-			panic(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		defer file.Close()
-		name := strings.Split(header.Filename, ".")
-		fmt.Printf("File name %s\n", name[0])
-		// Copy the file data to my buffer
-		io.Copy(&buf, file)
-		// do something with the contents...
-		// I normally have a struct defined and unmarshal into a struct, but this will
-		// work as an example
-		contents := buf.String()
-		fmt.Println(contents)
-		// I reset the buffer in case I want to use it again
-		// reduces memory allocations in more intense projects
-		buf.Reset()
-		// do something else
-		// etc write header
-		return
-	}
 
+		var buf bytes.Buffer
+		io.Copy(&buf, file)
+
+		contents := buf.String()
+		reader := csv.NewReader(strings.NewReader(contents))
+
+		records, err := reader.ReadAll()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		for _, record := range records {
+			if len(record) != 11 {
+				continue
+			}
+
+			watchStatus, _ := strconv.Atoi(record[2])
+			totalNumberOfEpisodes, _ := strconv.Atoi(record[3])
+			score, _ := strconv.Atoi(record[4])
+			malScore, _ := strconv.ParseFloat(record[5], 32)
+			isMovie, _ := strconv.ParseBool(record[6])
+
+			anime := models.AnimeCreate{
+				Name:                  record[0],
+				AnimeStatus:           record[1],
+				WatchStatus:           watchStatus,
+				TotalNumberOfEpisodes: totalNumberOfEpisodes,
+				IsMovie:               isMovie,
+				Score:                 score,
+				MALScore:              float32(malScore),
+				Notes:                 record[10],
+				MALAnimeLink:          record[8],
+				AnimeLink:             record[9],
+			}
+
+			result := db.Table("anime.animes").Create(&anime)
+			if result.Error != nil {
+				http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			var animesGenres []models.AnimesGenres
+			idArr := strings.Split(record[7], "-")
+			db.Table("anime.genres g").Select("id").Where("id IN ?", idArr).Find(&genres)
+			for _, item := range genres {
+				genreId := int(item.ID)
+				animeId := int(anime.ID)
+				newItem := models.AnimesGenres{
+					AnimeID: animeId,
+					GenreID: genreId,
+				}
+				animesGenres = append(animesGenres, newItem)
+
+			}
+
+			if len(animesGenres) != 0 {
+				err2 := db.Table("anime.animes_genres").Create(&animesGenres).Error
+				if err2 != nil {
+					fmt.Println("Update error in genre:", err2)
+					return
+				}
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("File uploaded and data processed successfully"))
+	}
 }
 
 func DeleteAnimeTableData(db *gorm.DB) http.HandlerFunc {

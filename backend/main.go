@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 	"gorm.io/driver/postgres"
@@ -22,11 +24,11 @@ type spaHandler struct {
 }
 
 const (
-	host     = "192.168.1.33"
-	portDb   = 5433
-	user     = "postgres"
-	password = "sp.132132"
-	dbname   = "postgres"
+	host     = ""
+	portDb   = 0
+	user     = ""
+	password = ""
+	dbname   = ""
 )
 
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -48,14 +50,34 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	certFile := "/etc/ssl/certs/server.crt"
-	keyFile := "/etc/ssl/certs/server.key"
-	/* certFile := "./server.crt"
-	keyFile := "./server.key"
-	*/
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	env := os.Getenv("ENV")
+	certFile := ""
+	keyFile := ""
+	if env == "development" {
+		certFile = "./server.crt"
+		keyFile = "./server.key"
+	} else {
+		certFile = "/etc/ssl/certs/server.crt"
+		keyFile = "/etc/ssl/certs/server.key"
+	}
+	host := os.Getenv("DB_HOST")
+	portDb := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	dbport, err := strconv.Atoi(portDb)
+	if err != nil {
+		log.Fatalf("Invalid port number: %v", err)
+	}
+
 	router := mux.NewRouter()
 
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, portDb, user, password, dbname)
+	dsn := fmt.Sprintf("host='%s' port=%d user='%s' password=%s dbname='%s' sslmode=disable", host, dbport, user, password, dbname)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("Veritabanına bağlanılamadı: " + err.Error())
@@ -65,8 +87,7 @@ func main() {
 		_ = dbInstance.Close()
 	}()
 
-	//port := utils.GetConfig().GetPort()
-	port := "3007"
+	port := os.Getenv("PORT")
 
 	router.HandleFunc("/getAnimeTable", anime_functions.GetAnimeTableData(db))
 	router.HandleFunc("/getGenres", anime_functions.GetGenres(db))
@@ -101,8 +122,6 @@ func main() {
 	}
 
 	log.Println("Server starting at port " + port)
-
-	//devMode := utils.GetConfig().GetDevMode()
 	log.Fatal(srv.ListenAndServeTLS(certFile, keyFile))
 	/* if devMode {
 	        log.Fatal(srv.ListenAndServeTLS("localhost.pem", "localhost-key.pem"))
