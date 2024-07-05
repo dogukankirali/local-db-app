@@ -102,7 +102,7 @@ func main() {
 
 	router.HandleFunc("/healthcheck",
 		func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("It's dangerous to go alone, take some tea with you..."))
+			w.Write([]byte("It's dangerous to go alone, take this sword with you..."))
 		})
 
 	spa := spaHandler{staticPath: "frontend/build", indexPath: "index.html"}
