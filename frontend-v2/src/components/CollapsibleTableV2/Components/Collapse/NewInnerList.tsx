@@ -160,7 +160,11 @@ export default function InnerList({
               <StyledTextField
                 size="small"
                 defaultValue={getStrValue(item)}
-                disabled={type === "delete"}
+                disabled={
+                  type === "delete" ||
+                  type === "detail" ||
+                  item.key === "SeriesName"
+                }
                 sx={{
                   width: "100%",
                   backgroundColor: theme.background,
@@ -203,7 +207,7 @@ export default function InnerList({
                   size="small"
                   id={item.key}
                   defaultValue={data ? data[item.key as keyof typeof data] : ""}
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   onChange={(e) => {
                     updateData(item.key, e.target.value);
                   }}
@@ -255,7 +259,7 @@ export default function InnerList({
                 fullWidth
                 size="small"
                 value={data ? data![item.key as keyof typeof data] : ""}
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 InputProps={{
                   onChange: (e) => {
                     try {
@@ -307,7 +311,7 @@ export default function InnerList({
             {item.type === "timezone" && (
               <StyledSelectFormControl size="small" fullWidth>
                 <MaterialSelect
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   value={
                     timezoneOptions.filter(
                       (opt) => opt.value === data[item.key as keyof typeof data]
@@ -338,7 +342,7 @@ export default function InnerList({
             )}
             {item.type === "score" && (
               <StyledTextField
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 fullWidth
                 size="small"
                 id={item.key}
@@ -392,7 +396,7 @@ export default function InnerList({
             )}
             {item.type === "textarea" && (
               <StyledTextField
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 fullWidth
                 size="medium"
                 id={item.key}
@@ -436,7 +440,7 @@ export default function InnerList({
             {item.type === "number" && (
               <StyledTextField
                 fullWidth
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 size="small"
                 value={data ? data[item.key as keyof typeof data] : 0}
                 InputProps={{
@@ -515,7 +519,7 @@ export default function InnerList({
             {item.type === "float" && (
               <StyledTextField
                 fullWidth
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 size="small"
                 value={data ? data[item.key as keyof typeof data] : 0}
                 InputProps={{
@@ -629,14 +633,17 @@ export default function InnerList({
                       type="file"
                       ref={inputRef}
                       style={{ display: "none" }}
-                      disabled={type === "delete"}
+                      disabled={type === "delete" || type === "detail"}
                       onChange={handleImageUpload}
                     />
                     <img
-                      onClick={handleImageClick}
+                      onClick={type !== "detail" ? handleImageClick : undefined}
                       src={`${data![item.key as keyof typeof data]}`}
                       alt={data["Name"] + "_cover"}
-                      style={{ width: 100 }}
+                      style={{
+                        width: 100,
+                        cursor: type !== "detail" ? "pointer" : "default",
+                      }}
                     />
                   </Box>
                 )}
@@ -646,7 +653,7 @@ export default function InnerList({
               <StyledSelectFormControl size="small" fullWidth>
                 <Select
                   isMulti
-                  isDisabled={type === "delete"}
+                  isDisabled={type === "delete" || type === "detail"}
                   value={
                     data
                       ? data[item.key as keyof typeof data]
@@ -737,7 +744,7 @@ export default function InnerList({
             {item.type === "select" && (
               <StyledSelectFormControl size="small" fullWidth>
                 <MaterialSelect
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   value={
                     data
                       ? data[item.key as keyof typeof data]
@@ -842,7 +849,7 @@ export default function InnerList({
             {item.type === "select-api" && (
               <StyledSelectFormControl size="small" fullWidth>
                 <AsyncSelect
-                  isDisabled={type === "delete"}
+                  isDisabled={type === "delete" || type === "detail"}
                   value={
                     data && data[item.key as keyof typeof data]
                       ? {
@@ -955,7 +962,7 @@ export default function InnerList({
             {(item.type === "boolean" || item.type === "boolean-readOnly") && (
               <Box>
                 <IOSSwitch
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   //disabled={item.type === "boolean-readOnly"}
                   defaultChecked={
                     data

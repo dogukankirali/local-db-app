@@ -21,7 +21,7 @@ export default function Inner({
         <InnerList
           data={data}
           list={list}
-          type={listType!}
+          type={listType || "detail"}
           wIcons={show.list.icon}
         />
       )}
