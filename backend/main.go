@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	anime_functions "local-db-app/functions"
+	"local-db-app/migrations"
 	"log"
 	"net/http"
 	"os"
@@ -50,14 +51,35 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf(".env dosyası yüklenemedi: %v\n", err)
+		// Alternatif konumları deneyelim
+		alternativePaths := []string{
+			"./.env",
+			"../.env",
+			"../../.env",
+			"/app/.env", // Docker için
+		}
+
+		for _, path := range alternativePaths {
+			if err := godotenv.Load(path); err == nil {
+				log.Printf(".env dosyası başarıyla yüklendi: %s\n", path)
+				break
+			}
+		}
 	}
+
 	env := os.Getenv("ENV")
+	log.Println("env", env)
 	certFile := ""
 	keyFile := ""
 	if env == "development" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
 		certFile = "./server.crt"
 		keyFile = "./server.key"
 	} else {
@@ -87,14 +109,26 @@ func main() {
 		_ = dbInstance.Close()
 	}()
 
+	// Migrasyon işlemlerini çalıştır
+	migrations.FixSeriesData(db)
+	migrations.CreateSeriesTable(db)
+
 	port := os.Getenv("PORT")
 
 	router.HandleFunc("/getAnimeTable", anime_functions.GetAnimeTableData(db))
 	router.HandleFunc("/getGenres", anime_functions.GetGenres(db))
+	router.HandleFunc("/getSeries", anime_functions.GetSeries(db))
 	router.HandleFunc("/updateAnimeTable", anime_functions.UpdateAnimeTableData(db))
 	router.HandleFunc("/createAnime", anime_functions.CreateAnimeTableData(db))
 	router.HandleFunc("/deleteAnime", anime_functions.DeleteAnimeTableData(db))
 	router.HandleFunc("/createAnimeWithFile", anime_functions.CreateAnimeTableDataWithFile(db))
+
+	// Senkronizasyon API ucu
+	router.HandleFunc("/syncAnimeData", anime_functions.SyncAnimeData(db))
+
+	// MAL API uçları
+	router.HandleFunc("/getAnime", anime_functions.GetAnimeHandler)
+	router.HandleFunc("/getManga", anime_functions.GetMangaHandler)
 
 	/* router.HandleFunc("/getUserList", common.ForwardRequest("/auth/userlist"))
 	   router.HandleFunc("/logout", auth.Logout())
@@ -110,10 +144,24 @@ func main() {
 
 	// CORS middleware'ini ekle
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*", "http://localhost:3000/"}, // React uygulamanızın çalıştığı adres
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
+		AllowedOrigins: []string{
+			"http://localhost:3000",  // trailing slash olmadan
+			"https://localhost:3000", // HTTPS için
+			"http://localhost:8080",  // backend portu için
+			"https://localhost:8080", // backend HTTPS için
+		},
+		AllowedMethods: []string{
+			"GET", "POST", "PUT", "DELETE", "OPTIONS", // OPTIONS ekleyin
+		},
+		AllowedHeaders: []string{
+			"Content-Type",
+			"Authorization",
+			"X-Requested-With",
+			"Accept",
+			"Origin",
+		},
+		// Debug modunu açalım
+		Debug: true,
 	}).Handler(router)
 
 	srv := &http.Server{

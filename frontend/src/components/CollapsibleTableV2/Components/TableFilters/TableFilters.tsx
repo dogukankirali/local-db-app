@@ -206,6 +206,7 @@ export default function TableSettings({
           if (element.type === "input") {
             return (
               <InputFilter
+                key={element.key}
                 label={element.label}
                 elKey={element.key}
                 value={localFilters[index].value as string}
@@ -217,6 +218,7 @@ export default function TableSettings({
           if (element.type === "single-select") {
             return (
               <SelectFilter
+                key={element.key}
                 label={element.label}
                 elKey={element.key}
                 value={localFilters[index].value as string}
@@ -228,6 +230,7 @@ export default function TableSettings({
           if (element.type === "multi-select") {
             return (
               <MultiSelectFilter
+                key={element.key}
                 label={element.label}
                 elKey={element.key}
                 value={localFilters[index].value as string[]}
@@ -239,6 +242,7 @@ export default function TableSettings({
           if (element.type === "number") {
             return (
               <NumberFilter
+                key={element.key}
                 label={element.label}
                 state={localFilters[index] as TEATable.NumberFilterType}
                 handleStateChange={handleStateChange}

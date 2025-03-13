@@ -78,9 +78,9 @@ export default function TableTemp<T extends {}>(
           />
         </TableCell>
       )}
-      {props.header.map((_) => {
+      {props.header.map((header, index) => {
         return (
-          <TableCell height="73">
+          <TableCell key={`skeleton-${header.key || index}`} height="73">
             <Skeleton
               variant="text"
               width="100%"

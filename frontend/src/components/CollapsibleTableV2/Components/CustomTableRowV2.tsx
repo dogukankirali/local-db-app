@@ -582,7 +582,7 @@ export default function CustomTableRowV2(
               );
             } else if (header.type === "pill") {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell align="center" style={colStyle} id={header.key}>
                   <Box
                     style={{
                       display: "grid",

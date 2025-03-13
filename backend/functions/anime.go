@@ -52,6 +52,41 @@ func GetGenres(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
+// Sıralama için kullanılacak SQL ifadesini oluşturan yardımcı fonksiyon
+func buildOrderByClause(orderBy, order string) string {
+	// Sıralama yönünü kontrol et
+	if order != "asc" && order != "desc" {
+		order = "asc" // Varsayılan sıralama yönü
+	}
+
+	// Özel durumlar için kontrol
+	switch orderBy {
+	case "Name":
+		return fmt.Sprintf("LOWER(a.name) %s", order) // Büyük/küçük harf duyarsız sıralama
+	case "AnimeStatus":
+		return fmt.Sprintf("a.anime_status %s", order)
+	case "WatchStatus":
+		return fmt.Sprintf("a.watch_status %s", order)
+	case "TotalNumberOfEpisodes":
+		return fmt.Sprintf("a.total_number_of_episodes::integer %s", order) // Sayısal sıralama
+	case "IsMovie":
+		return fmt.Sprintf("a.is_movie %s", order)
+	case "Score":
+		return fmt.Sprintf("a.score::float %s", order) // Ondalıklı sayı sıralaması
+	case "MALScore":
+		return fmt.Sprintf("a.mal_score::float %s", order) // Ondalıklı sayı sıralaması
+	case "Genre":
+		return fmt.Sprintf("genre %s", order)
+	default:
+		// Varsayılan olarak name sütununa göre sırala
+		if orderBy == "" {
+			return fmt.Sprintf("LOWER(a.name) %s", order)
+		}
+		// Varsayılan olarak snake_case dönüşümü kullan
+		return fmt.Sprintf("%s %s", PascalToSnakeCase(orderBy), order)
+	}
+}
+
 func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var reqBody models.FilterArray
@@ -64,8 +99,25 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		queryParams := r.URL.Query()
 		count, _ := strconv.Atoi(queryParams.Get("count"))
 		page, _ := strconv.Atoi(queryParams.Get("page"))
-		orderBy := ""
-		order := ""
+
+		// Sıralama parametrelerini al
+		orderBy := queryParams.Get("orderBy")
+		order := queryParams.Get("order")
+
+		// Varsayılan değerler
+		if count <= 0 {
+			count = 10
+		}
+		if page <= 0 {
+			page = 1
+		}
+		if order == "" {
+			order = "asc"
+		}
+
+		// Log ekle
+		fmt.Printf("Sıralama parametreleri: orderBy=%s, order=%s\n", orderBy, order)
+
 		empty := []models.Anime{}
 
 		errDec := json.NewDecoder(r.Body).Decode(&reqBody)
@@ -93,8 +145,8 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				animeFilter.IsMovie = filter.Value.([]interface{})
 			case "Score":
 				if filter.Value != nil {
-					animeFilter.Score = models.NumberFilter{
-						Value:   int(filter.Value.(float64)),
+					animeFilter.Score = models.FloatNumberFilter{
+						Value:   float32(filter.Value.(float64)),
 						Operand: filter.Operand,
 					}
 				}
@@ -176,28 +228,34 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			}
 		}
 
-		if len(queryParams.Get("order")) != 0 {
-			order = queryParams.Get("order")
-			orderBy = queryParams.Get("orderBy")
+		if len(whereString) != 0 {
+			// Sıralama parametresi varsa
+			orderClause := buildOrderByClause(orderBy, order)
+
 			result = db.Table("anime.animes a").
-				Select("a.*, string_agg(g.genre_name, ', ') as genre").
+				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
 				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
 				Joins("left join anime.genres g on ag.genre_id = g.id").
-				Order(fmt.Sprintf("%s %s", PascalToSnakeCase(orderBy), order)).
+				Joins("left join anime.anime_series s on a.series = s.id").
+				Where(whereString).
+				Order(orderClause).
 				Limit(count).
 				Offset((page - 1) * count).
-				Where(whereString).
-				Group("a.id, a.*").
+				Group("a.id, a.*, s.name").
 				Scan(&animes)
 		} else {
+			// Sıralama parametresi varsa
+			orderClause := buildOrderByClause(orderBy, order)
+
 			result = db.Table("anime.animes a").
-				Select("a.*, string_agg(g.genre_name, ', ') as genre").
+				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
 				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
 				Joins("left join anime.genres g on ag.genre_id = g.id").
+				Joins("left join anime.anime_series s on a.series = s.id").
+				Order(orderClause).
 				Limit(count).
 				Offset((page - 1) * count).
-				Where(whereString).
-				Group("a.id, a.*").
+				Group("a.id, a.*, s.name").
 				Scan(&animes)
 		}
 
@@ -404,7 +462,7 @@ func CreateAnimeTableDataWithFile(db *gorm.DB) http.HandlerFunc {
 
 			watchStatus, _ := strconv.Atoi(record[2])
 			totalNumberOfEpisodes, _ := strconv.Atoi(record[3])
-			score, _ := strconv.Atoi(record[4])
+			score, _ := strconv.ParseFloat(record[4], 32)
 			malScore, _ := strconv.ParseFloat(record[5], 32)
 			isMovie, _ := strconv.ParseBool(record[6])
 
@@ -414,7 +472,7 @@ func CreateAnimeTableDataWithFile(db *gorm.DB) http.HandlerFunc {
 				WatchStatus:           watchStatus,
 				TotalNumberOfEpisodes: totalNumberOfEpisodes,
 				IsMovie:               isMovie,
-				Score:                 score,
+				Score:                 float32(score),
 				MALScore:              float32(malScore),
 				Notes:                 record[10],
 				MALAnimeLink:          record[8],
@@ -475,5 +533,44 @@ func DeleteAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			Message: message,
 		}
 		json.NewEncoder(w).Encode(&response)
+	}
+}
+
+// SyncAnimeDataFromJikan fonksiyonu sync.go dosyasında SyncAnimeData olarak tanımlanmıştır.
+// Bu nedenle burada tekrar tanımlanmasına gerek yoktur.
+
+// GetSeries, anime serilerini getiren fonksiyon
+func GetSeries(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		var series []models.Series
+		result := db.Table("anime.anime_series").Order("name ASC").Find(&series)
+		if result.Error != nil {
+			http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Seri listesini JSON olarak döndür
+		seriesResponse := make([]map[string]interface{}, len(series))
+		for i, s := range series {
+			seriesResponse[i] = map[string]interface{}{
+				"id":    s.ID,
+				"name":  s.Name,
+				"value": s.ID,
+				"label": s.Name,
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(seriesResponse)
 	}
 }
