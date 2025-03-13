@@ -15,7 +15,7 @@ type Anime struct {
 	MALAnimeLink          string  `gorm:"column:mal_anime_link"`
 	Cover                 string  `gorm:"column:cover"`
 	Series                int     `gorm:"column:series"`
-	SeriesName            string  `gorm:"-"`
+	SeriesName            string  `gorm:"column:series_name"`
 }
 
 type AnimeCreate struct {

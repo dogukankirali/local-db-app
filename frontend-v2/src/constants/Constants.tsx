@@ -109,23 +109,24 @@ export default function Constants({
   } else if (type === "outerColumns") {
     return [
       { key: "Cover", value: "Cover", width: "2%", type: "base64" },
-      { key: "Name", value: "Name", width: "40%", type: "string" },
+      { key: "Name", value: "Name", width: "35%", type: "string" },
+      { key: "SeriesName", value: "Series", width: "10%", type: "string" },
       {
         key: "AnimeStatus",
         value: "Anime Status",
-        width: "10%",
+        width: "8%",
         type: "status",
       },
       {
         key: "WatchStatus",
         value: "Watch Status",
-        width: "10%",
+        width: "8%",
         type: "episode",
       },
       {
         key: "TotalNumberOfEpisodes",
         value: "Total Number Of Episodes",
-        width: "10%",
+        width: "8%",
         type: "number",
       },
       { key: "Score", value: "Score", width: "5%", type: "score" },
@@ -141,7 +142,7 @@ export default function Constants({
     return [
       { key: "MALScore", value: "MAL Score", icon: <></>, type: "string" },
       { key: "Notes", value: "Notes", icon: <></>, type: "string" },
-      { key: "Series", value: "Series", icon: <></>, type: "series" },
+      { key: "SeriesName", value: "Series", icon: <></>, type: "string" },
       { key: "AnimeLink", value: "Watch Link", icon: <></>, type: "link" },
       { key: "MALAnimeLink", value: "MAL Page", icon: <></>, type: "link" },
     ];

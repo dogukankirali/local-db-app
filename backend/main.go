@@ -110,7 +110,9 @@ func main() {
 	}()
 
 	// Migrasyon işlemlerini çalıştır
-	migrations.FixSeriesData(db)
+	if err := migrations.FixSeriesData(db); err != nil {
+		log.Printf("Series veri düzeltme hatası: %v", err)
+	}
 	migrations.CreateSeriesTable(db)
 
 	port := os.Getenv("PORT")

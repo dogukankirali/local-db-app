@@ -232,6 +232,22 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			// Sıralama parametresi varsa
 			orderClause := buildOrderByClause(orderBy, order)
 
+			// SQL sorgusunu debug et
+			sqlQuery := db.Table("anime.animes a").
+				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
+				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
+				Joins("left join anime.genres g on ag.genre_id = g.id").
+				Joins("left join anime.anime_series s on a.series = s.id").
+				Where(whereString).
+				Order(orderClause).
+				Limit(count).
+				Offset((page - 1) * count).
+				Group("a.id, a.*, s.name").Statement
+
+			// SQL sorgusunu yazdır
+			fmt.Println("SQL Sorgusu:", sqlQuery.SQL.String())
+			fmt.Println("SQL Parametreleri:", sqlQuery.Vars)
+
 			result = db.Table("anime.animes a").
 				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
 				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
@@ -246,6 +262,21 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		} else {
 			// Sıralama parametresi varsa
 			orderClause := buildOrderByClause(orderBy, order)
+
+			// SQL sorgusunu debug et
+			sqlQuery := db.Table("anime.animes a").
+				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
+				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
+				Joins("left join anime.genres g on ag.genre_id = g.id").
+				Joins("left join anime.anime_series s on a.series = s.id").
+				Order(orderClause).
+				Limit(count).
+				Offset((page - 1) * count).
+				Group("a.id, a.*, s.name").Statement
+
+			// SQL sorgusunu yazdır
+			fmt.Println("SQL Sorgusu:", sqlQuery.SQL.String())
+			fmt.Println("SQL Parametreleri:", sqlQuery.Vars)
 
 			result = db.Table("anime.animes a").
 				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
@@ -263,12 +294,14 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			panic(result.Error)
 		}
 
+		// Sayım için sorgu
 		counterD := db.Table("anime.animes a").
-			Select("a.*, string_agg(g.genre_name, ', ') as genre").
+			Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
 			Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
 			Joins("left join anime.genres g on ag.genre_id = g.id").
+			Joins("left join anime.anime_series s on a.series = s.id").
 			Where(whereString).
-			Group("a.id, a.*").
+			Group("a.id, a.*, s.name").
 			Scan(&counter)
 		if counterD.Error != nil {
 			panic(result.Error)
@@ -288,6 +321,38 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				Pagination: pagination,
 			}
 		} else {
+			// SeriesName alanını doldur
+			for i := range animes {
+				// Debug log ekle
+				fmt.Printf("Anime ID: %d, Name: %s, Series: %d, SeriesName: %s\n",
+					animes[i].ID, animes[i].Name, animes[i].Series, animes[i].SeriesName)
+
+				// SeriesName zaten SQL sorgusunda s.name as series_name olarak alınıyor
+				// Eğer hala boş geliyorsa, manuel olarak dolduralım
+				if animes[i].SeriesName == "" && animes[i].Series > 0 {
+					var seriesName string
+					seriesResult := db.Table("anime.anime_series").
+						Select("name").
+						Where("id = ?", animes[i].Series).
+						Scan(&seriesName)
+
+					if seriesResult.Error != nil {
+						fmt.Printf("Series sorgusu hatası: %v\n", seriesResult.Error)
+					} else if seriesResult.RowsAffected > 0 {
+						animes[i].SeriesName = seriesName
+						fmt.Printf("SeriesName manuel olarak güncellendi: %s\n", seriesName)
+					} else {
+						fmt.Printf("Series ID %d için kayıt bulunamadı\n", animes[i].Series)
+					}
+				}
+			}
+
+			// Tüm anime verilerini debug et
+			for i, anime := range animes {
+				fmt.Printf("Anime[%d]: ID=%d, Name=%s, Series=%d, SeriesName=%s\n",
+					i, anime.ID, anime.Name, anime.Series, anime.SeriesName)
+			}
+
 			response = models.AnimeResponse{
 				Data:       animes,
 				Pagination: pagination,
@@ -309,6 +374,10 @@ func UpdateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
+		// Debug log ekle
+		fmt.Printf("Güncelleme isteği alındı: ID=%d, Name=%s, Series=%d, SeriesName=%s\n",
+			reqBody.ID, reqBody.Name, reqBody.Series, reqBody.SeriesName)
+
 		anime := models.Anime{
 			Name:                  reqBody.Name,
 			AnimeStatus:           reqBody.AnimeStatus,
@@ -321,6 +390,7 @@ func UpdateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			AnimeLink:             reqBody.AnimeLink,
 			MALAnimeLink:          reqBody.MALAnimeLink,
 			Cover:                 reqBody.Cover,
+			Series:                reqBody.Series, // Series alanını da güncelle
 		}
 
 		err := db.Table("anime.animes a").Model(&models.Anime{}).Where("id = ?", reqBody.ID).Updates(&anime).Error
@@ -373,6 +443,10 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
+		// Debug log ekle
+		fmt.Printf("Oluşturma isteği alındı: Name=%s, Series=%d, SeriesName=%s\n",
+			reqBody.Name, reqBody.Series, reqBody.SeriesName)
+
 		anime := models.AnimeCreate{
 			Name:                  reqBody.Name,
 			AnimeStatus:           reqBody.AnimeStatus,
@@ -385,6 +459,7 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			AnimeLink:             reqBody.AnimeLink,
 			MALAnimeLink:          reqBody.MALAnimeLink,
 			Cover:                 reqBody.Cover,
+			Series:                reqBody.Series, // Series alanını da ekle
 		}
 		err := db.Table("anime.animes").Create(&anime).Error
 		if err != nil {

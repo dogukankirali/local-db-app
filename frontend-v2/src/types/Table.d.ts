@@ -46,6 +46,8 @@ declare namespace TEATable {
     MALAnimeLink: string;
     Cover: string;
     SeriesID?: number;
+    Series?: number;
+    SeriesName?: string;
   }
 
   export interface IAnimeDetail {
@@ -63,6 +65,8 @@ declare namespace TEATable {
     MALAnimeLink: string;
     Cover: string;
     SeriesID?: number;
+    Series?: number;
+    SeriesName?: string;
   }
 
   export interface IColumnItems extends Array<IColumnItem> {}

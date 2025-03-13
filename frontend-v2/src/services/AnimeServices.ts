@@ -95,10 +95,12 @@ export module AnimeService {
 
   export async function getSeries() {
     try {
+      console.log("getSeries API çağrılıyor...");
       const res = await axios.get(`${path}/getSeries`);
+      console.log("getSeries API yanıtı:", res.data);
       return res.data;
     } catch (err) {
-      console.error(err);
+      console.error("getSeries API hatası:", err);
       return [];
     }
   }

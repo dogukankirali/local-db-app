@@ -13,6 +13,7 @@ import { theme } from "../../../../theme/customTheme";
 import { customStyles, timezoneOptions } from "./Common";
 import { useRef, useEffect } from "react";
 import Select from "react-select";
+import AsyncSelect from "react-select/async";
 import {
   IOSSwitch,
   StyledMenuItem,
@@ -836,6 +837,119 @@ export default function InnerList({
                     </StyledMenuItem>
                   ))}
                 </MaterialSelect>
+              </StyledSelectFormControl>
+            )}
+            {item.type === "select-api" && (
+              <StyledSelectFormControl size="small" fullWidth>
+                <AsyncSelect
+                  isDisabled={type === "delete"}
+                  value={
+                    data && data[item.key as keyof typeof data]
+                      ? {
+                          value: data[item.key as keyof typeof data],
+                          label: data["SeriesName"] || "Seçiniz",
+                        }
+                      : null
+                  }
+                  onChange={(selectedOption: any) => {
+                    if (selectedOption) {
+                      updateData(item.key, selectedOption.value);
+                      // SeriesName alanını da güncelle
+                      updateData("SeriesName", selectedOption.label);
+                    } else {
+                      updateData(item.key, null);
+                      updateData("SeriesName", "");
+                    }
+                  }}
+                  defaultOptions={true}
+                  cacheOptions
+                  loadOptions={async (inputValue) => {
+                    try {
+                      const { AnimeService } = await import(
+                        "../../../../services/AnimeServices"
+                      );
+                      const series = await AnimeService.getSeries();
+                      console.log("Yüklenen seriler:", series);
+
+                      // Eğer arama metni varsa, filtreleme yap
+                      if (inputValue) {
+                        return series.filter((option: any) =>
+                          option.label
+                            .toLowerCase()
+                            .includes(inputValue.toLowerCase())
+                        );
+                      }
+
+                      return series;
+                    } catch (error) {
+                      console.error("Series yüklenirken hata:", error);
+                      return [];
+                    }
+                  }}
+                  styles={{
+                    ...customStyles,
+                    placeholder: (provided) => ({
+                      ...provided,
+                      color: "rgba(255, 255, 255, 0.7)",
+                      fontWeight: "400",
+                      fontSize: "1rem",
+                      lineHeight: "1.4375em",
+                    }),
+                    container: (provided) => ({
+                      ...provided,
+                    }),
+                    control: (provided, state) => ({
+                      ...provided,
+                      color: theme.primary_text,
+                      backgroundColor: "transparent",
+                      borderColor: state.isFocused
+                        ? theme.scondary_button
+                        : theme.secondary_text,
+                      boxShadow: state.isFocused
+                        ? theme.scondary_button
+                        : "transparent",
+                      ":hover": {
+                        borderColor: state.isFocused
+                          ? theme.scondary_button
+                          : theme.input_border,
+                        boxShadowColor: state.isFocused
+                          ? theme.scondary_button
+                          : theme.input_border,
+                      },
+                      ":focus": {
+                        borderColor: theme.input_border,
+                        boxShadowColor: state.isFocused ? "red" : "transparent",
+                      },
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      color: theme.primary_text,
+                      ":hover": {
+                        cursor: "text",
+                      },
+                      ":disabled": {
+                        color: theme.primary_text,
+                      },
+                    }),
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 10,
+                    }),
+                  }}
+                  theme={(t) => ({
+                    ...t,
+                    colors: {
+                      ...t.colors,
+                      primary25: theme.primary25,
+                      primary50: theme.primary50,
+                      primary: theme.primary,
+                      neutral0: theme.neutral0,
+                      neutral80: theme.neutral80,
+                      neutral10: theme.neutral10,
+                      neutral5: theme.neutral5,
+                    },
+                  })}
+                />
               </StyledSelectFormControl>
             )}
             {(item.type === "boolean" || item.type === "boolean-readOnly") && (
