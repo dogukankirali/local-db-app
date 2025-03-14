@@ -26,6 +26,7 @@ export default function TableHeaders(props: {
   handleClickSettings: any;
   windowSize: any;
   tableRerender?: TEATable.FetchData;
+  user: any;
 }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStats, setSyncStats] = useState({
@@ -43,6 +44,9 @@ export default function TableHeaders(props: {
     eventSource: EventSource;
     close: () => void;
   } | null>(null);
+
+  // isAdmin kontrolü ekleyelim
+  const isAdmin = props.user?.isAdmin;
 
   // Synchronize all anime
   const handleSyncAllAnime = async () => {
@@ -253,66 +257,94 @@ export default function TableHeaders(props: {
           onClick={() => {
             props.setCreateModalData({ status: true });
           }}
-          sx={{ 
+          disabled={!isAdmin}
+          sx={{
             fontFamily: "inherit",
             fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
             padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
+            opacity: !isAdmin ? 0.5 : 1,
+            cursor: !isAdmin ? "not-allowed" : "pointer",
           }}
           color="primary"
         >
-          <Typography variant={props.windowSize.width < 768 ? "caption" : "button"}>Create</Typography>
+          <Typography
+            variant={props.windowSize.width < 768 ? "caption" : "button"}
+          >
+            Create
+          </Typography>
         </StyledTeaButton>
         {!isSyncing ? (
           <StyledTeaButton
             onClick={handleSyncAllAnime}
-            disabled={isSyncing}
-            sx={{ 
+            disabled={isSyncing || !isAdmin}
+            sx={{
               fontFamily: "inherit",
               fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
               padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
+              opacity: !isAdmin ? 0.5 : 1,
+              cursor: !isAdmin ? "not-allowed" : "pointer",
             }}
             color="primary"
           >
-            <SyncIcon sx={{ mr: 1, fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem" }} />
-            <Typography variant={props.windowSize.width < 768 ? "caption" : "button"}>
+            <SyncIcon
+              sx={{
+                mr: 1,
+                fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem",
+              }}
+            />
+            <Typography
+              variant={props.windowSize.width < 768 ? "caption" : "button"}
+            >
               {props.windowSize.width < 768 ? "Sync" : "Sync All"}
             </Typography>
           </StyledTeaButton>
         ) : (
           <StyledTeaButton
             onClick={handleStopSync}
-            sx={{ 
+            sx={{
               fontFamily: "inherit",
               fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
               padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
             }}
             color="error"
           >
-            <SyncIcon sx={{ 
-              mr: 1, 
-              animation: "spin 2s linear infinite",
-              fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem"
-            }} />
-            <Typography variant={props.windowSize.width < 768 ? "caption" : "button"}>
+            <SyncIcon
+              sx={{
+                mr: 1,
+                animation: "spin 2s linear infinite",
+                fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem",
+              }}
+            />
+            <Typography
+              variant={props.windowSize.width < 768 ? "caption" : "button"}
+            >
               {props.windowSize.width < 768 ? "Stop" : "Stop Sync"}
             </Typography>
           </StyledTeaButton>
         )}
-        <StyledMUIFilterButton 
+        <StyledMUIFilterButton
           onClick={props.handleClickFilters}
           sx={{
             padding: props.windowSize.width < 768 ? "6px" : "8px",
           }}
         >
-          <FilterAltIcon sx={{ fontSize: props.windowSize.width < 768 ? "1.25rem" : "1.5rem" }} />
+          <FilterAltIcon
+            sx={{
+              fontSize: props.windowSize.width < 768 ? "1.25rem" : "1.5rem",
+            }}
+          />
         </StyledMUIFilterButton>
-        <StyledMUIFilterButton 
+        <StyledMUIFilterButton
           onClick={props.handleClickSettings}
           sx={{
             padding: props.windowSize.width < 768 ? "6px" : "8px",
           }}
         >
-          <SettingsIcon sx={{ fontSize: props.windowSize.width < 768 ? "1.25rem" : "1.5rem" }} />
+          <SettingsIcon
+            sx={{
+              fontSize: props.windowSize.width < 768 ? "1.25rem" : "1.5rem",
+            }}
+          />
         </StyledMUIFilterButton>
       </Box>
 

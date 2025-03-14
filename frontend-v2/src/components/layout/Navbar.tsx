@@ -15,11 +15,19 @@ import {
   useMediaQuery,
   useTheme,
   Tooltip,
+  Button,
+  Divider,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import MenuIcon from "@mui/icons-material/Menu";
 import StorageIcon from "@mui/icons-material/Storage";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import LogoutIcon from "@mui/icons-material/Logout";
+import PersonIcon from "@mui/icons-material/Person";
+import SettingsIcon from "@mui/icons-material/Settings";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -31,6 +39,8 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
+  const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -42,6 +52,16 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
+  };
+
+  const handleLogout = async () => {
+    handleClose();
+    await logout();
+  };
+
+  const handleProfileClick = () => {
+    handleClose();
+    router.push("/profile");
   };
 
   return (
@@ -162,38 +182,93 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             justifyContent: "flex-end",
           }}
         >
-          <Tooltip title="Profil">
-            <IconButton
-              size={isMobile ? "small" : "medium"}
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleMenu}
-            >
-              <Avatar
-                sx={{ width: isMobile ? 28 : 36, height: isMobile ? 28 : 36 }}
-              />
-            </IconButton>
-          </Tooltip>
-          <Menu
-            id="menu-appbar"
-            anchorEl={anchorEl}
-            anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "right",
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            <MenuItem onClick={handleClose}>Profil</MenuItem>
-            <MenuItem onClick={handleClose}>Ayarlar</MenuItem>
-            <MenuItem onClick={handleClose}>Çıkış Yap</MenuItem>
-          </Menu>
+          {isAuthenticated && user ? (
+            <>
+              <Tooltip title="Profil">
+                <IconButton
+                  size={isMobile ? "small" : "medium"}
+                  aria-label="account of current user"
+                  aria-controls="menu-appbar"
+                  aria-haspopup="true"
+                  onClick={handleMenu}
+                >
+                  <Avatar
+                    sx={{
+                      width: isMobile ? 28 : 36,
+                      height: isMobile ? 28 : 36,
+                    }}
+                  >
+                    {user.username
+                      ? user.username.charAt(0).toUpperCase()
+                      : "U"}
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "right",
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+              >
+                <Box sx={{ px: 2, py: 1 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    {user.username}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {user.email}
+                  </Typography>
+                </Box>
+                <Divider />
+                <MenuItem onClick={handleProfileClick}>
+                  <PersonIcon fontSize="small" sx={{ mr: 1 }} />
+                  Profil
+                </MenuItem>
+                {user.isAdmin && (
+                  <MenuItem onClick={handleClose}>
+                    <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
+                    Yönetici Paneli
+                  </MenuItem>
+                )}
+                <Divider />
+                <MenuItem onClick={handleLogout}>
+                  <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
+                  Çıkış Yap
+                </MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Link href="/login" style={{ textDecoration: "none" }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size={isMobile ? "small" : "medium"}
+                >
+                  Giriş
+                </Button>
+              </Link>
+              {!isMobile && (
+                <Link href="/register" style={{ textDecoration: "none" }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size={isMobile ? "small" : "medium"}
+                  >
+                    Kayıt Ol
+                  </Button>
+                </Link>
+              )}
+            </Box>
+          )}
         </Box>
       </Toolbar>
     </AppBar>

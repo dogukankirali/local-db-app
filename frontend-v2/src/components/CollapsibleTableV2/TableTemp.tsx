@@ -14,18 +14,20 @@ import TableHeader from "./Components/TableHeader";
 import { Scrollbars } from "react-custom-scrollbars-2";
 
 // INewTableProps tipini genişletelim
-declare namespace TEATable {
+declare namespace TEATableProps {
   interface INewTableProps<T> {
     data?: TEAData.WPagination<T>;
     setData?: React.Dispatch<React.SetStateAction<TEAData.WPagination<T>>>;
-    header: IColumnItems;
-    sortHeader: React.Dispatch<React.SetStateAction<IColumnItems>>;
-    collapsible: ICollapsible;
+    header: TEATable.IColumnItems;
+    sortHeader: React.Dispatch<React.SetStateAction<TEATable.IColumnItems>>;
+    collapsible: TEATable.ITableCollapse<T>;
     updateInnerCard?: (data: T) => void;
-    tableRerender: FetchData;
+    tableRerender: TEATable.FetchData;
     style?: React.CSSProperties;
-    selectionFilters?: IFilterType[];
-    setSelectionFilters?: React.Dispatch<React.SetStateAction<IFilterType[]>>;
+    selectionFilters?: TEATable.IFilterType[];
+    setSelectionFilters?: React.Dispatch<
+      React.SetStateAction<TEATable.IFilterType[]>
+    >;
     loading?: boolean;
     rowsPerPage?: number;
     extendedTable?: boolean;
@@ -40,7 +42,7 @@ declare namespace TEATable {
 }
 
 export default function TableTemp<T extends {}>(
-  props: TEATable.INewTableProps<T>
+  props: TEATableProps.INewTableProps<T>
 ) {
   const [order, setOrder] = useState<TEATable.Order>("asc");
   const [orderBy, setOrderBy] = useState<string>("Name");
@@ -234,7 +236,7 @@ export default function TableTemp<T extends {}>(
               orderBy={orderBy}
               setOrder={setOrder}
               setOrderBy={setOrderBy}
-              tableName={props.tableName}
+              tableName={props.tableName ?? ""}
               isCollapsible={props?.collapsible?.isCollapsible}
             />
             <TableBody sx={{ overflowX: "hidden", height: "100%" }}>
@@ -248,7 +250,7 @@ export default function TableTemp<T extends {}>(
                     singleData={singleData}
                     headers={props.header}
                     collapsible={props.collapsible}
-                    updateInnerCard={props.updateInnerCard}
+                    updateInnerCard={props.updateInnerCard as any}
                     updateData={optimisticUpdate}
                     filterState={props.selectionFilters}
                     setFilterState={props.setSelectionFilters}

@@ -25,10 +25,10 @@ declare namespace TEATable {
     | "list"
     | "listWithIcons";
   export interface IColumnItem {
-    key: string;
+    key: string | ((id: string, index: number, data?: any) => JSX.Element);
     value: string;
-    type?: string;
     width?: string;
+    type?: string;
   }
 
   export interface IAnime {
@@ -107,13 +107,14 @@ declare namespace TEATable {
     }[];
   };
 
-  type FetchData = (
-    orderParam: Order,
-    orderByParam: string,
-    filterArray: IFilterTypes | any[],
-    rowsPerPage: number,
-    page: number
-  ) => void;
+  type FetchData = (params: {
+    order?: Order;
+    orderBy?: string;
+    abortController?: AbortController;
+    page?: number;
+    count?: number;
+    filters?: IFilterType[];
+  }) => Promise<void>;
 
   export interface ITableProps<T> {
     data: {
@@ -218,11 +219,7 @@ declare namespace TEATable {
     ref?: any;
   }[];
 
-  type OnInnerUpdate = (
-    key: string,
-    value: string | number | boolean,
-    type: string | null
-  ) => Promise<boolean | null>;
+  type OnInnerUpdate = (key: string) => Promise<boolean | null>;
 
   export interface INewTableProps<T> {
     tableName: string;
@@ -245,6 +242,7 @@ declare namespace TEATable {
       width: number;
       height: number;
     };
+    resetPage?: boolean;
   }
 
   export type TableLocalProps<T> = Omit<
@@ -379,5 +377,20 @@ declare namespace TEATable {
       tableColumns: any;
       sortHeader?: SetStateAction<any[]>;
     }
+  }
+}
+
+declare namespace TEAData {
+  interface Pagination {
+    currentPage: number;
+    itemCount: number;
+    totalItemCount: number;
+    itemsPerPage: number;
+    totalPageCount: number;
+  }
+
+  interface WPagination<T> {
+    data: T[];
+    pagination: Pagination;
   }
 }

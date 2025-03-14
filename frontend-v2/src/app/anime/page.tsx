@@ -1,7 +1,17 @@
 "use client";
 
 import React, { JSX } from "react";
-import { Box, Container, Typography } from "@mui/material";
+import {
+  Box,
+  Container,
+  Typography,
+  IconButton,
+  Avatar,
+  Tooltip,
+  Menu,
+  MenuItem,
+  Divider,
+} from "@mui/material";
 import TableTemp from "@/components/CollapsibleTableV2/TableTemp";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -20,6 +30,10 @@ import Constants from "@/constants/Constants";
 import { AnimeService } from "@/services/AnimeServices";
 import TableHeaders from "@/components/CollapsibleTableV2/Components/Headers/Headers";
 import UpdateDeleteAnimeModal from "@/components/Modals/UpdateDeleteAnimeModal";
+import { useRouter } from "next/navigation";
+import PersonIcon from "@mui/icons-material/Person";
+import SettingsIcon from "@mui/icons-material/Settings";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 export default function AnimePage() {
   const [windowSize, setWindowSize] = useState({
@@ -77,8 +91,27 @@ export default function AnimePage() {
   }>({ status: false });
   const [genres, setGenres] = useState<{ value: string; label: string }[]>();
   const [series, setSeries] = useState<{ value: string; label: string }[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const router = useRouter();
+
+  // Kullanıcı bilgisini yükle
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+      } catch (error) {
+        console.error("Kullanıcı bilgisi ayrıştırılamadı:", error);
+      }
+    }
+  }, []);
 
   function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
+    // SettingsButtons içindeki user kontrolünü kaldıralım, zaten state'ten gelecek
+    const isAdmin = user?.isAdmin;
+
     return (
       <Box
         sx={{
@@ -96,7 +129,12 @@ export default function AnimePage() {
               data: data,
             });
           }}
-          sx={{ fontFamily: "inherit" }}
+          disabled={!isAdmin}
+          sx={{
+            fontFamily: "inherit",
+            opacity: !isAdmin ? 0.5 : 1,
+            cursor: !isAdmin ? "not-allowed" : "pointer",
+          }}
           color="primary"
         >
           <Typography variant="button">Update</Typography>
@@ -109,7 +147,12 @@ export default function AnimePage() {
               data: data,
             });
           }}
-          sx={{ fontFamily: "inherit" }}
+          disabled={!isAdmin}
+          sx={{
+            fontFamily: "inherit",
+            opacity: !isAdmin ? 0.5 : 1,
+            cursor: !isAdmin ? "not-allowed" : "pointer",
+          }}
           color="error"
         >
           <Typography variant="button">Delete</Typography>
@@ -306,6 +349,40 @@ export default function AnimePage() {
     });
   }, []);
 
+  const handleProfileMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
+
+  const handleProfileClick = () => {
+    handleCloseMenu();
+    router.push("/profile");
+  };
+
+  const handleLogout = async () => {
+    handleCloseMenu();
+    try {
+      // Çıkış işlemi
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      router.push("/login");
+    } catch (error) {
+      console.error("Çıkış yapılırken hata oluştu:", error);
+      Toastify({
+        text: "Çıkış yapılırken bir hata oluştu",
+        duration: 3000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+        stopOnFocus: true,
+      }).showToast();
+    }
+  };
+
   return (
     <div>
       <Box
@@ -338,6 +415,52 @@ export default function AnimePage() {
             overflow: "hidden",
           }}
         >
+          {/* Profil ikonu ve popup */}
+          {user && (
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+              <Menu
+                id="profile-menu"
+                anchorEl={anchorEl}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "right",
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                open={Boolean(anchorEl)}
+                onClose={handleCloseMenu}
+              >
+                <Box sx={{ px: 2, py: 1 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    {user?.username || "Kullanıcı"}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {user?.email || "kullanici@ornek.com"}
+                  </Typography>
+                </Box>
+                <Divider />
+                <MenuItem onClick={handleProfileClick}>
+                  <PersonIcon fontSize="small" sx={{ mr: 1 }} />
+                  Profil
+                </MenuItem>
+                {user?.isAdmin && (
+                  <MenuItem onClick={handleCloseMenu}>
+                    <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
+                    Yönetici Paneli
+                  </MenuItem>
+                )}
+                <Divider />
+                <MenuItem onClick={handleLogout}>
+                  <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
+                  Çıkış Yap
+                </MenuItem>
+              </Menu>
+            </Box>
+          )}
+
           <TableHeaders
             genres={genres}
             filterState={filterState}
@@ -350,6 +473,7 @@ export default function AnimePage() {
             handleClickSettings={handleClickSettings}
             windowSize={windowSize}
             tableRerender={tableRerender}
+            user={user}
           />
 
           <TableTemp

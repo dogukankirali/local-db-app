@@ -217,13 +217,13 @@ export default function TableHeader({
 
   const HeaderCol = (id: UniqueIdentifier, index: number) => {
     // Mobil cihazlar için kontrol
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
     // Eğer mobil görünümde ve header'ın hide özelliği true ise, null döndür
-    if (isMobile && headers[index].hide) {
+    if (isMobile && (headers[index] as any).hide) {
       return null;
     }
-    
+
     return (
       <HeaderItem
         key={id}
@@ -235,8 +235,8 @@ export default function TableHeader({
         <TableSortLabel
           active={orderBy === headers[index].key}
           direction={orderBy === headers[index].key ? order : "asc"}
-          style={{ 
-            cursor: "grabbing", 
+          style={{
+            cursor: "grabbing",
             color: theme.primary_text,
             fontSize: isMobile ? "0.75rem" : "inherit",
           }}
@@ -260,7 +260,9 @@ export default function TableHeader({
             }
           }}
         >
-          {isMobile ? truncateString(headers[index].value, 10) : headers[index].value}
+          {isMobile
+            ? truncateString(headers[index].value, 10)
+            : headers[index].value}
         </TableSortLabel>
       </HeaderItem>
     );

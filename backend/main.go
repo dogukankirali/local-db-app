@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	anime_functions "local-db-app/functions"
+	"local-db-app/middleware"
 	"local-db-app/migrations"
 	"log"
 	"net/http"
@@ -129,9 +130,11 @@ func main() {
 
 	// Sadece temel tablo oluşturma işlemini yap, diğer migration işlemlerini kaldır
 	migrations.CreateSeriesTable(db)
+	migrations.CreateUsersTable(db)
 
 	port := os.Getenv("PORT")
 
+	// API rotaları
 	router.HandleFunc("/getAnimeTable", anime_functions.GetAnimeTableData(db))
 	router.HandleFunc("/getGenres", anime_functions.GetGenres(db))
 	router.HandleFunc("/getSeries", anime_functions.GetSeries(db))
@@ -154,9 +157,23 @@ func main() {
 	router.HandleFunc("/getAnime", anime_functions.GetAnimeHandler)
 	router.HandleFunc("/getManga", anime_functions.GetMangaHandler)
 
-	/* router.HandleFunc("/getUserList", common.ForwardRequest("/auth/userlist"))
-	   router.HandleFunc("/logout", auth.Logout())
-	   router.HandleFunc("/checkLoginStatus", auth.IsLoggedIn()) */
+	// Kullanıcı API uçları
+	router.HandleFunc("/auth/register", anime_functions.Register(db))
+	router.HandleFunc("/auth/login", anime_functions.Login(db))
+
+	// Korumalı rotalar için bir alt router oluştur
+	authRouter := router.PathPrefix("/auth").Subrouter()
+	authRouter.Use(middleware.AuthMiddleware)
+
+	// Korumalı kullanıcı rotaları
+	authRouter.HandleFunc("/profile", anime_functions.GetProfile(db)).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/profile", anime_functions.UpdateProfile(db)).Methods("PUT", "OPTIONS")
+
+	// Admin rotaları için bir alt router oluştur
+	adminRouter := router.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(middleware.AuthMiddleware, middleware.AdminMiddleware)
+
+	// Admin rotaları buraya eklenecek
 
 	router.HandleFunc("/healthcheck",
 		func(w http.ResponseWriter, r *http.Request) {
