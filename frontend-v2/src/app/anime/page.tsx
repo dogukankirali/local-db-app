@@ -428,64 +428,6 @@ export default function AnimePage() {
             overflow: "hidden",
           }}
         >
-          {/* Profil ikonu ve popup */}
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-            <Tooltip title="Profil">
-              <IconButton
-                size={windowSize.width < 768 ? "small" : "medium"}
-                onClick={handleProfileMenu}
-              >
-                <Avatar
-                  sx={{
-                    width: windowSize.width < 768 ? 28 : 36,
-                    height: windowSize.width < 768 ? 28 : 36,
-                  }}
-                >
-                  {user?.username ? user.username.charAt(0).toUpperCase() : "U"}
-                </Avatar>
-              </IconButton>
-            </Tooltip>
-            <Menu
-              id="profile-menu"
-              anchorEl={anchorEl}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              open={Boolean(anchorEl)}
-              onClose={handleCloseMenu}
-            >
-              <Box sx={{ px: 2, py: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold">
-                  {user?.username || "Kullanıcı"}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {user?.email || "kullanici@ornek.com"}
-                </Typography>
-              </Box>
-              <Divider />
-              <MenuItem onClick={handleProfileClick}>
-                <PersonIcon fontSize="small" sx={{ mr: 1 }} />
-                Profil
-              </MenuItem>
-              {user?.isAdmin && (
-                <MenuItem onClick={handleCloseMenu}>
-                  <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
-                  Yönetici Paneli
-                </MenuItem>
-              )}
-              <Divider />
-              <MenuItem onClick={handleLogout}>
-                <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-                Çıkış Yap
-              </MenuItem>
-            </Menu>
-          </Box>
           <TableHeaders
             genres={genres}
             filterState={filterState}
