@@ -95,23 +95,18 @@ export default function AnimePage() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const router = useRouter();
 
-  // Kullanıcı bilgisini yükle
-  useEffect(() => {
+  function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
+    // SettingsButtons içindeki user kontrolünü kaldıralım, zaten state'ten gelecek
     const userStr = localStorage.getItem("user");
+    let isAdmin = false;
     if (userStr) {
       try {
         const userData = JSON.parse(userStr);
-        setUser(userData);
+        isAdmin = userData?.isAdmin;
       } catch (error) {
         console.error("Kullanıcı bilgisi ayrıştırılamadı:", error);
       }
     }
-  }, []);
-
-  function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
-    // SettingsButtons içindeki user kontrolünü kaldıralım, zaten state'ten gelecek
-    const isAdmin = user?.isAdmin;
-
     return (
       <Box
         sx={{
@@ -415,52 +410,6 @@ export default function AnimePage() {
             overflow: "hidden",
           }}
         >
-          {/* Profil ikonu ve popup */}
-          {user && (
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-              <Menu
-                id="profile-menu"
-                anchorEl={anchorEl}
-                anchorOrigin={{
-                  vertical: "bottom",
-                  horizontal: "right",
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                open={Boolean(anchorEl)}
-                onClose={handleCloseMenu}
-              >
-                <Box sx={{ px: 2, py: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {user?.username || "Kullanıcı"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {user?.email || "kullanici@ornek.com"}
-                  </Typography>
-                </Box>
-                <Divider />
-                <MenuItem onClick={handleProfileClick}>
-                  <PersonIcon fontSize="small" sx={{ mr: 1 }} />
-                  Profil
-                </MenuItem>
-                {user?.isAdmin && (
-                  <MenuItem onClick={handleCloseMenu}>
-                    <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
-                    Yönetici Paneli
-                  </MenuItem>
-                )}
-                <Divider />
-                <MenuItem onClick={handleLogout}>
-                  <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-                  Çıkış Yap
-                </MenuItem>
-              </Menu>
-            </Box>
-          )}
-
           <TableHeaders
             genres={genres}
             filterState={filterState}

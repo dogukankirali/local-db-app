@@ -46,7 +46,11 @@ export default function TableHeaders(props: {
   } | null>(null);
 
   // isAdmin kontrolü ekleyelim
-  const isAdmin = props.user?.isAdmin;
+
+  let isAdmin = false;
+  if (localStorage.getItem("user")) {
+    isAdmin = JSON.parse(localStorage.getItem("user")!).isAdmin;
+  }
 
   // Synchronize all anime
   const handleSyncAllAnime = async () => {
