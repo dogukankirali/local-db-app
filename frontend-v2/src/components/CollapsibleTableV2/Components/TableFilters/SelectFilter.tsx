@@ -25,7 +25,17 @@ export default function SelectFilter({
 
   return (
     <StyledSelectFormControl size="small" fullWidth>
-      <InputLabel id={elKey + "_label"}>{label}</InputLabel>
+      <InputLabel
+        id={elKey + "_label"}
+        sx={{
+          color: theme.secondary_text,
+          "&.Mui-focused": {
+            color: theme.primary,
+          },
+        }}
+      >
+        {label}
+      </InputLabel>
       <Select
         labelId={elKey + "_label"}
         id={elKey}
@@ -33,28 +43,65 @@ export default function SelectFilter({
         label={label}
         onChange={onChange}
         sx={{
+          backgroundColor: theme.input_background,
+          borderRadius: "8px",
           "& .MuiSelect-select": {
-            color: theme.input_text, // Seçili öğe yazı rengi
+            color: theme.primary_text,
           },
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: theme.input_border, // Seçili öğe border rengi
+            borderColor: theme.input_border,
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.primary,
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: theme.secondary, // Odaklanmış durumda border rengi
+            borderColor: theme.primary,
           },
-          "& .MuiMenuItem-root.Mui-selected": {
-            backgroundColor: theme.secondary, // Seçili öğe arkaplan rengi
-            color: theme.background, // Seçili öğe yazı rengi
+          "& .MuiSvgIcon-root": {
+            color: theme.secondary_text,
           },
-          "& .MuiMenuItem-root.Mui-selected:hover": {
-            backgroundColor: theme.secondary, // Seçili öğe hover arkaplan rengi
-            color: theme.background, // Seçili öğe hover yazı rengi
+        }}
+        MenuProps={{
+          PaperProps: {
+            sx: {
+              backgroundColor: theme.background,
+              border: `1px solid ${theme.input_border}`,
+              borderRadius: "8px",
+              boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+            },
           },
         }}
       >
-        <StyledMenuItem value="">All</StyledMenuItem>
+        <StyledMenuItem
+          value=""
+          sx={{
+            color: theme.primary_text,
+            "&:hover": {
+              backgroundColor: theme.input_background,
+            },
+          }}
+        >
+          Tümü
+        </StyledMenuItem>
         {options.map((option) => (
-          <StyledMenuItem key={option} value={option}>
+          <StyledMenuItem
+            key={option}
+            value={option}
+            sx={{
+              color: theme.primary_text,
+              "&:hover": {
+                backgroundColor: theme.input_background,
+              },
+              "&.Mui-selected": {
+                backgroundColor: theme.primary,
+                color: "#FFFFFF",
+              },
+              "&.Mui-selected:hover": {
+                backgroundColor: theme.primary,
+                opacity: 0.9,
+              },
+            }}
+          >
             {option}
           </StyledMenuItem>
         ))}

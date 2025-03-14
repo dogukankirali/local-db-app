@@ -32,9 +32,16 @@ export default function SCButtonGroup({
     >
       <Button
         onClick={handleCancel}
-        variant="text"
+        variant="outlined"
         sx={{
-          color: theme.button_text_alt,
+          color: theme.primary_text,
+          borderColor: theme.input_border,
+          borderRadius: "20px",
+          textTransform: "none",
+          "&:hover": {
+            borderColor: theme.secondary_text,
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+          },
         }}
         disabled={cancelDisabled}
       >
@@ -46,15 +53,18 @@ export default function SCButtonGroup({
         autoFocus
         disabled={confirmDisabled}
         sx={{
-          bgcolor: theme.scondary_button,
-          color: theme.button_text,
+          bgcolor: theme.primary,
+          color: "#FFFFFF",
+          borderRadius: "20px",
+          textTransform: "none",
+          fontWeight: "500",
           ":hover": {
-            bgcolor: Utils.ChangeColorAlpha(theme.scondary_button, 0.8),
+            bgcolor: Utils.ChangeColorAlpha(theme.primary, 0.8),
           },
         }}
       >
         {confirmText}
       </Button>
-    </Box>
-  );
+    </Box>
+  );
 }

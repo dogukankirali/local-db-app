@@ -124,4 +124,59 @@ export module AnimeService {
       return Promise.reject(err);
     }
   }
+
+  export async function cancelSync(): Promise<any> {
+    try {
+      const res = await axios.get(`${path}/cancelSync`);
+      return res;
+    } catch (err) {
+      console.error(err);
+      return Promise.reject(err);
+    }
+  }
+
+  export function syncAnimeDataStream(
+    onStart: (data: any) => void,
+    onProgress: (data: any) => void,
+    onComplete: (data: any) => void,
+    onError: (error: any) => void
+  ): { eventSource: EventSource; close: () => void } {
+    const eventSource = new EventSource(`${path}/syncAnimeData`);
+
+    eventSource.addEventListener("start", (event) => {
+      const data = JSON.parse((event as MessageEvent).data);
+      onStart(data);
+    });
+
+    eventSource.addEventListener("progress", (event) => {
+      const data = JSON.parse((event as MessageEvent).data);
+      onProgress(data);
+    });
+
+    eventSource.addEventListener("complete", (event) => {
+      const data = JSON.parse((event as MessageEvent).data);
+      onComplete(data);
+      eventSource.close();
+    });
+
+    eventSource.addEventListener("error", (event) => {
+      const data = (event as MessageEvent).data
+        ? JSON.parse((event as MessageEvent).data)
+        : { message: "Bağlantı hatası" };
+      onError(data);
+      eventSource.close();
+    });
+
+    eventSource.onerror = (error) => {
+      onError(error);
+      eventSource.close();
+    };
+
+    return {
+      eventSource,
+      close: () => {
+        eventSource.close();
+      },
+    };
+  }
 }

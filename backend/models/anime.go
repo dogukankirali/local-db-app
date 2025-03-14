@@ -42,6 +42,7 @@ type AnimeFilter struct {
 	IsMovie               []interface{}     `gorm:"column:is_movie"`
 	Genre                 []interface{}     `gorm:"column:genre"`
 	Score                 FloatNumberFilter `gorm:"column:score"`
+	Series                []interface{}     `gorm:"column:series"`
 }
 
 type NumberFilter struct {

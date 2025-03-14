@@ -25,22 +25,24 @@ export default function InputFilter({
   return (
     <StyledTextField
       sx={{
-        backgroundColor: theme.background,
+        backgroundColor: "transparent",
         "& .MuiInputBase-input": {
-          color: theme.input_text, // Font rengi
+          color: theme.primary_text,
         },
         "& .MuiInputLabel-root": {
-          color: theme.input_text, // Label rengi
+          color: theme.secondary_text,
         },
         "& .MuiOutlinedInput-root": {
+          backgroundColor: theme.input_background,
+          borderRadius: "8px",
           "& fieldset": {
-            borderColor: theme.input_border, // Normal border rengi
+            borderColor: theme.input_border,
           },
           "&:hover fieldset": {
-            borderColor: theme.input_border, // Hover'da border rengi
+            borderColor: theme.primary,
           },
           "&.Mui-focused fieldset": {
-            borderColor: theme.input_border, // Odaklanmış durumda border rengi
+            borderColor: theme.primary,
           },
         },
       }}

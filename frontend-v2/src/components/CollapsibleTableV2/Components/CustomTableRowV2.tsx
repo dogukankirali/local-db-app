@@ -26,6 +26,11 @@ import LocalMoviesIcon from "@mui/icons-material/LocalMovies";
 import TvIcon from "@mui/icons-material/Tv";
 import { genreColors } from "../../../constants/Constants";
 
+// IColumnItem tipini genişleterek hide özelliğini ekleyelim
+interface IExtendedColumnItem extends TEATable.IColumnItem {
+  hide?: boolean;
+}
+
 export default function CustomTableRowV2(
   props: TEATable.ICustomTableRowPropsV2
 ) {
@@ -35,6 +40,11 @@ export default function CustomTableRowV2(
   );
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [popData, setPopData] = React.useState<string | null>(null);
+
+  // headers'ı IExtendedColumnItem[] olarak belirtelim
+  const headers = props.headers as IExtendedColumnItem[];
+  const rowIndex = props.index || 0;
+
   const handlePopoverOpen = (
     event: React.MouseEvent<HTMLElement>,
     source: string
@@ -195,7 +205,10 @@ export default function CustomTableRowV2(
         PaperProps={{ sx: { backgroundColor: theme.background } }}
         sx={{ "& .MuiDialog-paper": { width: "80%" } }}
       >
-        <DialogTitle id="alert-dialog-title" sx={{ color: theme.primary_text }}>
+        <DialogTitle
+          id="alert-dialog-title"
+          sx={{ color: theme.primary_text, backgroundColor: theme.background }}
+        >
           {props.singleData !== undefined && (
             <Typography variant="h5">
               {props.singleData.Name} - Details
@@ -224,45 +237,57 @@ export default function CustomTableRowV2(
         )}
       </Dialog>
       <TableRow
-        id={`${props.collapsible.inner?.tableName}_${props.index}`}
-        key={`${props.collapsible.inner?.tableName}_${props.index}`}
-        style={{
-          height: 58,
-          backgroundColor:
-            props.index! % 2 === 1
-              ? theme.table_row_light
-              : theme.table_row_dark,
+        sx={{
+          "& > *": { borderBottom: "unset" },
+          backgroundColor: open
+            ? theme.table_row_light
+            : rowIndex % 2 === 0
+            ? theme.table_row_dark
+            : theme.table_row_light,
+          cursor: "pointer",
         }}
+        onClick={() => setOpen(!open)}
       >
-        {props.collapsible.isCollapsible && (
-          <TableCell style={colStyle}>
-            <IconButton
-              aria-label="expand row"
-              size="small"
-              onClick={() => setOpen(!open)}
-            >
-              <OpenInNewIcon
-                sx={{
-                  color: theme.primary_text,
-                  ":hover": { color: theme.primary },
-                  transition: "color 0.3s ease-in-out",
-                }}
-              />
-            </IconButton>
-          </TableCell>
+        {props.collapsible?.isCollapsible && (
+          <TableCell
+            sx={{
+              width: "1%",
+              backgroundColor: open
+                ? theme.table_row_light
+                : rowIndex % 2 === 0
+                ? theme.table_row_dark
+                : theme.table_row_light,
+            }}
+          ></TableCell>
         )}
-        {props.headers.map((header, index) => {
+        {headers.map((header, index) => {
+          // Mobil cihazlar için kontrol
+          const isMobile =
+            typeof window !== "undefined" && window.innerWidth < 768;
+
+          // Eğer mobil görünümde ve header'ın hide özelliği true ise, null döndür
+          if (isMobile && (header as IExtendedColumnItem).hide) {
+            return null;
+          }
+
+          const colStyle = {
+            backgroundColor: open
+              ? theme.table_row_light
+              : rowIndex % 2 === 0
+              ? theme.table_row_dark
+              : theme.table_row_light,
+            color: theme.primary_text,
+            fontSize: isMobile ? "0.75rem" : "inherit",
+            padding: isMobile ? "8px 4px" : "16px",
+          };
+
           if (typeof header.key === "string") {
             if (header.type === "string") {
               return (
                 <TableCell
                   key={`cell-${header.key}-${index}`}
                   align="center"
-                  style={{
-                    color: theme.primary_text,
-                    fontWeight: "semi-bold",
-                    ...colStyle,
-                  }}
+                  style={colStyle}
                 >
                   {props.singleData[header.key]}
                 </TableCell>
@@ -352,15 +377,15 @@ export default function CustomTableRowV2(
               const renderFunction = header.key as any;
               return (
                 <TableCell
-                  key={`cell-button-${props.index}-${index}`}
-                  className={`${props.collapsible.inner?.tableName}_${props.index}`}
-                  id={`${props.collapsible.inner?.tableName}_${props.index}_row`}
+                  key={`cell-button-${rowIndex}-${index}`}
+                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
+                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
                   align="center"
                   style={colStyle}
                 >
                   {renderFunction(
                     props.singleData.id,
-                    props.index!,
+                    rowIndex,
                     props.singleData
                   )}
                 </TableCell>
@@ -391,7 +416,7 @@ export default function CustomTableRowV2(
                     .humanize()}
                 </TableCell>
               );
-            } else if (header.type === "series") {
+            } else if ((header.type as any) === "series") {
               return (
                 <TableCell
                   key={`cell-${header.key}-${index}`}
@@ -584,10 +609,18 @@ export default function CustomTableRowV2(
                   id={header.key}
                 >
                   <Box
-                    style={{
+                    sx={{
                       display: "grid",
-                      gridTemplateColumns: "4fr 4fr 4fr",
-                      gap: 5,
+                      gridTemplateColumns: {
+                        xs: "repeat(3, 1fr)", // Mobil görünümde 3 sütun
+                        sm: "repeat(3, 1fr)", // Tablet görünümde 3 sütun
+                        md: "repeat(3, 1fr)", // Küçük masaüstü görünümde 3 sütun
+                        lg: "repeat(4, 1fr)", // Büyük masaüstü görünümde 4 sütun
+                      },
+                      gap: { xs: 1, sm: 1, md: 1.5, lg: 2 },
+                      width: "100%",
+                      justifyContent: "center",
+                      alignItems: "center",
                     }}
                   >
                     {props.singleData[header.key].length !== 0 &&
@@ -595,15 +628,16 @@ export default function CustomTableRowV2(
                         .split(", ")
                         .map((pill: string, index: number) => (
                           <Button
-                            key={`button-${props.index}-${pill}-${index}`}
+                            key={`button-${rowIndex}-${pill}-${index}`}
                             sx={{
                               // Butonun tüm stil özelliklerini kaldır
                               display: "inline-block",
                               backgroundColor: "transparent",
                               cursor: "pointer",
                               padding: 0, // İç boşlukları sıfırlayın
-                              width: "auto",
+                              width: "100%",
                               height: "auto",
+                              margin: "2px 0",
                               ":hover": {
                                 backgroundColor: "transparent",
                               },
@@ -632,7 +666,7 @@ export default function CustomTableRowV2(
                           >
                             <Chip
                               key={`chip-${index}`}
-                              id={`chip-${props.index}-${index}`}
+                              id={`chip-${rowIndex}-${index}`}
                               onMouseEnter={(e) => {
                                 handlePopoverOpen(e, "genre");
                               }}
@@ -640,12 +674,29 @@ export default function CustomTableRowV2(
                               size="small"
                               label={pill}
                               color="primary"
-                              style={{
+                              sx={{
                                 backgroundColor: genreColors[pill as string],
                                 color: getFontColor(
                                   genreColors[pill as string]
                                 ),
-                                minWidth: 80,
+                                minWidth: {
+                                  xs: "100%",
+                                  sm: "100%",
+                                  md: "80px",
+                                },
+                                maxWidth: "100%",
+                                height: "24px",
+                                "& .MuiChip-label": {
+                                  padding: "0 8px",
+                                  fontSize: {
+                                    xs: "0.7rem",
+                                    sm: "0.75rem",
+                                    md: "0.8rem",
+                                  },
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                },
                               }}
                             />
                           </Button>
@@ -683,10 +734,16 @@ export default function CustomTableRowV2(
                       size="small"
                       label={popData}
                       color="primary"
-                      style={{
+                      sx={{
                         backgroundColor: genreColors[popData! as string],
                         color: getFontColor(genreColors[popData! as string]),
-                        minWidth: 80,
+                        minWidth: "120px",
+                        height: "28px",
+                        "& .MuiChip-label": {
+                          padding: "0 12px",
+                          fontSize: "0.85rem",
+                          fontWeight: 500,
+                        },
                       }}
                     />
                   </Popover>
@@ -708,15 +765,15 @@ export default function CustomTableRowV2(
               const renderFunction = header.key as any;
               return (
                 <TableCell
-                  key={`cell-button-${props.index}-${index}`}
-                  className={`${props.collapsible.inner?.tableName}_${props.index}`}
-                  id={`${props.collapsible.inner?.tableName}_${props.index}_row`}
+                  key={`cell-button-${rowIndex}-${index}`}
+                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
+                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
                   align="center"
                   style={colStyle}
                 >
                   {renderFunction(
                     props.singleData.id,
-                    props.index!,
+                    rowIndex,
                     props.singleData
                   )}
                 </TableCell>
@@ -724,7 +781,7 @@ export default function CustomTableRowV2(
             } else {
               return (
                 <TableCell
-                  key={`cell-other-${props.index}-${index}`}
+                  key={`cell-other-${rowIndex}-${index}`}
                   align="center"
                   style={colStyle}
                 >

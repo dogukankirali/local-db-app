@@ -297,6 +297,7 @@ export default function TableTemp<T extends {}>(
             minHeight: "40px",
             backgroundColor: theme.table_header,
             borderTop: "1px solid",
+            padding: isMobile ? "8px 0" : "0",
           }}
         >
           <Pagination
@@ -304,6 +305,7 @@ export default function TableTemp<T extends {}>(
               // Aşağıdaki stil özellikleri, Pagination bileşeninin alt bileşenlerine uygulanır
               "& .MuiPaginationItem-root": {
                 color: theme.primary_text, // Normal yazı rengi
+                fontSize: isMobile ? "0.75rem" : "inherit",
               },
               "& .MuiPaginationItem-page": {
                 "&.Mui-selected": {
@@ -320,10 +322,10 @@ export default function TableTemp<T extends {}>(
             }}
             count={props.data.pagination.totalPageCount}
             page={props.data.pagination.currentPage || page}
-            siblingCount={1}
-            showFirstButton
-            showLastButton
-            size="small"
+            siblingCount={isMobile ? 0 : 1}
+            showFirstButton={!isMobile}
+            showLastButton={!isMobile}
+            size={isMobile ? "small" : "medium"}
             onChange={handleChange}
           />
         </Box>

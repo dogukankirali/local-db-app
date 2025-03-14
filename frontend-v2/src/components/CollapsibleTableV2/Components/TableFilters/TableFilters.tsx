@@ -35,6 +35,7 @@ type FilterElementProps =
 export type FilterStateProp = {
   label: string;
   key: string;
+  style?: React.CSSProperties;
 } & FilterElementProps;
 
 export type FilterState = TEATable.IFilterType;
@@ -211,16 +212,19 @@ export default function TableSettings({
       }}
       sx={{
         "& .MuiPopover-paper": {
-          backgroundColor: theme.background, // Sabit kırmızı renk
+          backgroundColor: theme.background,
+          boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+          borderRadius: "12px",
+          border: `1px solid ${theme.input_border}`,
           overflow: "visible",
+          padding: "16px",
+          maxWidth: "calc(100vw - 32px)",
         },
       }}
     >
       <Box
         sx={{
-          width: 300,
-          m: 4,
-          mb: 2,
+          width: { xs: "100%", sm: 400 },
           display: "flex",
           flexDirection: "column",
           gap: 2,
@@ -260,6 +264,7 @@ export default function TableSettings({
                 value={localFilters[index].value as string[]}
                 handleStateChange={handleStateChange}
                 options={element.options}
+                style={element.style}
               />
             );
           }
@@ -277,12 +282,22 @@ export default function TableSettings({
           }
           return null;
         })}
-        <SCButtonGroup
-          cancelText="Reset"
-          confirmText="Apply"
-          handleCancel={clearFilters}
-          handleConfirm={applyFilters}
-        />
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 2,
+            mt: 2,
+          }}
+        >
+          <SCButtonGroup
+            cancelText="Temizle"
+            confirmText="Uygula"
+            handleCancel={clearFilters}
+            handleConfirm={applyFilters}
+          />
+        </Box>
       </Box>
     </Popover>
   );

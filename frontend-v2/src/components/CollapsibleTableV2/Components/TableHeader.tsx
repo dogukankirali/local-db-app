@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
@@ -50,6 +52,20 @@ export function HeaderItem({
     isDragging,
   } = useSortable({ id });
 
+  const [elementWidth, setElementWidth] = useState<number | undefined>(
+    undefined
+  );
+
+  // Client-side'da element genişliğini al
+  useEffect(() => {
+    if (dragOverlay && typeof document !== "undefined") {
+      const element = document.getElementById(rowId);
+      if (element) {
+        setElementWidth(element.offsetWidth);
+      }
+    }
+  }, [dragOverlay, rowId]);
+
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
@@ -59,7 +75,7 @@ export function HeaderItem({
     backgroundColor: theme.table_header,
     color: theme.primary_text,
     width: width,
-    ...(dragOverlay && { width: document.getElementById(rowId)?.offsetWidth }),
+    ...(dragOverlay && elementWidth && { width: elementWidth }),
     ...(dragOverlay && { cursor: "grabbing" }),
   };
 
@@ -111,6 +127,12 @@ export default function TableHeader({
   const activeIndex = useRef<number | null>(null);
   const [disableSort, setDisableSort] = useState<boolean>(false);
   const headRef = useRef<HTMLTableRowElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Client-side'da olduğumuzdan emin olmak için
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const onResizeStart = (
     index: number,
@@ -129,6 +151,8 @@ export default function TableHeader({
     element: HTMLElement;
     index: number;
   } | null => {
+    if (typeof document === "undefined") return null;
+
     const neighborIndex = diff > 0 ? index + 1 : index - 1;
     const neighbor = document.getElementById(
       `${tableName}-tablecell-${neighborIndex}`
@@ -143,6 +167,8 @@ export default function TableHeader({
 
   const mouseMove = (e: MouseEvent) => {
     if (activeIndex.current === null || mouseXStart.current === null) return;
+    if (typeof document === "undefined") return;
+
     const diff = e.clientX - mouseXStart.current;
     if (diff === 0) return;
     const elementIndex =
@@ -170,9 +196,11 @@ export default function TableHeader({
   };
 
   useEffect(() => {
-    if (!setHeaders) return;
+    if (!setHeaders || typeof window === "undefined") return;
+
     window.addEventListener("mousemove", mouseMove);
     window.addEventListener("mouseup", mouseUp);
+
     return () => {
       window.removeEventListener("mousemove", mouseMove);
       window.removeEventListener("mouseup", mouseUp);
@@ -187,52 +215,57 @@ export default function TableHeader({
     return str.substring(0, maxLength) + "...";
   }
 
-  const HeaderCol = (id: UniqueIdentifier, index: number) => (
-    <HeaderItem
-      key={id}
-      id={id}
-      rowId={`${tableName}-tablecell-${index}`}
-      sortDirection={orderBy === headers[index].key ? order : false}
-      dragOverlay
-    >
-      <TableSortLabel
-        active={orderBy === headers[index].key}
-        direction={orderBy === headers[index].key ? order : "asc"}
-        style={{ cursor: "grabbing", color: theme.primary_text }}
-        sx={{
-          "& .MuiTableSortLabel-icon": {
-            color: "green !important",
-          },
-        }}
-        onClick={() => {
-          if (typeof headers[index].key === "string") {
-            setOrderBy(headers[index].key as string);
-          }
-          if (orderBy === headers[index].key) {
-            if (order === "asc") {
-              setOrder("desc");
+  const HeaderCol = (id: UniqueIdentifier, index: number) => {
+    // Mobil cihazlar için kontrol
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    
+    // Eğer mobil görünümde ve header'ın hide özelliği true ise, null döndür
+    if (isMobile && headers[index].hide) {
+      return null;
+    }
+    
+    return (
+      <HeaderItem
+        key={id}
+        id={id}
+        rowId={`${tableName}-tablecell-${index}`}
+        sortDirection={orderBy === headers[index].key ? order : false}
+        dragOverlay
+      >
+        <TableSortLabel
+          active={orderBy === headers[index].key}
+          direction={orderBy === headers[index].key ? order : "asc"}
+          style={{ 
+            cursor: "grabbing", 
+            color: theme.primary_text,
+            fontSize: isMobile ? "0.75rem" : "inherit",
+          }}
+          sx={{
+            "& .MuiTableSortLabel-icon": {
+              color: "green !important",
+            },
+          }}
+          onClick={() => {
+            if (typeof headers[index].key === "string") {
+              setOrderBy(headers[index].key as string);
+            }
+            if (orderBy === headers[index].key) {
+              if (order === "asc") {
+                setOrder("desc");
+              } else {
+                setOrder("asc");
+              }
             } else {
               setOrder("asc");
             }
-          } else {
-            setOrder("asc");
-          }
-        }}
-      >
-        {headers[index].value}
-      </TableSortLabel>
-      {index !== headers.length - 1 && setHeaders && (
-        <div
-          onMouseDown={(e) => onResizeStart(index, e)}
-          onMouseOver={() => setDisableSort(true)}
-          onMouseOut={() =>
-            activeIndex.current === null ? setDisableSort(false) : null
-          }
-          className="resize-handle"
-        />
-      )}
-    </HeaderItem>
-  );
+          }}
+        >
+          {isMobile ? truncateString(headers[index].value, 10) : headers[index].value}
+        </TableSortLabel>
+      </HeaderItem>
+    );
+  };
+
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
   return (
@@ -241,7 +274,6 @@ export default function TableHeader({
         ref={headRef}
         sx={{
           width: "100%",
-          // borderColor: "gray",
           backgroundColor: theme.table_header,
         }}
       >
@@ -260,22 +292,21 @@ export default function TableHeader({
           collisionDetection={closestCenter}
           autoScroll={false}
           onDragStart={(event) => {
-            const { active } = event;
-            if (active) {
-              setActiveId(active.id);
+            if (disableSort || !setHeaders) return;
+            setActiveId(event.active.id);
+          }}
+          onDragEnd={(event) => {
+            setActiveId(null);
+            if (disableSort || !setHeaders) return;
+            const { active, over } = event;
+            if (over && active.id !== over.id) {
+              const oldIndex = items.indexOf(active.id);
+              const newIndex = items.indexOf(over.id);
+              const newHeaders = arrayMove(headers, oldIndex, newIndex);
+              setHeaders(newHeaders);
             }
           }}
-          onDragCancel={() => setActiveId(null)}
-          onDragEnd={(event) => {
-            const { active, over } = event;
-
-            if (setHeaders && active?.id && over?.id && active.id !== over.id) {
-              setHeaders((prev) => {
-                const oldIndex = items.indexOf(active.id);
-                const newIndex = items.indexOf(over.id);
-                return arrayMove(prev, oldIndex, newIndex);
-              });
-            }
+          onDragCancel={() => {
             setActiveId(null);
           }}
         >
@@ -284,12 +315,16 @@ export default function TableHeader({
             disabled={disableSort || !setHeaders}
             strategy={horizontalListSortingStrategy}
           >
-            {createPortal(
-              <DragOverlay zIndex={5000}>
-                {activeId ? HeaderCol(activeId, items.indexOf(activeId)) : null}
-              </DragOverlay>,
-              document.body
-            )}
+            {mounted &&
+              typeof document !== "undefined" &&
+              createPortal(
+                <DragOverlay zIndex={5000}>
+                  {activeId
+                    ? HeaderCol(activeId, items.indexOf(activeId))
+                    : null}
+                </DragOverlay>,
+                document.body
+              )}
             {items.map((id, index) => (
               <HeaderItem
                 key={id}

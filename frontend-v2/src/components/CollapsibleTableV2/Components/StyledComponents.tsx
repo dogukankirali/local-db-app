@@ -146,12 +146,13 @@ export const StyledTeaButton = styled((props: ButtonProps) => (
 ))(() => {
   return {
     fontFamily: "Work Sans",
-    backgroundColor: customTheme.scondary_button,
-    color: customTheme.button_text,
+    backgroundColor: customTheme.primary,
+    color: "#FFFFFF",
     borderRadius: 20,
     textTransform: "none",
+    fontWeight: "500",
     ":hover": {
-      backgroundColor: Utils.ChangeColorAlpha(customTheme.scondary_button, 0.8),
+      backgroundColor: Utils.ChangeColorAlpha(customTheme.primary, 0.8),
     },
   };
 });

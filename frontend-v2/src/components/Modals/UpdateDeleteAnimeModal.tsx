@@ -19,11 +19,12 @@ const modalStyle = {
   width: "80%",
   maxHeight: "90vh",
   bgcolor: theme.background,
-  boxShadow: 24,
+  boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
   p: 4,
   borderRadius: 2,
   outline: "none",
   overflow: "hidden",
+  border: `1px solid ${theme.input_border}`,
 };
 
 const LoadingFallback = () => (
@@ -58,10 +59,13 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
       keepMounted={false}
     >
       <Box sx={modalStyle}>
-        <Typography variant="h5" sx={{ color: theme.primary_text, mb: 2 }}>
+        <Typography
+          variant="h5"
+          sx={{ color: theme.primary_text, mb: 2, fontWeight: "600" }}
+        >
           {props.modalData?.type === "delete"
-            ? `Delete - ${props.modalData?.data.Name}`
-            : `Update - ${props.modalData?.data!.Name}`}
+            ? `Sil - ${props.modalData?.data.Name}`
+            : `Güncelle - ${props.modalData?.data!.Name}`}
         </Typography>
 
         <Suspense fallback={<LoadingFallback />}>
@@ -91,7 +95,14 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
           }}
         >
           <StyledTeaButton
-            sx={{ backgroundColor: theme.primary }}
+            sx={{
+              backgroundColor:
+                props.modalData?.type === "delete"
+                  ? theme.danger
+                  : theme.primary,
+              color: "#FFFFFF",
+              fontWeight: "500",
+            }}
             onClick={
               props.modalData?.type === "delete"
                 ? props.deleteAnime
@@ -99,16 +110,20 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
             }
           >
             <Typography variant="button">
-              {props.modalData?.type === "delete" ? "Delete" : "Update"}
+              {props.modalData?.type === "delete" ? "Sil" : "Güncelle"}
             </Typography>
           </StyledTeaButton>
           <StyledTeaButton
-            sx={{ backgroundColor: theme.danger }}
+            sx={{
+              backgroundColor: "transparent",
+              color: theme.primary_text,
+              border: `1px solid ${theme.input_border}`,
+            }}
             onClick={() => {
               props.setModalData({ status: false });
             }}
           >
-            <Typography variant="button">Cancel</Typography>
+            <Typography variant="button">İptal</Typography>
           </StyledTeaButton>
         </Box>
       </Box>

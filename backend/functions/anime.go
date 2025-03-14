@@ -152,6 +152,8 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				}
 			case "Genre":
 				animeFilter.Genre = filter.Value.([]interface{})
+			case "Series":
+				animeFilter.Series = filter.Value.([]interface{})
 			}
 		}
 
@@ -165,7 +167,18 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		if len(animeFilter.AnimeStatus) == 1 {
 			var genreArray []string
 			for i := range animeFilter.AnimeStatus {
-				genreArray = append(genreArray, animeFilter.AnimeStatus[i].(string))
+				// Tip kontrolü yaparak uygun şekilde string'e dönüştürme
+				switch v := animeFilter.AnimeStatus[i].(type) {
+				case string:
+					genreArray = append(genreArray, v)
+				case float64:
+					genreArray = append(genreArray, fmt.Sprintf("%d", int(v)))
+				case int:
+					genreArray = append(genreArray, fmt.Sprintf("%d", v))
+				default:
+					// Diğer tipler için string dönüşümü
+					genreArray = append(genreArray, fmt.Sprintf("%v", v))
+				}
 			}
 			genreString := strings.Join(genreArray, ", ")
 			if len(whereString) != 0 {
@@ -177,7 +190,20 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		if len(animeFilter.IsMovie) != 0 {
 			var genreArray []string
 			for i := range animeFilter.IsMovie {
-				genreArray = append(genreArray, animeFilter.IsMovie[i].(string))
+				// Tip kontrolü yaparak uygun şekilde string'e dönüştürme
+				switch v := animeFilter.IsMovie[i].(type) {
+				case string:
+					genreArray = append(genreArray, v)
+				case float64:
+					genreArray = append(genreArray, fmt.Sprintf("%t", v != 0))
+				case int:
+					genreArray = append(genreArray, fmt.Sprintf("%t", v != 0))
+				case bool:
+					genreArray = append(genreArray, fmt.Sprintf("%t", v))
+				default:
+					// Diğer tipler için string dönüşümü
+					genreArray = append(genreArray, fmt.Sprintf("%v", v))
+				}
 			}
 			if len(genreArray) == 1 {
 				if len(whereString) != 0 {
@@ -187,25 +213,24 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				}
 			} else {
 				if len(whereString) != 0 {
-					whereString += fmt.Sprintf("and a.is_movie = %s or a.is_movie = %s ", genreArray[0], genreArray[1])
+					whereString += fmt.Sprintf("and (a.is_movie = %s or a.is_movie = %s) ", genreArray[0], genreArray[1])
 				} else {
-					whereString += fmt.Sprintf("a.is_movie = %s or a.is_movie = %s ", genreArray[0], genreArray[1])
+					whereString += fmt.Sprintf("(a.is_movie = %s or a.is_movie = %s) ", genreArray[0], genreArray[1])
 				}
 			}
-
 		}
 		if animeFilter.Score.Value != 0 {
 			if len(whereString) != 0 {
-				whereString += fmt.Sprintf("and a.score %s '%d' ", animeFilter.Score.Operand, animeFilter.Score.Value)
+				whereString += fmt.Sprintf("and a.score %s %f ", animeFilter.Score.Operand, animeFilter.Score.Value)
 			} else {
-				whereString += fmt.Sprintf("a.score %s '%d' ", animeFilter.Score.Operand, animeFilter.Score.Value)
+				whereString += fmt.Sprintf("a.score %s %f ", animeFilter.Score.Operand, animeFilter.Score.Value)
 			}
 		}
 		if animeFilter.TotalNumberOfEpisodes.Value != 0 {
 			if len(whereString) != 0 {
-				whereString += fmt.Sprintf("and a.total_number_of_episodes %s '%d' ", animeFilter.TotalNumberOfEpisodes.Operand, animeFilter.TotalNumberOfEpisodes.Value)
+				whereString += fmt.Sprintf("and a.total_number_of_episodes %s %d ", animeFilter.TotalNumberOfEpisodes.Operand, animeFilter.TotalNumberOfEpisodes.Value)
 			} else {
-				whereString += fmt.Sprintf("a.total_number_of_episodes %s '%d' ", animeFilter.TotalNumberOfEpisodes.Operand, animeFilter.TotalNumberOfEpisodes.Value)
+				whereString += fmt.Sprintf("a.total_number_of_episodes %s %d ", animeFilter.TotalNumberOfEpisodes.Operand, animeFilter.TotalNumberOfEpisodes.Value)
 			}
 		}
 		if len(animeFilter.WatchStatus) != 0 {
@@ -218,13 +243,49 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		if len(animeFilter.Genre) != 0 {
 			var genreArray []string
 			for i := range animeFilter.Genre {
-				genreArray = append(genreArray, animeFilter.Genre[i].(string))
+				// Tip kontrolü yaparak uygun şekilde string'e dönüştürme
+				switch v := animeFilter.Genre[i].(type) {
+				case string:
+					genreArray = append(genreArray, v)
+				case float64:
+					genreArray = append(genreArray, fmt.Sprintf("%d", int(v)))
+				case int:
+					genreArray = append(genreArray, fmt.Sprintf("%d", v))
+				default:
+					// Diğer tipler için string dönüşümü
+					genreArray = append(genreArray, fmt.Sprintf("%v", v))
+				}
 			}
 			genreString := strings.Join(genreArray, ", ")
 			if len(whereString) != 0 {
 				whereString += fmt.Sprintf("and g.genre_name ILIKE ANY (string_to_array('%%%s%%', ', ')) ", genreString)
 			} else {
 				whereString += fmt.Sprintf("g.genre_name ILIKE ANY (string_to_array('%%%s%%', ', ')) ", genreString)
+			}
+		}
+
+		if len(animeFilter.Series) != 0 {
+			var seriesArray []string
+			for i := range animeFilter.Series {
+				// Tip kontrolü yaparak uygun şekilde string'e dönüştürme
+				switch v := animeFilter.Series[i].(type) {
+				case string:
+					seriesArray = append(seriesArray, fmt.Sprintf("'%s'", v))
+				case float64:
+					seriesArray = append(seriesArray, fmt.Sprintf("%d", int(v)))
+				case int:
+					seriesArray = append(seriesArray, fmt.Sprintf("%d", v))
+				default:
+					// Diğer tipler için string dönüşümü
+					seriesArray = append(seriesArray, fmt.Sprintf("%v", v))
+				}
+			}
+			// Series ID'lerini kullanarak filtreleme
+			seriesString := strings.Join(seriesArray, ", ")
+			if len(whereString) != 0 {
+				whereString += fmt.Sprintf("and s.name IN (%s) ", seriesString)
+			} else {
+				whereString += fmt.Sprintf("s.name IN (%s) ", seriesString)
 			}
 		}
 
@@ -640,7 +701,7 @@ func GetSeries(db *gorm.DB) http.HandlerFunc {
 			seriesResponse[i] = map[string]interface{}{
 				"id":    s.ID,
 				"name":  s.Name,
-				"value": s.ID,
+				"value": s.Name,
 				"label": s.Name,
 			}
 		}

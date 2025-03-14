@@ -27,6 +27,7 @@
     "react-dom": "^19.0.0",
     "react-gauge-chart": "^0.5.1",
     "react-select": "^5.9.0",
+    "react-toastify": "^11.0.5",
     "toastify-js": "^1.12.0"
   },
   "devDependencies": {

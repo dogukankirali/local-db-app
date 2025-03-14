@@ -12,6 +12,9 @@ import {
   Avatar,
   Theme,
   Typography,
+  useMediaQuery,
+  useTheme,
+  Tooltip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -25,6 +28,9 @@ interface NavbarProps {
 export default function Navbar({ onMenuClick }: NavbarProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -50,16 +56,24 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
       elevation={0}
       color="inherit"
     >
-      <Toolbar>
-        <Box sx={{ display: "flex", alignItems: "center", minWidth: 200 }}>
+      <Toolbar sx={{ px: isMobile ? 1 : 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            minWidth: isMobile ? "auto" : 200,
+            mr: isMobile ? 1 : 2,
+          }}
+        >
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={onMenuClick}
-            sx={{ mr: 2 }}
+            sx={{ mr: isMobile ? 0.5 : 2 }}
+            size={isMobile ? "small" : "medium"}
           >
-            <MenuIcon />
+            <MenuIcon fontSize={isMobile ? "small" : "medium"} />
           </IconButton>
 
           <Link
@@ -71,14 +85,17 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               alignItems: "center",
             }}
           >
-            <StorageIcon sx={{ mr: 1 }} />
+            <StorageIcon
+              sx={{ mr: isMobile ? 0.5 : 1 }}
+              fontSize={isMobile ? "small" : "medium"}
+            />
             <Typography
-              variant="subtitle1"
+              variant={isMobile ? "body2" : "subtitle1"}
               noWrap
               component="div"
               sx={{
                 fontWeight: 600,
-                display: { xs: "none", sm: "block" },
+                display: { xs: isMobile ? "none" : "block", sm: "block" },
               }}
             >
               Local DB
@@ -86,19 +103,26 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           </Link>
         </Box>
 
-        <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            justifyContent: "center",
+            mx: isMobile ? 0.5 : 2,
+          }}
+        >
           <Box
             sx={{
               position: "relative",
               borderRadius: 1,
               bgcolor: "action.hover",
               width: "100%",
-              maxWidth: "400px",
+              maxWidth: isMobile ? "150px" : isTablet ? "250px" : "400px",
             }}
           >
             <Box
               sx={{
-                padding: "0 12px",
+                padding: isMobile ? "0 8px" : "0 12px",
                 height: "100%",
                 position: "absolute",
                 pointerEvents: "none",
@@ -107,20 +131,22 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                 justifyContent: "center",
               }}
             >
-              <SearchIcon />
+              <SearchIcon fontSize={isMobile ? "small" : "medium"} />
             </Box>
             <InputBase
-              placeholder="Ara..."
+              placeholder={isMobile ? "Ara" : "Ara..."}
               value={searchQuery}
               onChange={handleSearch}
               sx={{
                 color: "inherit",
                 width: "100%",
                 "& .MuiInputBase-input": {
-                  padding: "12px 12px 12px 0",
-                  paddingLeft: `calc(1em + 28px)`,
+                  padding: isMobile ? "8px 8px 8px 0" : "12px 12px 12px 0",
+                  paddingLeft: isMobile
+                    ? `calc(1em + 16px)`
+                    : `calc(1em + 28px)`,
                   width: "100%",
-                  fontSize: "0.875rem",
+                  fontSize: isMobile ? "0.75rem" : "0.875rem",
                 },
               }}
               inputProps={{ "aria-label": "search" }}
@@ -132,19 +158,23 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           sx={{
             display: "flex",
             alignItems: "center",
-            minWidth: 200,
+            minWidth: isMobile ? "auto" : 200,
             justifyContent: "flex-end",
           }}
         >
-          <IconButton
-            size="medium"
-            aria-label="account of current user"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-            onClick={handleMenu}
-          >
-            <Avatar sx={{ width: 36, height: 36 }} />
-          </IconButton>
+          <Tooltip title="Profil">
+            <IconButton
+              size={isMobile ? "small" : "medium"}
+              aria-label="account of current user"
+              aria-controls="menu-appbar"
+              aria-haspopup="true"
+              onClick={handleMenu}
+            >
+              <Avatar
+                sx={{ width: isMobile ? 28 : 36, height: isMobile ? 28 : 36 }}
+              />
+            </IconButton>
+          </Tooltip>
           <Menu
             id="menu-appbar"
             anchorEl={anchorEl}

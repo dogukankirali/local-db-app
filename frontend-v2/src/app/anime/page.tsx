@@ -23,9 +23,32 @@ import UpdateDeleteAnimeModal from "@/components/Modals/UpdateDeleteAnimeModal";
 
 export default function AnimePage() {
   const [windowSize, setWindowSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: 0,
+    height: 0,
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+
+      const handleResize = () => {
+        setWindowSize({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        });
+      };
+
+      window.addEventListener("resize", handleResize);
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
+    }
+  }, []);
+
   const [dataLoading, setDataLoading] = useState<boolean>(false);
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
@@ -53,30 +76,41 @@ export default function AnimePage() {
     status: boolean;
   }>({ status: false });
   const [genres, setGenres] = useState<{ value: string; label: string }[]>();
+  const [series, setSeries] = useState<{ value: string; label: string }[]>([]);
 
   function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
     return (
       <Box
         sx={{
           display: "flex",
-          gap: 1,
+          justifyContent: "flex-end",
           alignItems: "center",
-          justifyContent: "space-between",
+          gap: 1,
         }}
       >
         <StyledTeaButton
-          sx={{ fontFamily: "inherit", backgroundColor: theme.primary }}
           onClick={() => {
-            setModalData({ data: data, type: "update", status: true });
+            setModalData({
+              status: true,
+              type: "update",
+              data: data,
+            });
           }}
+          sx={{ fontFamily: "inherit" }}
+          color="primary"
         >
           <Typography variant="button">Update</Typography>
         </StyledTeaButton>
         <StyledTeaButton
-          sx={{ fontFamily: "inherit", backgroundColor: theme.danger }}
           onClick={() => {
-            setModalData({ data: data, type: "delete", status: true });
+            setModalData({
+              status: true,
+              type: "delete",
+              data: data,
+            });
           }}
+          sx={{ fontFamily: "inherit" }}
+          color="error"
         >
           <Typography variant="button">Delete</Typography>
         </StyledTeaButton>
@@ -86,7 +120,7 @@ export default function AnimePage() {
 
   const { filterState, handleClickFilters, ...tableFilterProps } =
     useTableFilters(
-      Constants({ type: "tableFilters", additionalData: { genres } })!,
+      Constants({ type: "tableFilters", additionalData: { genres, series } })!,
       () => {
         if (lastFetchParams.current) {
           const updatedParams = {
@@ -103,6 +137,15 @@ export default function AnimePage() {
     try {
       const res = await AnimeService.getGenres();
       setGenres(res);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const getSeries = async () => {
+    try {
+      const res = await AnimeService.getSeries();
+      setSeries(res);
     } catch (err) {
       console.error(err);
     }
@@ -138,13 +181,11 @@ export default function AnimePage() {
   };
 
   async function updateAnime() {
-    modalData.data!.MALScore = parseFloat(modalData.data!.MALScore.toString());
-    await AnimeService.updateAnime(modalData.data!)
-      .then((resp: any) => {
-        getData(lastFetchParams.current!);
-        setModalData({ status: false });
+    try {
+      const res = await AnimeService.updateAnime(modalData.data!);
+      if (res.status === 200) {
         Toastify({
-          text: "Anime updated successfully",
+          text: "Anime başarıyla güncellendi",
           duration: 3000,
           close: true,
           gravity: "top",
@@ -152,27 +193,33 @@ export default function AnimePage() {
           backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
           stopOnFocus: true,
         }).showToast();
-      })
-      .catch((err) => {
-        Toastify({
-          text: "Failed to update anime",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-          stopOnFocus: true,
-        }).showToast();
-      });
+        setModalData({ status: false });
+        getData({
+          page: 1,
+          count: 10,
+          filters: [],
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      Toastify({
+        text: "Anime güncellenirken bir hata oluştu",
+        duration: 3000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+        stopOnFocus: true,
+      }).showToast();
+    }
   }
 
   async function deleteAnime() {
-    await AnimeService.deleteAnime(modalData.data!)
-      .then((resp: any) => {
-        getData(lastFetchParams.current!);
-        setModalData({ status: false });
+    try {
+      const res = await AnimeService.deleteAnime(modalData.data!);
+      if (res.status === 200) {
         Toastify({
-          text: "Anime deleted successfully",
+          text: "Anime başarıyla silindi",
           duration: 3000,
           close: true,
           gravity: "top",
@@ -180,30 +227,33 @@ export default function AnimePage() {
           backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
           stopOnFocus: true,
         }).showToast();
-      })
-      .catch((err) => {
-        Toastify({
-          text: "Failed to delete anime",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-          stopOnFocus: true,
-        }).showToast();
-      });
+        setModalData({ status: false });
+        getData({
+          page: 1,
+          count: 10,
+          filters: [],
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      Toastify({
+        text: "Anime silinirken bir hata oluştu",
+        duration: 3000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+        stopOnFocus: true,
+      }).showToast();
+    }
   }
 
   async function createAnime() {
-    createModalData.data!.MALScore = parseFloat(
-      createModalData.data!.MALScore.toString()
-    );
-    await AnimeService.createAnime(createModalData.data!)
-      .then((resp: any) => {
-        getData(lastFetchParams.current!);
-        setCreateModalData({ status: false });
+    try {
+      const res = await AnimeService.createAnime(createModalData.data!);
+      if (res.status === 200) {
         Toastify({
-          text: "Anime created successfully",
+          text: "Anime başarıyla oluşturuldu",
           duration: 3000,
           close: true,
           gravity: "top",
@@ -211,49 +261,34 @@ export default function AnimePage() {
           backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
           stopOnFocus: true,
         }).showToast();
-      })
-      .catch((err) => {
-        Toastify({
-          text: "Failed to create anime",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-          stopOnFocus: true,
-        }).showToast();
-      });
+        setCreateModalData({ status: false });
+        getData({
+          page: 1,
+          count: 10,
+          filters: [],
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      Toastify({
+        text: "Anime oluşturulurken bir hata oluştu",
+        duration: 3000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+        stopOnFocus: true,
+      }).showToast();
+    }
   }
 
   const tableRerender: TEATable.FetchData = async (params) => {
-    const updatedParams = { ...params };
-
-    if (
-      lastFetchParams.current &&
-      (lastFetchParams.current.order !== params.order ||
-        lastFetchParams.current.orderBy !== params.orderBy ||
-        JSON.stringify(lastFetchParams.current.filters) !==
-          JSON.stringify(params.filters))
-    ) {
-      updatedParams.page = 1;
-    }
-
-    setTableData({
-      data: [],
-      pagination: {
-        currentPage: updatedParams.page || 1,
-        itemCount: 0,
-        totalItemCount: 0,
-        itemsPerPage: 10,
-        totalPageCount: 0,
-      },
-    });
-
-    await getData(updatedParams);
+    getData(params);
   };
 
   useEffect(() => {
     getGenres();
+    getSeries();
     setOuterColumns((prev) => {
       if (!prev.some((column) => column.value === "Settings")) {
         return [
@@ -269,24 +304,40 @@ export default function AnimePage() {
         return prev;
       }
     });
-    const handleResize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
   }, []);
 
   return (
-    <div className="mx-auto bg-white w-[1000px]">
-      <div className="bg-background min-h-screen p-4 grid gap-4">
-        <div className="h-[calc(100vh-550px)]">
+    <div>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          width: "100%",
+          overflow: "hidden",
+          "@media (max-width: 768px)": {
+            width: "100%",
+            position: "absolute",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            padding: "10px",
+            left: "0px",
+            top: "50px",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            width: "100%",
+            padding: windowSize.width < 768 ? "10px" : "20px",
+            overflow: "hidden",
+          }}
+        >
           <TableHeaders
             genres={genres}
             filterState={filterState}
@@ -300,6 +351,7 @@ export default function AnimePage() {
             windowSize={windowSize}
             tableRerender={tableRerender}
           />
+
           <TableTemp
             tableName="anime-table"
             data={tableData}
@@ -317,18 +369,20 @@ export default function AnimePage() {
             }}
             tableRerender={tableRerender}
             style={{
-              height: windowSize.height - 200,
+              height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
+              width: "100%",
+              maxWidth: "100vw",
             }}
             selectionFilters={filterState}
             setSelectionFilters={tableFilterProps.setFilterState}
             loading={dataLoading}
             dimensions={{
-              height: windowSize.height - 200,
-              width: windowSize.width - 150,
+              height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
+              width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
             }}
           />
-        </div>
-      </div>
+        </Box>
+      </Box>
       <UpdateDeleteAnimeModal
         modalData={modalData}
         setModalData={setModalData}

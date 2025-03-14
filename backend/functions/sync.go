@@ -3,19 +3,43 @@ package functions
 import (
 	"encoding/json"
 	"fmt"
+	"local-db-app/migrations"
 	"local-db-app/models"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/darenliang/jikan-go"
 	"gorm.io/gorm"
 )
 
-// SyncAnimeData, veritabanındaki eksik anime bilgilerini Jikan API'si ile dolduran fonksiyon
-func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
+// Senkronizasyon işlemini iptal etmek için global değişkenler
+var (
+	syncCancelChan = make(chan struct{}, 1) // Buffered kanal olarak değiştirdim
+	syncActive     = false
+	syncMutex      sync.Mutex
+)
+
+// ResetSyncState, senkronizasyon durumunu sıfırlayan fonksiyon
+func ResetSyncState() {
+	syncMutex.Lock()
+	defer syncMutex.Unlock()
+	syncActive = false
+	// Kanalı temizle
+	select {
+	case <-syncCancelChan:
+		// Kanalı temizle
+	default:
+		// Kanal zaten boş
+	}
+	log.Println("Senkronizasyon durumu sıfırlandı")
+}
+
+// CancelSync, devam eden senkronizasyon işlemini iptal eden fonksiyon
+func CancelSync() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -32,21 +56,123 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
+		syncMutex.Lock()
+		// Force parametresi varsa, durumu zorla sıfırla
+		forceParam := r.URL.Query().Get("force")
+		forceReset := forceParam == "true"
+
+		if syncActive || forceReset {
+			// İptal sinyali gönder
+			select {
+			case syncCancelChan <- struct{}{}:
+				log.Println("Senkronizasyon iptal sinyali gönderildi")
+			default:
+				// Kanal dolu ise, zaten iptal sinyali gönderilmiş demektir
+				log.Println("Senkronizasyon zaten iptal ediliyor")
+			}
+
+			// Force parametresi varsa, durumu zorla sıfırla
+			if forceReset {
+				syncActive = false
+				log.Println("Senkronizasyon durumu zorla sıfırlandı (force=true)")
+			}
+
+			syncMutex.Unlock()
+			w.Write([]byte(`{"success": true, "message": "Senkronizasyon iptal edildi"}`))
+		} else {
+			syncMutex.Unlock()
+			w.Write([]byte(`{"success": false, "message": "Aktif senkronizasyon işlemi bulunamadı"}`))
+		}
+	}
+}
+
+// SyncAnimeData, veritabanındaki eksik anime bilgilerini Jikan API'si ile dolduran fonksiyon
+func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream") // SSE için content type
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != "GET" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Senkronizasyon durumunu kontrol et
+		syncMutex.Lock()
+		if syncActive {
+			syncMutex.Unlock()
+			http.Error(w, "Başka bir senkronizasyon işlemi zaten çalışıyor", http.StatusConflict)
+			return
+		}
+
+		// Yeni bir iptal kanalı oluştur
+		// Kanalı temizle (varsa bekleyen sinyalleri tüket)
+		select {
+		case <-syncCancelChan:
+			// Kanalı temizle
+		default:
+			// Kanal zaten boş
+		}
+
+		syncActive = true
+		syncMutex.Unlock()
+
+		// İşlem tamamlandığında senkronizasyon durumunu güncelle
+		defer func() {
+			syncMutex.Lock()
+			syncActive = false
+			syncMutex.Unlock()
+			log.Println("Senkronizasyon durumu güncellendi: syncActive = false")
+		}()
+
+		// SSE için flusher
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming desteklenmiyor", http.StatusInternalServerError)
+			return
+		}
+
+		// SSE mesajı gönderme fonksiyonu
+		sendSSEMessage := func(eventType string, data interface{}) {
+			dataJSON, err := json.Marshal(data)
+			if err != nil {
+				log.Printf("JSON marshal hatası: %v", err)
+				return
+			}
+			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventType, dataJSON)
+			flusher.Flush()
+		}
+
 		// Yanıt yapısı
 		type SyncResponse struct {
-			Success bool     `json:"success"`
-			Message string   `json:"message"`
-			Updated int      `json:"updated"`
-			Failed  int      `json:"failed"`
-			Errors  []string `json:"errors,omitempty"`
+			Success   bool     `json:"success"`
+			Message   string   `json:"message"`
+			Updated   int      `json:"updated"`
+			Failed    int      `json:"failed"`
+			Errors    []string `json:"errors,omitempty"`
+			Progress  float64  `json:"progress"`
+			TotalWork int      `json:"totalWork"`
+			Completed int      `json:"completed"`
 		}
 
 		response := SyncResponse{
-			Success: false,
-			Message: "",
-			Updated: 0,
-			Failed:  0,
-			Errors:  []string{},
+			Success:   false,
+			Message:   "",
+			Updated:   0,
+			Failed:    0,
+			Errors:    []string{},
+			Progress:  0,
+			TotalWork: 0,
+			Completed: 0,
 		}
 
 		// Sayfalama parametrelerini al
@@ -87,22 +213,43 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 		if result.Error != nil {
 			response.Message = "Veritabanından anime kayıtları alınamadı"
 			response.Errors = append(response.Errors, result.Error.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			sendSSEMessage("error", response)
 			return
 		}
 
-		log.Printf("Toplam %d anime kaydı bulundu", len(animes))
+		totalAnimes := len(animes)
+		log.Printf("Toplam %d anime kaydı bulundu", totalAnimes)
 
-		if len(animes) == 0 {
+		// Toplam iş miktarını güncelle
+		response.TotalWork = totalAnimes
+		sendSSEMessage("start", response)
+
+		if totalAnimes == 0 {
 			response.Success = true
 			response.Message = "Veritabanında anime kaydı bulunamadı"
-			json.NewEncoder(w).Encode(response)
+			response.Progress = 100
+			sendSSEMessage("complete", response)
 			return
 		}
 
 		// Her bir anime için eksik bilgileri doldur
-		for _, anime := range animes {
+		for i, anime := range animes {
+			// İptal edilip edilmediğini kontrol et
+			select {
+			case <-syncCancelChan:
+				log.Println("Senkronizasyon kullanıcı tarafından iptal edildi")
+				response.Success = false
+				response.Message = "Senkronizasyon kullanıcı tarafından iptal edildi"
+				sendSSEMessage("error", response)
+				return
+			default:
+				// İptal edilmedi, devam et
+			}
+
+			// İlerleme durumunu güncelle
+			response.Completed = i + 1
+			response.Progress = float64(i+1) / float64(totalAnimes) * 100
+
 			// Eksik bilgileri kontrol et
 			needsUpdate := false
 			missingFields := []string{}
@@ -158,6 +305,9 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 
 			if !needsUpdate {
 				log.Printf("Anime güncel: %s (ID: %d)", anime.Name, anime.ID)
+				// İlerleme durumunu gönder
+				response.Message = fmt.Sprintf("Anime güncel: %s (ID: %d)", anime.Name, anime.ID)
+				sendSSEMessage("progress", response)
 				continue
 			}
 
@@ -166,10 +316,26 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 				anime.MALAnimeLink, anime.MALScore, anime.TotalNumberOfEpisodes, anime.AnimeStatus, anime.Cover)
 			log.Printf("Genre: %s", anime.Genre)
 
+			// İlerleme durumunu gönder
+			response.Message = fmt.Sprintf("Anime işleniyor: %s (ID: %d), Eksik alanlar: %v", anime.Name, anime.ID, missingFields)
+			sendSSEMessage("progress", response)
+
 			// Jikan API'ye istek yapmadan önce bir gecikme ekle (rate limit'i aşmamak için)
 			// Her istek için 4 saniye bekle (Jikan API rate limit'i aşmamak için)
 			log.Printf("Rate limit'i aşmamak için 4 saniye bekleniyor...")
-			time.Sleep(4 * time.Second)
+
+			// Sleep yerine timer ve select kullanarak iptal edilebilir bekleme
+			select {
+			case <-time.After(4 * time.Second):
+				// Bekleme tamamlandı, devam et
+			case <-syncCancelChan:
+				// İptal sinyali alındı
+				log.Println("Senkronizasyon kullanıcı tarafından iptal edildi (bekleme sırasında)")
+				response.Success = false
+				response.Message = "Senkronizasyon kullanıcı tarafından iptal edildi"
+				sendSSEMessage("error", response)
+				return
+			}
 
 			// Anime adını kullanarak Jikan API'de ara
 			searchParams := url.Values{}
@@ -177,6 +343,8 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 			searchParams.Set("limit", "5") // Daha fazla sonuç al
 
 			log.Printf("Jikan API'ye istek gönderiliyor: %s", anime.Name)
+			response.Message = fmt.Sprintf("Jikan API'ye istek gönderiliyor: %s", anime.Name)
+			sendSSEMessage("progress", response)
 
 			// Yeniden deneme mekanizması
 			var animeList *jikan.AnimeSearch
@@ -191,9 +359,27 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 				}
 
 				log.Printf("Jikan API hatası (deneme %d/%d): %v", retry+1, maxRetries, err)
+				response.Message = fmt.Sprintf("Jikan API hatası (deneme %d/%d): %v", retry+1, maxRetries, err)
+				sendSSEMessage("progress", response)
+
 				if retry < maxRetries-1 {
 					log.Printf("%s sonra tekrar denenecek...", retryDelay)
-					time.Sleep(retryDelay)
+					response.Message = fmt.Sprintf("%s sonra tekrar denenecek...", retryDelay)
+					sendSSEMessage("progress", response)
+
+					// Sleep yerine timer ve select kullanarak iptal edilebilir bekleme
+					select {
+					case <-time.After(retryDelay):
+						// Bekleme tamamlandı, devam et
+					case <-syncCancelChan:
+						// İptal sinyali alındı
+						log.Println("Senkronizasyon kullanıcı tarafından iptal edildi (yeniden deneme beklemesi sırasında)")
+						response.Success = false
+						response.Message = "Senkronizasyon kullanıcı tarafından iptal edildi"
+						sendSSEMessage("error", response)
+						return
+					}
+
 					retryDelay *= 2 // Her denemede bekleme süresini iki katına çıkar (5s, 10s, 20s)
 				}
 			}
@@ -202,6 +388,8 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 				log.Printf("Jikan API hatası (son): %v", err)
 				response.Failed++
 				response.Errors = append(response.Errors, fmt.Sprintf("Anime bulunamadı: %s, Hata: %v", anime.Name, err.Error()))
+				response.Message = fmt.Sprintf("Jikan API hatası (son): %v", err)
+				sendSSEMessage("progress", response)
 				continue
 			}
 
@@ -209,10 +397,14 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 				log.Printf("Anime bulunamadı: %s", anime.Name)
 				response.Failed++
 				response.Errors = append(response.Errors, fmt.Sprintf("Anime bulunamadı: %s", anime.Name))
+				response.Message = fmt.Sprintf("Anime bulunamadı: %s", anime.Name)
+				sendSSEMessage("progress", response)
 				continue
 			}
 
 			log.Printf("Jikan API'den %d sonuç alındı", len(animeList.Data))
+			response.Message = fmt.Sprintf("Jikan API'den %d sonuç alındı: %s", len(animeList.Data), anime.Name)
+			sendSSEMessage("progress", response)
 
 			// En iyi eşleşmeyi bul
 			foundAnime := animeList.Data[0]
@@ -344,12 +536,28 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 			if anime.Series == 0 && foundAnime.MalId > 0 {
 				// Rate limit'i aşmamak için bir gecikme ekle
 				log.Printf("Relations için rate limit'i aşmamak için 4 saniye bekleniyor...")
-				time.Sleep(4 * time.Second)
+				response.Message = "Relations için rate limit'i aşmamak için bekleniyor..."
+				sendSSEMessage("progress", response)
+
+				// Sleep yerine timer ve select kullanarak iptal edilebilir bekleme
+				select {
+				case <-time.After(4 * time.Second):
+					// Bekleme tamamlandı, devam et
+				case <-syncCancelChan:
+					// İptal sinyali alındı
+					log.Println("Senkronizasyon kullanıcı tarafından iptal edildi (relations bekleme sırasında)")
+					response.Success = false
+					response.Message = "Senkronizasyon kullanıcı tarafından iptal edildi"
+					sendSSEMessage("error", response)
+					return
+				}
 
 				// Anime ID'sini kullanarak ilişkili animeleri al
 				animeRelations, err := jikan.GetAnimeRelations(foundAnime.MalId)
 				if err != nil {
 					log.Printf("İlişkili animeler alınamadı: %s, Hata: %v", anime.Name, err)
+					response.Message = fmt.Sprintf("İlişkili animeler alınamadı: %s, Hata: %v", anime.Name, err)
+					sendSSEMessage("progress", response)
 				} else if animeRelations != nil && len(animeRelations.Data) > 0 {
 					var seriesName string
 
@@ -362,6 +570,8 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 								if entry.Type == "anime" {
 									seriesName = entry.Name
 									log.Printf("Parent story bulundu: %s", seriesName)
+									response.Message = fmt.Sprintf("Parent story bulundu: %s", seriesName)
+									sendSSEMessage("progress", response)
 									break
 								}
 							}
@@ -379,6 +589,8 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 									if entry.Type == "anime" {
 										seriesName = entry.Name
 										log.Printf("Alternative setting/version bulundu: %s", seriesName)
+										response.Message = fmt.Sprintf("Alternative setting/version bulundu: %s", seriesName)
+										sendSSEMessage("progress", response)
 										break
 									}
 								}
@@ -411,6 +623,8 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 											seriesName = strings.TrimSpace(seriesName)
 										}
 										log.Printf("Sequel/Prequel ilişkisinden seri adı çıkarıldı: %s -> %s", relatedName, seriesName)
+										response.Message = fmt.Sprintf("Sequel/Prequel ilişkisinden seri adı çıkarıldı: %s -> %s", relatedName, seriesName)
+										sendSSEMessage("progress", response)
 										break
 									}
 								}
@@ -430,19 +644,28 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 						if seriesResult.Error != nil {
 							// Seri bulunamadıysa oluştur
 							log.Printf("Yeni seri oluşturuluyor: %s", seriesName)
+							response.Message = fmt.Sprintf("Yeni seri oluşturuluyor: %s", seriesName)
+							sendSSEMessage("progress", response)
+
 							seriesRecord = models.Series{
 								Name: seriesName,
 							}
 							createResult := db.Table("anime.anime_series").Create(&seriesRecord)
 							if createResult.Error != nil {
 								log.Printf("Seri oluşturulamadı: %s, Hata: %v", seriesName, createResult.Error)
+								response.Message = fmt.Sprintf("Seri oluşturulamadı: %s, Hata: %v", seriesName, createResult.Error)
+								sendSSEMessage("progress", response)
 							} else {
 								log.Printf("Yeni seri oluşturuldu: %s (ID: %d)", seriesName, seriesRecord.ID)
+								response.Message = fmt.Sprintf("Yeni seri oluşturuldu: %s (ID: %d)", seriesName, seriesRecord.ID)
+								sendSSEMessage("progress", response)
 								updates["series"] = seriesRecord.ID
 							}
 						} else {
 							// Seri bulundu, ID'sini kullan
 							log.Printf("Mevcut seri bulundu: %s (ID: %d)", seriesName, seriesRecord.ID)
+							response.Message = fmt.Sprintf("Mevcut seri bulundu: %s (ID: %d)", seriesName, seriesRecord.ID)
+							sendSSEMessage("progress", response)
 							updates["series"] = seriesRecord.ID
 						}
 					}
@@ -453,29 +676,121 @@ func SyncAnimeData(db *gorm.DB) http.HandlerFunc {
 			if len(updates) > 0 || genreUpdated {
 				if len(updates) > 0 {
 					log.Printf("Anime güncellenecek: %s, Güncellemeler: %v", anime.Name, updates)
+					response.Message = fmt.Sprintf("Anime güncellenecek: %s", anime.Name)
+					sendSSEMessage("progress", response)
+
 					updateResult := db.Table("anime.animes").Where("id = ?", anime.ID).Updates(updates)
 					if updateResult.Error != nil {
 						log.Printf("Anime güncellenemedi: %s, Hata: %v", anime.Name, updateResult.Error)
 						response.Failed++
 						response.Errors = append(response.Errors, fmt.Sprintf("Anime güncellenemedi: %s, Hata: %v", anime.Name, updateResult.Error.Error()))
+						response.Message = fmt.Sprintf("Anime güncellenemedi: %s, Hata: %v", anime.Name, updateResult.Error)
+						sendSSEMessage("progress", response)
 						continue
 					}
 					log.Printf("Anime güncellendi (updates): %s (ID: %d), Etkilenen satır: %d", anime.Name, anime.ID, updateResult.RowsAffected)
+					response.Message = fmt.Sprintf("Anime güncellendi: %s (ID: %d)", anime.Name, anime.ID)
+					sendSSEMessage("progress", response)
 				}
 
 				if genreUpdated {
 					log.Printf("Anime türleri güncellendi: %s (ID: %d)", anime.Name, anime.ID)
+					response.Message = fmt.Sprintf("Anime türleri güncellendi: %s (ID: %d)", anime.Name, anime.ID)
+					sendSSEMessage("progress", response)
 				}
 
 				response.Updated++
 			} else {
 				log.Printf("Anime için güncellenecek veri bulunamadı: %s (ID: %d)", anime.Name, anime.ID)
+				response.Message = fmt.Sprintf("Anime için güncellenecek veri bulunamadı: %s (ID: %d)", anime.Name, anime.ID)
+				sendSSEMessage("progress", response)
 				// Burada hata olarak eklemeyelim, sadece log olarak kaydedelim
 			}
 		}
 
 		response.Success = true
 		response.Message = fmt.Sprintf("Toplam %d anime güncellendi, %d anime güncellenemedi (limit: %d)", response.Updated, response.Failed, limit)
-		json.NewEncoder(w).Encode(response)
+		response.Progress = 100
+
+		// URL'den fixSeries parametresini al - series düzeltme işlemini opsiyonel yap
+		fixSeriesParam := r.URL.Query().Get("fixSeries")
+		shouldFixSeries := fixSeriesParam == "true"
+
+		if !shouldFixSeries {
+			log.Println("Series düzeltme işlemi atlanıyor (fixSeries=true parametresi belirtilmedi)")
+			response.Message = fmt.Sprintf("Toplam %d anime güncellendi, %d anime güncellenemedi. Series düzeltme işlemi atlandı.", response.Updated, response.Failed)
+			sendSSEMessage("complete", response)
+			return
+		}
+
+		// Senkronizasyon tamamlandıktan sonra series düzeltme işlemi çalıştır
+		log.Println("Senkronizasyon tamamlandı, series düzeltme işlemi başlatılıyor...")
+		response.Message = "Senkronizasyon tamamlandı, series düzeltme işlemi başlatılıyor..."
+		sendSSEMessage("progress", response)
+
+		// Series düzeltme işlemini çalıştır - timeout ekleyelim
+		seriesDone := make(chan bool, 1)
+		seriesError := make(chan error, 1)
+
+		go func() {
+			if err := migrations.FixSeriesData(db); err != nil {
+				seriesError <- err
+				return
+			}
+			seriesDone <- true
+		}()
+
+		// 30 saniye timeout ekleyelim
+		select {
+		case err := <-seriesError:
+			log.Printf("Series veri düzeltme hatası: %v", err)
+			response.Message = fmt.Sprintf("Series veri düzeltme hatası: %v", err)
+			sendSSEMessage("progress", response)
+		case <-seriesDone:
+			log.Println("Series veri düzeltme işlemi tamamlandı")
+			response.Message = "Series veri düzeltme işlemi tamamlandı"
+			sendSSEMessage("progress", response)
+		case <-time.After(30 * time.Second):
+			log.Println("Series veri düzeltme işlemi zaman aşımına uğradı, devam ediliyor")
+			response.Message = "Series veri düzeltme işlemi zaman aşımına uğradı, devam ediliyor"
+			sendSSEMessage("progress", response)
+		}
+
+		// Seri verilerini temizle ve birleştir
+		log.Println("Seri verilerini temizleme ve birleştirme işlemi başlatılıyor...")
+		response.Message = "Seri verilerini temizleme ve birleştirme işlemi başlatılıyor..."
+		sendSSEMessage("progress", response)
+
+		// Cleanup işlemini de timeout ile çalıştıralım
+		cleanupDone := make(chan bool, 1)
+		cleanupError := make(chan error, 1)
+
+		go func() {
+			if err := migrations.CleanupAndMergeSeriesData(db); err != nil {
+				cleanupError <- err
+				return
+			}
+			cleanupDone <- true
+		}()
+
+		// 60 saniye timeout ekleyelim
+		select {
+		case err := <-cleanupError:
+			log.Printf("Seri verilerini temizleme ve birleştirme hatası: %v", err)
+			response.Message = fmt.Sprintf("Seri verilerini temizleme ve birleştirme hatası: %v", err)
+			sendSSEMessage("progress", response)
+		case <-cleanupDone:
+			log.Println("Seri verilerini temizleme ve birleştirme işlemi tamamlandı")
+			response.Message = "Seri verilerini temizleme ve birleştirme işlemi tamamlandı"
+			sendSSEMessage("progress", response)
+		case <-time.After(60 * time.Second):
+			log.Println("Seri verilerini temizleme işlemi zaman aşımına uğradı")
+			response.Message = "Seri verilerini temizleme işlemi zaman aşımına uğradı"
+			sendSSEMessage("progress", response)
+		}
+
+		// İşlem tamamlandı mesajını gönder
+		response.Message = fmt.Sprintf("Toplam %d anime güncellendi, %d anime güncellenemedi (limit: %d). Series düzeltme işlemi tamamlandı.", response.Updated, response.Failed, limit)
+		sendSSEMessage("complete", response)
 	}
 }

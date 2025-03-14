@@ -35,23 +35,33 @@ export default function Genre(props: {
   return (
     <TableCell align="center" id={props.key}>
       <Box
-        style={{
+        sx={{
           display: "grid",
-          gridTemplateColumns: "4fr 4fr 4fr",
-          gap: 5,
+          gridTemplateColumns: {
+            xs: "repeat(3, 1fr)", // Mobil görünümde 3 sütun
+            sm: "repeat(3, 1fr)", // Tablet görünümde 3 sütun
+            md: "repeat(3, 1fr)", // Küçük masaüstü görünümde 3 sütun
+            lg: "repeat(4, 1fr)", // Büyük masaüstü görünümde 4 sütun
+          },
+          gap: { xs: 1, sm: 1, md: 1.5, lg: 2 },
+          width: "100%",
+          justifyContent: "center",
+          alignItems: "center",
         }}
       >
         {props.genres.length !== 0 &&
           props.genres.split(", ").map((pill: string, index: number) => (
             <Button
+              key={`button-${pill}-${index}`}
               sx={{
                 // Butonun tüm stil özelliklerini kaldır
                 display: "inline-block",
                 backgroundColor: "transparent",
                 cursor: "pointer",
                 padding: 0, // İç boşlukları sıfırlayın
-                width: "auto",
+                width: "100%",
                 height: "auto",
+                margin: "2px 0",
                 ":hover": {
                   backgroundColor: "transparent",
                 },
@@ -88,10 +98,19 @@ export default function Genre(props: {
                 size="small"
                 label={pill}
                 color="primary"
-                style={{
+                sx={{
                   backgroundColor: genreColors[pill as string],
                   color: getFontColor(genreColors[pill as string]),
-                  minWidth: 80,
+                  minWidth: { xs: "100%", sm: "100%", md: "80px" },
+                  maxWidth: "100%",
+                  height: "24px",
+                  "& .MuiChip-label": {
+                    padding: "0 8px",
+                    fontSize: { xs: "0.7rem", sm: "0.75rem", md: "0.8rem" },
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  },
                 }}
               />
             </Button>

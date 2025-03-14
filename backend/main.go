@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -51,6 +52,8 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Uygulama başladığında senkronizasyon durumunu sıfırla
+	anime_functions.ResetSyncState()
 
 	err := godotenv.Load()
 	if err != nil {
@@ -100,19 +103,31 @@ func main() {
 	router := mux.NewRouter()
 
 	dsn := fmt.Sprintf("host='%s' port=%d user='%s' password=%s dbname='%s' sslmode=disable", host, dbport, user, password, dbname)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		PrepareStmt: true, // SQL ifadelerini önbelleğe al
+	})
 	if err != nil {
 		panic("Veritabanına bağlanılamadı: " + err.Error())
 	}
+
+	// Veritabanı bağlantı havuzu ayarları
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("Veritabanı bağlantı havuzu oluşturulamadı: " + err.Error())
+	}
+
+	// Bağlantı havuzu ayarları
+	sqlDB.SetMaxIdleConns(10)           // Boşta bekleyen maksimum bağlantı sayısı
+	sqlDB.SetMaxOpenConns(100)          // Maksimum açık bağlantı sayısı
+	sqlDB.SetConnMaxLifetime(time.Hour) // Bağlantı maksimum yaşam süresi
+
 	defer func() {
-		dbInstance, _ := db.DB()
-		_ = dbInstance.Close()
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("Veritabanı bağlantısı kapatılırken hata: %v", err)
+		}
 	}()
 
-	// Migrasyon işlemlerini çalıştır
-	if err := migrations.FixSeriesData(db); err != nil {
-		log.Printf("Series veri düzeltme hatası: %v", err)
-	}
+	// Sadece temel tablo oluşturma işlemini yap, diğer migration işlemlerini kaldır
 	migrations.CreateSeriesTable(db)
 
 	port := os.Getenv("PORT")
@@ -127,6 +142,13 @@ func main() {
 
 	// Senkronizasyon API ucu
 	router.HandleFunc("/syncAnimeData", anime_functions.SyncAnimeData(db))
+	router.HandleFunc("/cancelSync", anime_functions.CancelSync())
+	// Senkronizasyon durumunu sıfırlamak için yeni endpoint
+	router.HandleFunc("/resetSyncState", func(w http.ResponseWriter, r *http.Request) {
+		anime_functions.ResetSyncState()
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"success": true, "message": "Senkronizasyon durumu sıfırlandı"}`))
+	})
 
 	// MAL API uçları
 	router.HandleFunc("/getAnime", anime_functions.GetAnimeHandler)
