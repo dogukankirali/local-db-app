@@ -46,10 +46,23 @@ export default function TableHeaders(props: {
   } | null>(null);
 
   // isAdmin kontrolü ekleyelim
-
   let isAdmin = false;
-  if (localStorage.getItem("user")) {
-    isAdmin = JSON.parse(localStorage.getItem("user")!).isAdmin;
+
+  // Props'tan gelen user bilgisini kullan
+  if (props.user) {
+    isAdmin = props.user.isAdmin || false;
+  }
+  // Eğer props'tan gelen user bilgisi yoksa localStorage'dan kontrol et
+  else if (typeof window !== "undefined") {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        isAdmin = userData?.isAdmin || false;
+      }
+    } catch (error) {
+      console.error("Kullanıcı bilgisi ayrıştırılamadı:", error);
+    }
   }
 
   // Synchronize all anime
