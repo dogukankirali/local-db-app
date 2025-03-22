@@ -3,11 +3,16 @@ package main
 import (
 	"fmt"
 	anime_functions "local-db-app/functions"
+	"local-db-app/middleware"
+	"local-db-app/migrations"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 	"gorm.io/driver/postgres"
@@ -22,11 +27,11 @@ type spaHandler struct {
 }
 
 const (
-	host     = "192.168.1.33"
-	portDb   = 5433
-	user     = "postgres"
-	password = "sp.132132"
-	dbname   = "postgres"
+	host     = ""
+	portDb   = 0
+	user     = ""
+	password = ""
+	dbname   = ""
 )
 
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -48,40 +53,147 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	certFile := "/etc/ssl/certs/server.crt"
-	keyFile := "/etc/ssl/certs/server.key"
-	/* certFile := "./server.crt"
-	keyFile := "./server.key"
-	*/
+	// Uygulama başladığında senkronizasyon durumunu sıfırla
+	anime_functions.ResetSyncState()
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf(".env dosyası yüklenemedi: %v\n", err)
+		// Alternatif konumları deneyelim
+		alternativePaths := []string{
+			"./.env",
+			"../.env",
+			"../../.env",
+			"/app/.env", // Docker için
+		}
+
+		for _, path := range alternativePaths {
+			if err := godotenv.Load(path); err == nil {
+				log.Printf(".env dosyası başarıyla yüklendi: %s\n", path)
+				break
+			}
+		}
+	}
+
+	env := os.Getenv("ENV")
+	log.Println("env", env)
+	certFile := ""
+	keyFile := ""
+	if env == "development" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
+		certFile = "./server.crt"
+		keyFile = "./server.key"
+	} else {
+		certFile = "/etc/ssl/certs/server.crt"
+		keyFile = "/etc/ssl/certs/server.key"
+	}
+	host := os.Getenv("DB_HOST")
+	portDb := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	dbport, err := strconv.Atoi(portDb)
+	if err != nil {
+		log.Fatalf("Invalid port number: %v", err)
+	}
+
 	router := mux.NewRouter()
 
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, portDb, user, password, dbname)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	dsn := fmt.Sprintf("host='%s' port=%d user='%s' password=%s dbname='%s' sslmode=disable", host, dbport, user, password, dbname)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		PrepareStmt: true, // SQL ifadelerini önbelleğe al
+	})
 	if err != nil {
 		panic("Veritabanına bağlanılamadı: " + err.Error())
 	}
+
+	// Veritabanı bağlantı havuzu ayarları
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("Veritabanı bağlantı havuzu oluşturulamadı: " + err.Error())
+	}
+
+	// Bağlantı havuzu ayarları
+	sqlDB.SetMaxIdleConns(10)           // Boşta bekleyen maksimum bağlantı sayısı
+	sqlDB.SetMaxOpenConns(100)          // Maksimum açık bağlantı sayısı
+	sqlDB.SetConnMaxLifetime(time.Hour) // Bağlantı maksimum yaşam süresi
+
 	defer func() {
-		dbInstance, _ := db.DB()
-		_ = dbInstance.Close()
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("Veritabanı bağlantısı kapatılırken hata: %v", err)
+		}
 	}()
 
-	//port := utils.GetConfig().GetPort()
-	port := "3007"
+	// Sadece temel tablo oluşturma işlemini yap, diğer migration işlemlerini kaldır
+	migrations.CreateSeriesTable(db)
+	migrations.CreateUsersTable(db)
 
+	// PlanToWatch kolonu ekle
+	migrations.AddPlanToWatchColumn(db)
+
+	// Watch List tablosunu oluştur
+	migrations.CreateWatchListTable(db)
+
+	port := os.Getenv("PORT")
+
+	// API rotaları
 	router.HandleFunc("/getAnimeTable", anime_functions.GetAnimeTableData(db))
 	router.HandleFunc("/getGenres", anime_functions.GetGenres(db))
+	router.HandleFunc("/getSeries", anime_functions.GetSeries(db))
 	router.HandleFunc("/updateAnimeTable", anime_functions.UpdateAnimeTableData(db))
 	router.HandleFunc("/createAnime", anime_functions.CreateAnimeTableData(db))
 	router.HandleFunc("/deleteAnime", anime_functions.DeleteAnimeTableData(db))
 	router.HandleFunc("/createAnimeWithFile", anime_functions.CreateAnimeTableDataWithFile(db))
 
-	/* router.HandleFunc("/getUserList", common.ForwardRequest("/auth/userlist"))
-	   router.HandleFunc("/logout", auth.Logout())
-	   router.HandleFunc("/checkLoginStatus", auth.IsLoggedIn()) */
+	// Senkronizasyon API ucu
+	router.HandleFunc("/syncAnimeData", anime_functions.SyncAnimeData(db))
+	router.HandleFunc("/cancelSync", anime_functions.CancelSync())
+	// Senkronizasyon durumunu sıfırlamak için yeni endpoint
+	router.HandleFunc("/resetSyncState", func(w http.ResponseWriter, r *http.Request) {
+		anime_functions.ResetSyncState()
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"success": true, "message": "Senkronizasyon durumu sıfırlandı"}`))
+	})
+
+	// MAL API uçları
+	router.HandleFunc("/getAnime", anime_functions.GetAnimeHandler)
+	router.HandleFunc("/getManga", anime_functions.GetMangaHandler)
+	// ID'ye göre anime getirme
+	router.HandleFunc("/getAnimeById", anime_functions.GetAnimeById(db)).Methods("GET", "OPTIONS")
+
+	// Kullanıcı API uçları
+	router.HandleFunc("/auth/register", anime_functions.Register(db))
+	router.HandleFunc("/auth/login", anime_functions.Login(db))
+
+	// Watch List API uçları
+	router.HandleFunc("/watchlist", anime_functions.GetWatchList(db)).Methods("GET", "OPTIONS")
+	router.HandleFunc("/watchlist", anime_functions.AddToWatchList(db)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/watchlist/order", anime_functions.UpdateWatchListOrder(db)).Methods("PUT", "OPTIONS")
+	router.HandleFunc("/watchlist", anime_functions.RemoveFromWatchList(db)).Methods("DELETE", "OPTIONS")
+	router.HandleFunc("/watchlist/sync", anime_functions.AutoSyncPlanToWatch(db)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/test-plan-to-watch", anime_functions.TestPlanToWatch(db)).Methods("GET", "OPTIONS")
+
+	// Korumalı rotalar için bir alt router oluştur
+	authRouter := router.PathPrefix("/auth").Subrouter()
+	authRouter.Use(middleware.AuthMiddleware)
+
+	// Korumalı kullanıcı rotaları
+	authRouter.HandleFunc("/profile", anime_functions.GetProfile(db)).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/profile", anime_functions.UpdateProfile(db)).Methods("PUT", "OPTIONS")
+
+	// Admin rotaları için bir alt router oluştur
+	adminRouter := router.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(middleware.AuthMiddleware, middleware.AdminMiddleware)
+
+	// Admin rotaları buraya eklenecek
 
 	router.HandleFunc("/healthcheck",
 		func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("It's dangerous to go alone, take some tea with you..."))
+			w.Write([]byte("It's dangerous to go alone, take this sword with you..."))
 		})
 
 	spa := spaHandler{staticPath: "frontend/build", indexPath: "index.html"}
@@ -89,10 +201,27 @@ func main() {
 
 	// CORS middleware'ini ekle
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*", "http://localhost:3000/"}, // React uygulamanızın çalıştığı adres
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
+		AllowedOrigins: []string{
+			"http://localhost:3000",  // trailing slash olmadan
+			"https://localhost:3000", // HTTPS için
+			"http://localhost:8080",  // backend portu için
+			"https://localhost:8080", // backend HTTPS için
+			"*",                      // Tüm kaynaklar için
+		},
+		AllowedMethods: []string{
+			"GET", "POST", "PUT", "DELETE", "OPTIONS", // OPTIONS ekleyin
+		},
+		AllowedHeaders: []string{
+			"Content-Type",
+			"Authorization",
+			"X-Requested-With",
+			"Accept",
+			"Origin",
+			"*", // Tüm başlıklar için
+		},
+		AllowCredentials: true, // Kimlik bilgilerini kabul et
+		// Debug modunu açalım
+		Debug: true,
 	}).Handler(router)
 
 	srv := &http.Server{
@@ -101,8 +230,6 @@ func main() {
 	}
 
 	log.Println("Server starting at port " + port)
-
-	//devMode := utils.GetConfig().GetDevMode()
 	log.Fatal(srv.ListenAndServeTLS(certFile, keyFile))
 	/* if devMode {
 	        log.Fatal(srv.ListenAndServeTLS("localhost.pem", "localhost-key.pem"))

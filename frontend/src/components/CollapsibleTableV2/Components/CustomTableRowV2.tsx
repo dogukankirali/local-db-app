@@ -16,6 +16,7 @@ import {
   LinearProgressProps,
   Popover,
   Typography,
+  Collapse,
 } from "@mui/material";
 import moment from "moment-timezone";
 import { theme } from "../../../theme/customTheme";
@@ -24,6 +25,14 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import React from "react";
 import LocalMoviesIcon from "@mui/icons-material/LocalMovies";
 import TvIcon from "@mui/icons-material/Tv";
+import { genreColors } from "../../../constants/Constants";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+
+// IColumnItem tipini genişleterek hide özelliğini ekleyelim
+interface IExtendedColumnItem extends TEATable.IColumnItem {
+  hide?: boolean;
+}
 
 export default function CustomTableRowV2(
   props: TEATable.ICustomTableRowPropsV2
@@ -34,6 +43,11 @@ export default function CustomTableRowV2(
   );
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [popData, setPopData] = React.useState<string | null>(null);
+
+  // headers'ı IExtendedColumnItem[] olarak belirtelim
+  const headers = props.headers as IExtendedColumnItem[];
+  const rowIndex = props.index || 0;
+
   const handlePopoverOpen = (
     event: React.MouseEvent<HTMLElement>,
     source: string
@@ -74,95 +88,6 @@ export default function CustomTableRowV2(
     "80-89": "#FFDF00", // Sarı Yeşil
     "90-99": "#00FF00", // Yeşil
     "100": "#00B0F0", // Mavi
-  };
-
-  const genreColors: { [key: string]: string } = {
-    Shounen: "#FF4500", // Ateş Kırmızısı
-    Shoujo: "#FF69B4", // Barbie Pembesi
-    Seinen: "#008080", // Deniz Yeşili
-    Josei: "#FF1493", // Parlak Pembe
-    Mecha: "#808080", // Metal Gri
-    "Slice of Life": "#F0E68C", // Açık Sarı
-    Fantastik: "#9932CC", // Şeftali Moru
-    Korku: "#8B0000", // Kan Kırmızısı
-    Spor: "#32CD32", // Çimen Yeşili
-    "Bilim Kurgu": "#00CED1", // Açık Mavi
-    Romantik: "#FFB6C1", // Gül Rengi
-    Dram: "#696969", // Kurşuni Gri
-    Aksiyon: "#FFD700", // Altın Sarısı
-    Komedi: "#FF8C00", // Hardal Sarısı
-    Macera: "#006400", // Orman Yeşili
-    Doğaüstü: "#8A2BE2", // Bordo Mor
-    Psikolojik: "#2F4F4F", // Teneke Gri
-    Yaoi: "#FFA07A", // Açık Somon
-    Yuri: "#9370DB", // Orkide Moru
-    Harem: "#FFC0CB", // İnci Pembe
-    "Mahou Shoujo": "#FF69B4", // Barbie Pembesi
-    Müzik: "#8B4513", // Ahşap Kahverengi
-    Savaş: "#4B0082", // İndigo
-    Samuray: "#DC143C", // Alev Kırmızısı
-    Vampir: "#800080", // Mor
-    "Vahşi Batı": "#CD853F", // Perulu
-    Okul: "#00FF7F", // Neon Yeşili
-    "Bilim Kurgu Korku": "#00CED1", // Açık Mavi
-    Gizem: "#483D8B", // Mor Mavi
-    Gerilim: "#808080", // Metal Gri
-    Zombi: "#556B2F", // Yeşil Kahverengi
-    Mücadele: "#FF4500", // Ateş Kırmızısı
-    Uzay: "#0000CD", // Orta Mavi
-    Kült: "#FF5722", // Turuncu
-    Suç: "#8B0000", // Kan Kırmızısı
-    Historical: "#DAA520", // Altın Rengi
-    "Mücadele Sporları": "#32CD32", // Çimen Yeşili
-    Müzikal: "#FFD700", // Altın Sarısı
-    "Günlük Yaşam": "#F0E68C", // Açık Sarı
-    "Karakter Gelişimi": "#006400", // Orman Yeşili
-    Fantezi: "#9932CC", // Şeftali Moru
-    Eğlence: "#FF8C00", // Hardal Sarısı
-    "Super Güçler": "#FFD700", // Altın Sarısı
-    Hayalet: "#9370DB", // Orkide Moru
-    "Kara Komedi": "#808080", // Metal Gri
-    Kahramanlık: "#00FF7F", // Neon Yeşili
-    "Hayatta Kalma": "#FF5722", // Turuncu
-    Dönem: "#696969", // Kurşuni Gri
-    Makine: "#A9A9A9", // Koyu Gri
-    Parodi: "#FF8C00", // Hardal Sarısı
-    "Hikayelere Dayalı": "#F0E68C", // Açık Sarı
-    "Kıyamet Sonrası": "#FFA500", // Portakal
-    Dedektif: "#000080", // Lacivert
-    "Dövüş Sanatları": "#32CD32", // Çimen Yeşili
-    Yetişkin: "#FF69B4", // Barbie Pembesi
-    Büyücülük: "#9932CC", // Şeftali Moru
-    "Samuraylar ve Ninja": "#DC143C", // Alev Kırmızısı
-    Sihir: "#9370DB", // Orkide Moru
-    "Bilgisayar Oyunu": "#0000CD", // Orta Mavi
-    Soyut: "#483D8B", // Mor Mavi
-    "Edebiyat Uyarlaması": "#8B4513", // Ahşap Kahverengi
-    Koşu: "#00FF7F", // Neon Yeşili
-    "Sevgililer Arasındaki İlişkiler": "#F06292", // Somon
-    Havacılık: "#DAA520", // Altın Rengi
-    Sürrealizm: "#AB82FF", // Parlak Lavanta
-    "Uzay Operası": "#000080", // Lacivert
-    "Kıyafetleri Değiştirme": "#FFEB3B", // Güneş Sarısı
-    Dans: "#00CED1", // Açık Mavi
-    Tarih: "#A0522D", // Koyu Kahverengi
-    Yarış: "#4CAF50", // Orta Yeşil
-    Yaratıklar: "#8B4513", // Ahşap Kahverengi
-    Yolculuk: "#9E9E9E", // Gümüş
-    "Aşk Üçgeni": "#BA55D3", // Orkide Rengi
-    Mangaka: "#607D8B", // Mavi Gri
-    "Öğretmen-Öğrenci İlişkisi": "#795548", // Kakao
-    "Konusu Olmayan": "#FF4500", // Ateş Kırmızısı
-    Yiyecek: "#FFA500", // Portakal
-    Oyun: "#FFD700", // Altın Sarısı
-    Polisiye: "#000080", // Lacivert
-    Mafia: "#8B0000", // Kan Kırmızısı
-    Suikastçılar: "#E57373", // Açık Kırmızı
-    "Ekip Çalışması": "#32CD32", // Çimen Yeşili
-    "Gösteri Sanatları": "#4CAF50", // Orta Yeşil
-    İntikam: "#00CED1", // Açık Mavi
-    "Kötü Karakterler": "#9E9E9E", // Gümüş
-    Isekai: "#0000E4", // Isekai
   };
 
   const colStyle = {
@@ -274,7 +199,8 @@ export default function CustomTableRowV2(
 
   return (
     <>
-      <Dialog
+      {/* Dialog'u yorum satırına alıyoruz, gerekirse tamamen kaldırabiliriz */}
+      {/* <Dialog
         open={open}
         onClose={() => setOpen(!open)}
         aria-labelledby="alert-dialog-title"
@@ -283,7 +209,10 @@ export default function CustomTableRowV2(
         PaperProps={{ sx: { backgroundColor: theme.background } }}
         sx={{ "& .MuiDialog-paper": { width: "80%" } }}
       >
-        <DialogTitle id="alert-dialog-title" sx={{ color: theme.primary_text }}>
+        <DialogTitle
+          id="alert-dialog-title"
+          sx={{ color: theme.primary_text, backgroundColor: theme.background }}
+        >
           {props.singleData !== undefined && (
             <Typography variant="h5">
               {props.singleData.Name} - Details
@@ -310,45 +239,81 @@ export default function CustomTableRowV2(
             listType="detail"
           />
         )}
-      </Dialog>
+      </Dialog> */}
       <TableRow
-        id={`${props.collapsible.inner?.tableName}_${props.index}`}
-        style={{
-          height: 58,
-          backgroundColor:
-            props.index! % 2 === 1
-              ? theme.table_row_light
-              : theme.table_row_dark,
+        sx={{
+          "& > *": { borderBottom: open ? "none" : "unset" },
+          backgroundColor: open
+            ? theme.table_row_light
+            : rowIndex % 2 === 0
+            ? theme.table_row_dark
+            : theme.table_row_light,
+          cursor: "pointer",
+          borderTop:
+            rowIndex % 2 === 0 ? "1px solid rgba(255, 255, 255, 0.12)" : "none",
+          transition: "background-color 0.2s ease-in-out",
         }}
+        onClick={() => setOpen(!open)}
       >
-        {props.collapsible.isCollapsible && (
-          <TableCell style={colStyle}>
+        {props.collapsible?.isCollapsible && (
+          <TableCell
+            sx={{
+              width: "1%",
+              backgroundColor: open
+                ? theme.table_row_light
+                : rowIndex % 2 === 0
+                ? theme.table_row_dark
+                : theme.table_row_light,
+            }}
+          >
+            {/* Akordiyon göstergesi ekliyoruz */}
             <IconButton
               aria-label="expand row"
               size="small"
-              onClick={() => setOpen(!open)}
+              onClick={(e) => {
+                e.stopPropagation(); // Ana satıra tıklama olayını engellemek için
+                setOpen(!open);
+              }}
+              sx={{
+                transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <OpenInNewIcon
-                sx={{
-                  color: theme.primary_text,
-                  ":hover": { color: theme.primary },
-                  transition: "color 0.3s ease-in-out",
-                }}
-              />
+              <KeyboardArrowDownIcon />
             </IconButton>
           </TableCell>
         )}
-        {props.headers.map((header) => {
+        {headers.map((header, index) => {
+          // Mobil cihazlar için kontrol
+          const isMobile =
+            typeof window !== "undefined" && window.innerWidth < 768;
+
+          // Eğer mobil görünümde ve header'ın hide özelliği true ise, null döndür
+          if (isMobile && (header as IExtendedColumnItem).hide) {
+            return null;
+          }
+
+          const colStyle = {
+            backgroundColor: open
+              ? theme.table_row_light
+              : rowIndex % 2 === 0
+              ? theme.table_row_dark
+              : theme.table_row_light,
+            color: theme.primary_text,
+            fontSize: isMobile ? "0.75rem" : "inherit",
+            padding: isMobile ? "8px 4px" : "16px",
+          };
+
           if (typeof header.key === "string") {
             if (header.type === "string") {
               return (
                 <TableCell
+                  key={`cell-${header.key}-${index}`}
                   align="center"
-                  style={{
-                    color: theme.primary_text,
-                    fontWeight: "semi-bold",
-                    ...colStyle,
-                  }}
+                  style={colStyle}
                 >
                   {props.singleData[header.key]}
                 </TableCell>
@@ -357,6 +322,7 @@ export default function CustomTableRowV2(
               if (props.singleData[header.key] === true) {
                 return (
                   <TableCell
+                    key={`cell-${header.key}-${index}`}
                     align="center"
                     style={{ ...colStyle, color: "green" }}
                   >
@@ -366,6 +332,7 @@ export default function CustomTableRowV2(
               } else {
                 return (
                   <TableCell
+                    key={`cell-${header.key}-${index}`}
                     align="center"
                     style={{ ...colStyle, color: "red" }}
                   >
@@ -377,6 +344,7 @@ export default function CustomTableRowV2(
               if (props.singleData[header.key] === true) {
                 return (
                   <TableCell
+                    key={`cell-${header.key}-${index}`}
                     align="center"
                     style={{ ...colStyle, color: "green" }}
                   >
@@ -386,6 +354,7 @@ export default function CustomTableRowV2(
               } else {
                 return (
                   <TableCell
+                    key={`cell-${header.key}-${index}`}
                     align="center"
                     style={{ ...colStyle, color: "red" }}
                   >
@@ -396,6 +365,7 @@ export default function CustomTableRowV2(
             } else if (header.type === "number") {
               return (
                 <TableCell
+                  key={`cell-${header.key}-${index}`}
                   align="center"
                   style={{
                     ...colStyle,
@@ -409,7 +379,11 @@ export default function CustomTableRowV2(
               );
             } else if (header.type === "timestamp") {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   {moment(props.singleData[header.key]).format(
                     "DD/MM/YYYY HH:mm"
                   )}
@@ -417,44 +391,145 @@ export default function CustomTableRowV2(
               );
             } else if (header.type === "selection") {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   {props.singleData[header.key]}
                 </TableCell>
               );
             } else if (header.type === "button") {
-              return <TableCell align="center" style={colStyle}></TableCell>;
+              const renderFunction = header.key as any;
+              return (
+                <TableCell
+                  key={`cell-button-${rowIndex}-${index}`}
+                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
+                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
+                  align="center"
+                  style={colStyle}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
+                  }}
+                >
+                  {renderFunction(
+                    props.singleData.id,
+                    rowIndex,
+                    props.singleData
+                  )}
+                </TableCell>
+              );
             } else if (
               header.type === "node" &&
               typeof header.key !== "string"
             ) {
               const Node = header.key as React.FC<{ data: any }>;
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   <Node data={props.singleData} />
                 </TableCell>
               );
             } else if (header.type === "uptime") {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   {moment
                     .duration(parseInt(props.singleData[header.key]), "seconds")
-                    .format(
-                      "D [Day(s)] H [Hour(s)] m [Minute(s)] s [Second(s)]"
-                    )}
+                    .humanize()}
+                </TableCell>
+              );
+            } else if ((header.type as any) === "series") {
+              return (
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={{
+                    ...colStyle,
+                    color: theme.primary_text,
+                    fontWeight: "semi-bold",
+                  }}
+                >
+                  {props.singleData[header.key] > 0 ? (
+                    <Chip
+                      label={
+                        props.singleData[`${header.key}Name`] ||
+                        "Unknown Series"
+                      }
+                      sx={{
+                        backgroundColor: theme.primary25,
+                        color: theme.primary_text,
+                        fontWeight: "bold",
+                      }}
+                    />
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      sx={{ color: theme.secondary_text }}
+                    >
+                      No Series
+                    </Typography>
+                  )}
                 </TableCell>
               );
             } else if (header.type === "base64") {
               return (
-                <TableCell align="center" style={colStyle}>
-                  <img
-                    src={`${props.singleData[header.key]}`}
-                    onMouseEnter={(e) => {
-                      handlePopoverOpen(e, "cover");
-                    }}
-                    onMouseLeave={handlePopoverClose}
-                    alt={props.singleData["Name"] + "_cover"}
-                    style={{ width: 70, borderRadius: 10 }}
-                  />
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
+                  <div
+                    style={{ position: "relative", display: "inline-block" }}
+                  >
+                    <img
+                      src={`${props.singleData[header.key]}`}
+                      onMouseEnter={(e) => {
+                        handlePopoverOpen(e, "cover");
+                      }}
+                      onMouseLeave={handlePopoverClose}
+                      alt={props.singleData["Name"] + "_cover"}
+                      style={{ width: 70, borderRadius: 10 }}
+                    />
+                    {props.singleData["PlanToWatch"] === true && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          backgroundColor: "#FFD700",
+                          color: "#000",
+                          width: "24px",
+                          height: "24px",
+                          textAlign: "center",
+                          fontSize: "8px",
+                          fontWeight: "bold",
+                          padding: "3px 0",
+                          zIndex: 1,
+                          clipPath: "polygon(0 0, 100% 0, 100% 100%)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "2px",
+                            right: "2px",
+                            fontSize: "8px",
+                            fontWeight: "bold",
+                            transform: "rotate(45deg)",
+                          }}
+                        >
+                          PTW
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <Popover
                     id="mouse-over-popover"
                     sx={{
@@ -476,17 +551,58 @@ export default function CustomTableRowV2(
                     onClose={handlePopoverClose}
                     disableRestoreFocus
                   >
-                    <img
-                      src={`${props.singleData[header.key]}`}
-                      alt={props.singleData["Name"] + "_cover"}
-                      style={{ width: 400 }}
-                    />
+                    <div
+                      style={{ position: "relative", display: "inline-block" }}
+                    >
+                      <img
+                        src={`${props.singleData[header.key]}`}
+                        alt={props.singleData["Name"] + "_cover"}
+                        style={{ width: 400 }}
+                      />
+                      {props.singleData["PlanToWatch"] === true && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            backgroundColor: "#FFD700",
+                            color: "#000",
+                            width: "60px",
+                            height: "60px",
+                            textAlign: "center",
+                            fontSize: "14px",
+                            fontWeight: "bold",
+                            padding: "8px 0",
+                            zIndex: 1,
+                            clipPath: "polygon(0 0, 100% 0, 100% 100%)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "8px",
+                              right: "10px",
+                              fontSize: "14px",
+                              fontWeight: "bold",
+                              transform: "rotate(45deg)",
+                              transformOrigin: "center",
+                            }}
+                          >
+                            PTW
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </Popover>
                 </TableCell>
               );
             } else if (header.type === "link") {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   <a href={`${props.singleData[header.key]}`}>
                     {props.singleData[header.key]}
                   </a>
@@ -495,6 +611,7 @@ export default function CustomTableRowV2(
             } else if (header.type === "status") {
               return (
                 <TableCell
+                  key={`cell-${header.key}-${index}`}
                   align="center"
                   style={{
                     color:
@@ -509,6 +626,7 @@ export default function CustomTableRowV2(
             } else if (header.type === "score") {
               return (
                 <TableCell
+                  key={`cell-${header.key}-${index}`}
                   align="center"
                   style={{
                     color: "lightgray",
@@ -529,7 +647,11 @@ export default function CustomTableRowV2(
               );
             } else if (header.type === "episode") {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   {props.singleData[header.key] === -1 ? (
                     <Typography sx={{ color: theme.primary_text }}>
                       Finished
@@ -582,12 +704,25 @@ export default function CustomTableRowV2(
               );
             } else if (header.type === "pill") {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                  id={header.key}
+                >
                   <Box
-                    style={{
+                    sx={{
                       display: "grid",
-                      gridTemplateColumns: "4fr 4fr 4fr",
-                      gap: 5,
+                      gridTemplateColumns: {
+                        xs: "repeat(3, 1fr)", // Mobil görünümde 3 sütun
+                        sm: "repeat(3, 1fr)", // Tablet görünümde 3 sütun
+                        md: "repeat(3, 1fr)", // Küçük masaüstü görünümde 3 sütun
+                        lg: "repeat(4, 1fr)", // Büyük masaüstü görünümde 4 sütun
+                      },
+                      gap: { xs: 1, sm: 1, md: 1.5, lg: 2 },
+                      width: "100%",
+                      justifyContent: "center",
+                      alignItems: "center",
                     }}
                   >
                     {props.singleData[header.key].length !== 0 &&
@@ -595,13 +730,16 @@ export default function CustomTableRowV2(
                         .split(", ")
                         .map((pill: string, index: number) => (
                           <Button
+                            key={`button-${rowIndex}-${pill}-${index}`}
                             sx={{
                               // Butonun tüm stil özelliklerini kaldır
                               display: "inline-block",
+                              backgroundColor: "transparent",
                               cursor: "pointer",
                               padding: 0, // İç boşlukları sıfırlayın
-                              width: "auto",
+                              width: "100%",
                               height: "auto",
+                              margin: "0 2px",
                               ":hover": {
                                 backgroundColor: "transparent",
                               },
@@ -630,7 +768,7 @@ export default function CustomTableRowV2(
                           >
                             <Chip
                               key={`chip-${index}`}
-                              id={`chip-${props.index}-${index}`}
+                              id={`chip-${rowIndex}-${index}`}
                               onMouseEnter={(e) => {
                                 handlePopoverOpen(e, "genre");
                               }}
@@ -638,12 +776,29 @@ export default function CustomTableRowV2(
                               size="small"
                               label={pill}
                               color="primary"
-                              style={{
+                              sx={{
                                 backgroundColor: genreColors[pill as string],
                                 color: getFontColor(
                                   genreColors[pill as string]
                                 ),
-                                minWidth: 80,
+                                minWidth: {
+                                  xs: "100%",
+                                  sm: "100%",
+                                  md: "80px",
+                                },
+                                maxWidth: "100%",
+                                height: "24px",
+                                "& .MuiChip-label": {
+                                  padding: "0 8px",
+                                  fontSize: {
+                                    xs: "0.7rem",
+                                    sm: "0.75rem",
+                                    md: "0.8rem",
+                                  },
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                },
                               }}
                             />
                           </Button>
@@ -677,13 +832,20 @@ export default function CustomTableRowV2(
                     disableRestoreFocus
                   >
                     <Chip
+                      key="popover-chip"
                       size="small"
                       label={popData}
                       color="primary"
-                      style={{
+                      sx={{
                         backgroundColor: genreColors[popData! as string],
                         color: getFontColor(genreColors[popData! as string]),
-                        minWidth: 80,
+                        minWidth: "120px",
+                        height: "28px",
+                        "& .MuiChip-label": {
+                          padding: "0 12px",
+                          fontSize: "0.85rem",
+                          fontWeight: 500,
+                        },
                       }}
                     />
                   </Popover>
@@ -691,36 +853,117 @@ export default function CustomTableRowV2(
               );
             } else {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   {props.singleData[header.key]}
                 </TableCell>
               );
             }
           } else {
             if (header.type === "button") {
+              const renderFunction = header.key as any;
               return (
                 <TableCell
-                  className={`${props.collapsible.inner?.tableName}_${props.index}`}
-                  id={`${props.collapsible.inner?.tableName}_${props.index}_row`}
+                  key={`cell-button-${rowIndex}-${index}`}
+                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
+                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
                   align="center"
                   style={colStyle}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
+                  }}
                 >
-                  {header.key(
+                  {renderFunction(
                     props.singleData.id,
-                    props.index!,
+                    rowIndex,
                     props.singleData
                   )}
                 </TableCell>
               );
             } else {
               return (
-                <TableCell align="center" style={colStyle}>
+                <TableCell
+                  key={`cell-other-${rowIndex}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
                   Buraya Ne Gelmeli
                 </TableCell>
               );
             }
           }
         })}
+      </TableRow>
+
+      {/* Akordiyon içeriği - satır genişletildiğinde gösterilecek */}
+      <TableRow
+        sx={{
+          backgroundColor: theme.table_row_light,
+        }}
+      >
+        <TableCell
+          style={{ paddingBottom: 0, paddingTop: 0, border: 0 }}
+          colSpan={headers.length + (props.collapsible?.isCollapsible ? 1 : 0)}
+        >
+          <Collapse
+            in={open}
+            timeout={300}
+            easing="cubic-bezier(0.4, 0, 0.2, 1)"
+            unmountOnExit
+            sx={{
+              willChange: "height, opacity",
+              transformOrigin: "top",
+              overflowY: "hidden",
+            }}
+          >
+            <Box
+              sx={{
+                margin: 2,
+                bgcolor: theme.background,
+                borderRadius: 1,
+                p: 2,
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  boxShadow: "0 6px 12px rgba(0,0,0,0.15)",
+                },
+              }}
+            >
+              <Typography
+                variant="h6"
+                gutterBottom
+                component="div"
+                sx={{ color: theme.primary_text, mb: 2 }}
+              >
+                {props.singleData.Name} - Detaylar
+              </Typography>
+
+              {props.collapsible.innerComponent && (
+                <props.collapsible.innerComponent
+                  key={props.singleData.id}
+                  data={props.singleData}
+                  update={props.updateData}
+                />
+              )}
+
+              {props.collapsible.inner?.type && (
+                <Inner
+                  data={props.singleData}
+                  type={props.collapsible.inner.type}
+                  list={props.collapsible.inner.list}
+                  onUpdate={props.updateInnerCard}
+                  sortHeader={props.collapsible.inner.sortHeader}
+                  tableColumns={props.collapsible.inner.tableColumns}
+                  tableName={props.collapsible.inner.tableName}
+                  listType="detail"
+                />
+              )}
+            </Box>
+          </Collapse>
+        </TableCell>
       </TableRow>
     </>
   );

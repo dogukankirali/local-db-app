@@ -13,11 +13,6 @@ type Filter struct {
 	Operand string      `json:"operand,omitempty"`
 }
 
-type NumberFilter struct {
-	Value   int    `json:"value"`
-	Operand string `json:"operand,omitempty"`
-}
-
 type FilterArray struct {
 	FilterArray []Filter `json:"filterArray"`
 }

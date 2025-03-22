@@ -35,6 +35,7 @@ type FilterElementProps =
 export type FilterStateProp = {
   label: string;
   key: string;
+  style?: React.CSSProperties;
 } & FilterElementProps;
 
 export type FilterState = TEATable.IFilterType;
@@ -47,6 +48,7 @@ type TemporaryProps = {
   filterElements: FilterStateProp[];
   filterState: FilterState[];
   setFilterState: React.Dispatch<React.SetStateAction<FilterState[]>>;
+  onFilterChange?: () => void;
 };
 
 function createFilterState(opts: FilterStateProp[]): FilterState[] {
@@ -68,7 +70,10 @@ function createFilterState(opts: FilterStateProp[]): FilterState[] {
   return result;
 }
 
-export const useTableFilters = (filterElements: FilterStateProp[]) => {
+export const useTableFilters = (
+  filterElements: FilterStateProp[],
+  onFilterChange?: () => void
+) => {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [filterState, setFilterState] = useState<FilterState[]>(
     createFilterState(filterElements)
@@ -78,13 +83,24 @@ export const useTableFilters = (filterElements: FilterStateProp[]) => {
     setAnchorEl(event.currentTarget);
   };
 
+  // Filtre durumu değiştiğinde callback'i çağıran özel bir setter
+  const setFilterStateWithCallback = (
+    newState: React.SetStateAction<FilterState[]>
+  ) => {
+    setFilterState(newState);
+    if (onFilterChange) {
+      onFilterChange();
+    }
+  };
+
   return {
     handleClickFilters,
     filterState,
     filterElements,
     anchorEl,
     setAnchorEl,
-    setFilterState,
+    setFilterState: setFilterStateWithCallback,
+    onFilterChange,
   };
 };
 
@@ -135,6 +151,7 @@ export default function TableSettings({
   filterElements,
   filterState,
   setFilterState,
+  onFilterChange,
 }: TemporaryProps) {
   const [localFilters, setLocalFilters] = useState(filterState);
   // const intl = useIntl();
@@ -158,6 +175,10 @@ export default function TableSettings({
   const applyFilters = () => {
     setFilterState(localFilters);
     setAnchorEl(null);
+
+    if (onFilterChange) {
+      onFilterChange();
+    }
   };
 
   const clearFilters = () => {
@@ -165,6 +186,10 @@ export default function TableSettings({
     setLocalFilters(newFilters);
     setFilterState(newFilters);
     setAnchorEl(null);
+
+    if (onFilterChange) {
+      onFilterChange();
+    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -187,16 +212,19 @@ export default function TableSettings({
       }}
       sx={{
         "& .MuiPopover-paper": {
-          backgroundColor: theme.background, // Sabit kırmızı renk
+          backgroundColor: theme.background,
+          boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+          borderRadius: "12px",
+          border: `1px solid ${theme.input_border}`,
           overflow: "visible",
+          padding: "16px",
+          maxWidth: "calc(100vw - 32px)",
         },
       }}
     >
       <Box
         sx={{
-          width: 300,
-          m: 4,
-          mb: 2,
+          width: { xs: "100%", sm: 400 },
           display: "flex",
           flexDirection: "column",
           gap: 2,
@@ -206,6 +234,7 @@ export default function TableSettings({
           if (element.type === "input") {
             return (
               <InputFilter
+                key={element.key}
                 label={element.label}
                 elKey={element.key}
                 value={localFilters[index].value as string}
@@ -217,6 +246,7 @@ export default function TableSettings({
           if (element.type === "single-select") {
             return (
               <SelectFilter
+                key={element.key}
                 label={element.label}
                 elKey={element.key}
                 value={localFilters[index].value as string}
@@ -228,17 +258,20 @@ export default function TableSettings({
           if (element.type === "multi-select") {
             return (
               <MultiSelectFilter
+                key={element.key}
                 label={element.label}
                 elKey={element.key}
                 value={localFilters[index].value as string[]}
                 handleStateChange={handleStateChange}
                 options={element.options}
+                style={element.style}
               />
             );
           }
           if (element.type === "number") {
             return (
               <NumberFilter
+                key={element.key}
                 label={element.label}
                 state={localFilters[index] as TEATable.NumberFilterType}
                 handleStateChange={handleStateChange}
@@ -249,12 +282,22 @@ export default function TableSettings({
           }
           return null;
         })}
-        <SCButtonGroup
-          cancelText="Reset"
-          confirmText="Apply"
-          handleCancel={clearFilters}
-          handleConfirm={applyFilters}
-        />
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 2,
+            mt: 2,
+          }}
+        >
+          <SCButtonGroup
+            cancelText="Temizle"
+            confirmText="Uygula"
+            handleCancel={clearFilters}
+            handleConfirm={applyFilters}
+          />
+        </Box>
       </Box>
     </Popover>
   );
