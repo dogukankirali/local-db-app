@@ -432,7 +432,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                   const itemCount = React.Children.count(children);
 
                   // Listbox içeriğini referans olarak al
-                  const ref = React.useRef<HTMLDivElement>(null);
+                  const ref = React.useRef<HTMLUListElement>(null);
 
                   React.useEffect(() => {
                     // Load more results when user scrolls near the end of the list
