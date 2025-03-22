@@ -19,6 +19,11 @@ type Anime struct {
 	PlanToWatch           bool    `gorm:"column:plan_to_watch"`
 }
 
+// TableName specifies the table name for Anime
+func (Anime) TableName() string {
+	return "anime.animes"
+}
+
 type AnimeCreate struct {
 	ID                    uint    `gorm:"column:id"`
 	Name                  string  `gorm:"column:name"`

@@ -2,10 +2,12 @@ import { Box, Typography } from "@mui/material";
 import TableFilters from "../TableFilters/TableFilters";
 import TableSettings from "../TableSettings";
 import { StyledMUIFilterButton, StyledTeaButton } from "../StyledComponents";
+import { useRouter } from "next/navigation";
 
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SyncIcon from "@mui/icons-material/Sync";
+import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
 import Constants from "../../../../constants/Constants";
 import FileUpload from "../../../Common/FileUpload";
 import { AnimeService } from "../../../../services/AnimeServices";
@@ -28,6 +30,7 @@ export default function TableHeaders(props: {
   tableRerender?: TEATable.FetchData;
   user: any;
 }) {
+  const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStats, setSyncStats] = useState({
     updated: 0,
@@ -61,7 +64,7 @@ export default function TableHeaders(props: {
         isAdmin = userData?.isAdmin || false;
       }
     } catch (error) {
-      console.error("Kullanıcı bilgisi ayrıştırılamadı:", error);
+      console.error("User information could not be parsed:", error);
     }
   }
 
@@ -86,7 +89,7 @@ export default function TableHeaders(props: {
       setSyncCancelled(false);
       setSyncStats({ updated: 0, failed: 0, totalWork: 0, completed: 0 });
       setSyncProgress(0);
-      setSyncMessage("Senkronizasyon başlatılıyor...");
+      setSyncMessage("Synchronization starting...");
       setShowProgressIndicator(true);
 
       // Use SSE for streaming updates
@@ -99,7 +102,7 @@ export default function TableHeaders(props: {
             totalWork: data.totalWork,
             completed: 0,
           });
-          setSyncMessage("Senkronizasyon başladı");
+          setSyncMessage("Synchronization started");
         },
         // onProgress
         (data) => {
@@ -121,7 +124,7 @@ export default function TableHeaders(props: {
             completed: data.completed,
           });
           setSyncProgress(100);
-          setSyncMessage("Senkronizasyon tamamlandı");
+          setSyncMessage("Synchronization completed");
 
           // Reload the table
           if (props.tableRerender) {
@@ -134,7 +137,7 @@ export default function TableHeaders(props: {
 
           if (!syncCancelled) {
             Toastify({
-              text: `Anime verileri başarıyla senkronize edildi: ${data.updated} güncellendi, ${data.failed} başarısız`,
+              text: `Anime data successfully synchronized: ${data.updated} updated, ${data.failed} failed`,
               duration: 3000,
               close: true,
               gravity: "top",
@@ -159,7 +162,7 @@ export default function TableHeaders(props: {
           // Don't show error message for cancelled requests
           if (error.name === "AbortError" || syncCancelled) {
             Toastify({
-              text: "Senkronizasyon işlemi kullanıcı tarafından durduruldu",
+              text: "Synchronization process was stopped by the user",
               duration: 3000,
               close: true,
               gravity: "top",
@@ -169,7 +172,7 @@ export default function TableHeaders(props: {
             }).showToast();
           } else {
             Toastify({
-              text: "Anime verilerini senkronize ederken hata oluştu",
+              text: "Error synchronizing anime data",
               duration: 3000,
               close: true,
               gravity: "top",
@@ -209,23 +212,23 @@ export default function TableHeaders(props: {
         eventSourceRef.current = null;
       }
 
-      // Backend'e iptal isteği gönder
+      // Send cancel request to backend
       AnimeService.cancelSync()
         .then(() => {
-          console.log("Backend senkronizasyon iptal isteği gönderildi");
+          console.log("Backend synchronization cancel request sent");
         })
         .catch((err) => {
           console.error(
-            "Backend senkronizasyon iptal isteği gönderilirken hata oluştu:",
+            "Error sending backend synchronization cancel request:",
             err
           );
         });
 
       setIsSyncing(false);
-      setSyncMessage("Senkronizasyon durduruldu");
+      setSyncMessage("Synchronization stopped");
 
       Toastify({
-        text: "Senkronizasyon işlemi durduruldu",
+        text: "Synchronization process stopped",
         duration: 3000,
         close: true,
         gravity: "top",
@@ -270,6 +273,27 @@ export default function TableHeaders(props: {
           flexWrap: props.windowSize.width < 768 ? "wrap" : "nowrap",
         }}
       >
+        <StyledTeaButton
+          onClick={() => router.push("/watchlist")}
+          sx={{
+            fontFamily: "inherit",
+            fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
+            padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
+          }}
+          color="primary"
+        >
+          <PlaylistAddCheckIcon
+            sx={{
+              mr: 1,
+              fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem",
+            }}
+          />
+          <Typography
+            variant={props.windowSize.width < 768 ? "caption" : "button"}
+          >
+            {props.windowSize.width < 768 ? "Watch" : "Watch List"}
+          </Typography>
+        </StyledTeaButton>
         <StyledTeaButton
           onClick={() => {
             props.setCreateModalData({ status: true });

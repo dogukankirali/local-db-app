@@ -135,6 +135,9 @@ func main() {
 	// PlanToWatch kolonu ekle
 	migrations.AddPlanToWatchColumn(db)
 
+	// Watch List tablosunu oluştur
+	migrations.CreateWatchListTable(db)
+
 	port := os.Getenv("PORT")
 
 	// API rotaları
@@ -159,10 +162,20 @@ func main() {
 	// MAL API uçları
 	router.HandleFunc("/getAnime", anime_functions.GetAnimeHandler)
 	router.HandleFunc("/getManga", anime_functions.GetMangaHandler)
+	// ID'ye göre anime getirme
+	router.HandleFunc("/getAnimeById", anime_functions.GetAnimeById(db)).Methods("GET", "OPTIONS")
 
 	// Kullanıcı API uçları
 	router.HandleFunc("/auth/register", anime_functions.Register(db))
 	router.HandleFunc("/auth/login", anime_functions.Login(db))
+
+	// Watch List API uçları
+	router.HandleFunc("/watchlist", anime_functions.GetWatchList(db)).Methods("GET", "OPTIONS")
+	router.HandleFunc("/watchlist", anime_functions.AddToWatchList(db)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/watchlist/order", anime_functions.UpdateWatchListOrder(db)).Methods("PUT", "OPTIONS")
+	router.HandleFunc("/watchlist", anime_functions.RemoveFromWatchList(db)).Methods("DELETE", "OPTIONS")
+	router.HandleFunc("/watchlist/sync", anime_functions.AutoSyncPlanToWatch(db)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/test-plan-to-watch", anime_functions.TestPlanToWatch(db)).Methods("GET", "OPTIONS")
 
 	// Korumalı rotalar için bir alt router oluştur
 	authRouter := router.PathPrefix("/auth").Subrouter()
@@ -193,6 +206,7 @@ func main() {
 			"https://localhost:3000", // HTTPS için
 			"http://localhost:8080",  // backend portu için
 			"https://localhost:8080", // backend HTTPS için
+			"*",                      // Tüm kaynaklar için
 		},
 		AllowedMethods: []string{
 			"GET", "POST", "PUT", "DELETE", "OPTIONS", // OPTIONS ekleyin
@@ -203,7 +217,9 @@ func main() {
 			"X-Requested-With",
 			"Accept",
 			"Origin",
+			"*", // Tüm başlıklar için
 		},
+		AllowCredentials: true, // Kimlik bilgilerini kabul et
 		// Debug modunu açalım
 		Debug: true,
 	}).Handler(router)

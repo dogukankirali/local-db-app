@@ -30,7 +30,7 @@ import Constants from "@/constants/Constants";
 import { AnimeService } from "@/services/AnimeServices";
 import TableHeaders from "@/components/CollapsibleTableV2/Components/Headers/Headers";
 import UpdateDeleteAnimeModal from "@/components/Modals/UpdateDeleteAnimeModal";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -94,9 +94,10 @@ export default function AnimePage() {
   const [user, setUser] = useState<any>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
-    // Admin kontrolünü güvenli şekilde yapalım
+    // Admin control securely
     let isAdmin = false;
 
     if (typeof window !== "undefined") {
@@ -107,7 +108,7 @@ export default function AnimePage() {
           isAdmin = userData?.isAdmin || false;
         }
       } catch (error) {
-        console.error("Kullanıcı bilgisi ayrıştırılamadı:", error);
+        console.error("User information parsing failed:", error);
       }
     }
 
@@ -203,7 +204,7 @@ export default function AnimePage() {
     const filters = getFilledFilters(params.filters ?? []);
 
     try {
-      console.log("Veri çekiliyor:", { ...params, filters });
+      console.log("Fetching data:", { ...params, filters });
       const res = await AnimeService.getAnimes({ ...params, filters });
 
       if (!aborted) {
@@ -213,7 +214,7 @@ export default function AnimePage() {
       if (axios.isCancel(err)) {
         aborted = true;
       } else {
-        console.error("Veri çekme hatası:", err);
+        console.error("Data fetching error:", err);
       }
     }
 
@@ -224,10 +225,50 @@ export default function AnimePage() {
 
   async function updateAnime() {
     try {
-      const res = await AnimeService.updateAnime(modalData.data!);
+      const fromWatchList = searchParams.get("fromWatchList") === "true";
+
+      // Ensure modalData.data is defined
+      if (!modalData.data) {
+        console.error("Anime data not found");
+        Toastify({
+          text: "Anime data not found, update is not possible",
+          duration: 3000,
+          close: true,
+          gravity: "top",
+          position: "right",
+          backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+          stopOnFocus: true,
+        }).showToast();
+        return;
+      }
+
+      // Log data to be sent to backend
+      console.log("Anime data to be sent to backend:", modalData.data);
+      console.log("Coming from Watch List:", fromWatchList ? "Yes" : "No");
+
+      // Clone and cast data to IAnime type
+      const updatedData: TEATable.IAnime = { ...modalData.data };
+
+      // If coming from watchlist, set WatchStatus and PlanToWatch values once
+      if (fromWatchList) {
+        updatedData.WatchStatus = "-1";
+        updatedData.PlanToWatch = false;
+
+        console.log(
+          "Special values set because it was opened from Watchlist (final check):"
+        );
+        console.log("WatchStatus value: set to -1");
+        console.log("PlanToWatch value: set to false");
+      } else {
+        console.log("Normal editing. Existing values are preserved:");
+        console.log("WatchStatus value:", updatedData.WatchStatus);
+        console.log("PlanToWatch value:", updatedData.PlanToWatch);
+      }
+
+      const res = await AnimeService.updateAnime(updatedData);
       if (res.status === 200) {
         Toastify({
-          text: "Anime başarıyla güncellendi",
+          text: "Anime successfully updated",
           duration: 3000,
           close: true,
           gravity: "top",
@@ -236,16 +277,20 @@ export default function AnimePage() {
           stopOnFocus: true,
         }).showToast();
         setModalData({ status: false });
+
+        // Reset order parameters to get new data
         getData({
           page: 1,
           count: 10,
           filters: [],
+          order: "asc", // Specify default sorting direction
+          orderBy: "Name", // Specify default sorting field
         });
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error updating anime:", err);
       Toastify({
-        text: "Anime güncellenirken bir hata oluştu",
+        text: "An error occurred while updating the anime",
         duration: 3000,
         close: true,
         gravity: "top",
@@ -261,7 +306,7 @@ export default function AnimePage() {
       const res = await AnimeService.deleteAnime(modalData.data!);
       if (res.status === 200) {
         Toastify({
-          text: "Anime başarıyla silindi",
+          text: "Anime successfully deleted",
           duration: 3000,
           close: true,
           gravity: "top",
@@ -270,16 +315,20 @@ export default function AnimePage() {
           stopOnFocus: true,
         }).showToast();
         setModalData({ status: false });
+
+        // Reset order parameters to get new data
         getData({
           page: 1,
           count: 10,
           filters: [],
+          order: "asc", // Specify default sorting direction
+          orderBy: "Name", // Specify default sorting field
         });
       }
     } catch (err) {
       console.error(err);
       Toastify({
-        text: "Anime silinirken bir hata oluştu",
+        text: "An error occurred while deleting the anime",
         duration: 3000,
         close: true,
         gravity: "top",
@@ -295,7 +344,7 @@ export default function AnimePage() {
       const res = await AnimeService.createAnime(createModalData.data!);
       if (res.status === 200) {
         Toastify({
-          text: "Anime başarıyla oluşturuldu",
+          text: "Anime successfully created",
           duration: 3000,
           close: true,
           gravity: "top",
@@ -304,16 +353,20 @@ export default function AnimePage() {
           stopOnFocus: true,
         }).showToast();
         setCreateModalData({ status: false });
+
+        // Reset order parameters to get new data
         getData({
           page: 1,
           count: 10,
           filters: [],
+          order: "asc", // Specify default sorting direction
+          orderBy: "Name", // Specify default sorting field
         });
       }
     } catch (err) {
       console.error(err);
       Toastify({
-        text: "Anime oluşturulurken bir hata oluştu",
+        text: "An error occurred while creating the anime",
         duration: 3000,
         close: true,
         gravity: "top",
@@ -348,19 +401,116 @@ export default function AnimePage() {
     });
   }, []);
 
-  // Kullanıcı bilgisini yükle
+  // Load user information
   useEffect(() => {
     try {
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const userData = JSON.parse(userStr);
         setUser(userData);
-        console.log("Kullanıcı bilgisi yüklendi:", userData);
+        console.log("User information loaded:", userData);
       }
     } catch (error) {
-      console.error("Kullanıcı bilgisi yüklenirken hata oluştu:", error);
+      console.error("Error loading user information:", error);
     }
   }, []);
+
+  // Open anime edit mode based on URL parameters
+  useEffect(() => {
+    const id = searchParams.get("id");
+    const edit = searchParams.get("edit");
+    const fromWatchList = searchParams.get("fromWatchList");
+
+    if (id && edit === "true") {
+      const animeId = parseInt(id);
+      console.log("Opening anime edit modal, ID:", animeId);
+      console.log(
+        "Coming from Watch List:",
+        fromWatchList === "true" ? "Yes" : "No"
+      );
+
+      // Fetch and open the anime for editing
+      const fetchAnimeForEdit = async () => {
+        try {
+          const response = await AnimeService.getAnime(animeId);
+          console.log("API Response:", response);
+
+          if (response && response.data && response.data.data) {
+            // Backend response: { status: "success", data: { anime data... } }
+            // Therefore we use response.data.data
+            const backendData = response.data.data;
+
+            // Log detailed backend data
+            console.log("Anime data from backend:", backendData);
+            console.log("Data fields:", Object.keys(backendData));
+
+            // Convert data to frontend format
+            const convertedData: any = {};
+
+            // First convert all fields
+            Object.keys(backendData).forEach((key) => {
+              // Capitalize first letter of key and keep the rest as is
+              const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+              convertedData[capitalizedKey] = backendData[key];
+            });
+
+            // If coming from watchlist, specially set WatchStatus and PlanToWatch values
+            if (fromWatchList === "true") {
+              // Force set WatchStatus and PlanToWatch values
+              // Even if the backend fields have different names, change the values here
+              convertedData["WatchStatus"] = "-1";
+              convertedData["PlanToWatch"] = false;
+
+              console.log(
+                "Special values set because it was opened from Watchlist:"
+              );
+              console.log("WatchStatus value: set to -1");
+              console.log("PlanToWatch value: set to false");
+            } else {
+              console.log("Normal editing. Original values preserved:");
+              console.log("WatchStatus value:", convertedData["WatchStatus"]);
+              console.log("PlanToWatch value:", convertedData["PlanToWatch"]);
+            }
+
+            console.log("Converted data:", convertedData);
+
+            setModalData({
+              status: true,
+              type: "update",
+              data: convertedData, // Use converted data
+            });
+          } else {
+            console.error(
+              "Anime not found or data structure not as expected, ID:",
+              animeId
+            );
+            Toastify({
+              text: "Anime to be edited not found or data structure not appropriate",
+              duration: 3000,
+              close: true,
+              gravity: "top",
+              position: "right",
+              backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+              stopOnFocus: true,
+            }).showToast();
+          }
+        } catch (err) {
+          console.error("Error getting anime information:", err);
+          Toastify({
+            text: "An error occurred while getting anime information",
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+            stopOnFocus: true,
+          }).showToast();
+        }
+      };
+
+      fetchAnimeForEdit();
+    }
+  }, [searchParams]);
 
   const handleProfileMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -378,14 +528,14 @@ export default function AnimePage() {
   const handleLogout = async () => {
     handleCloseMenu();
     try {
-      // Çıkış işlemi
+      // Logout process
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       router.push("/login");
     } catch (error) {
-      console.error("Çıkış yapılırken hata oluştu:", error);
+      console.error("Error occurred during logout:", error);
       Toastify({
-        text: "Çıkış yapılırken bir hata oluştu",
+        text: "An error occurred while logging out",
         duration: 3000,
         close: true,
         gravity: "top",
@@ -471,6 +621,7 @@ export default function AnimePage() {
               height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
               width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
             }}
+            lastFetchParams={lastFetchParams.current}
           />
         </Box>
       </Box>

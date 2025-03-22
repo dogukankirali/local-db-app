@@ -173,77 +173,34 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
       console.log("API yanıtı:", response);
 
       if (response && response.success && response.data) {
-        // Jikan API'nin veri yapısını kontrol et
-        let animeData = [];
-
-        // API yanıt yapısını kontrol et
-        if (Array.isArray(response.data)) {
-          animeData = response.data;
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          animeData = response.data.data;
-        } else if (typeof response.data === "object") {
-          // Diğer olası yapılar
-          console.log("Farklı veri yapısı:", response.data);
-          if (response.data.results && Array.isArray(response.data.results)) {
-            animeData = response.data.results;
-          }
-        }
-
-        console.log("İşlenen anime verileri:", animeData);
-
-        // Veri yapısını kontrol et ve düzelt
-        if (animeData.length > 0) {
-          // İlk öğeyi kontrol ederek veri yapısını anla
-          const firstItem = animeData[0];
-          console.log("İlk öğe örneği:", firstItem);
-
-          // Gerekirse veri yapısını dönüştür
-          if (!firstItem.title && firstItem.node && firstItem.node.title) {
-            animeData = animeData.map((item: any) => item.node);
+        // Check MAL API response
+        if (response.data.pagination && response.data.data) {
+          // If this is the first page, set the results
+          // Otherwise, append to existing results
+          if (page === 1) {
+            setSearchResults(response.data.data);
+          } else {
+            setSearchResults((prev) => [...prev, ...response.data.data]);
           }
 
-          // Anime verilerini doğru formata dönüştür
-          animeData = animeData.map((item: any) => {
-            // Gerekli alanları kontrol et ve düzelt
-            const processedItem: MALAnime = {
-              ...item,
-              mal_id: item.mal_id || 0,
-              title:
-                item.title ||
-                item.title_english ||
-                item.name ||
-                "İsimsiz Anime",
-              score: item.score || 0,
-              url: item.url || "",
-              images: item.images || {
-                jpg: { image_url: item.image_url || "" },
-              },
-            };
-
-            // Genre bilgisini kontrol et
-            if (item.genres && Array.isArray(item.genres)) {
-              console.log(
-                `${processedItem.title} için genre bilgisi:`,
-                item.genres
-              );
-            } else {
-              console.log(
-                `${processedItem.title} için genre bilgisi bulunamadı`
-              );
-            }
-
-            return processedItem;
-          });
-        }
-
-        // Daha fazla sonuç olup olmadığını kontrol et
-        setHasMoreResults(animeData.length > 0);
-
-        // Sayfa 1'den büyükse, önceki sonuçlara ekle
-        if (page > 1) {
-          setSearchResults((prev) => [...prev, ...animeData]);
+          // Check if there are more results
+          const { items, per_page, current_page, last_visible_page } =
+            response.data.pagination;
+          console.log(
+            `Page: ${current_page}/${last_visible_page}, Items: ${items.count}`
+          );
+          // If not on the last page and there are items on this page
+          setHasMoreResults(
+            current_page < last_visible_page && items.count > 0
+          );
+          // Keep track of the current page for pagination
+          setCurrentPage(current_page);
         } else {
-          setSearchResults(animeData);
+          console.log("API response failed or no data:", response);
+          if (page === 1) {
+            setSearchResults([]);
+          }
+          setHasMoreResults(false);
         }
       } else {
         console.log("API yanıtı başarısız veya veri yok:", response);
@@ -276,9 +233,9 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
   const handleAnimeSelect = (anime: MALAnime | null) => {
     setSelectedAnime(anime);
     if (anime) {
-      console.log("Seçilen anime:", anime);
+      console.log("Selected anime:", anime);
 
-      // Resim URL'sini al
+      // Get image URL
       let imageUrl = "";
       if (anime.images && anime.images.jpg && anime.images.jpg.image_url) {
         imageUrl = anime.images.jpg.image_url;
@@ -287,27 +244,27 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
       } else if (anime.images && anime.images.image_url) {
         imageUrl = anime.images.image_url;
       }
-      console.log("Resim URL:", imageUrl);
+      console.log("Image URL:", imageUrl);
 
-      // Başlık - title alanından al
+      // Title - get from title field
       const title =
-        anime.title || anime.title_english || anime.name || "İsimsiz Anime";
-      console.log("Başlık:", title);
+        anime.title || anime.title_english || anime.name || "Unnamed Anime";
+      console.log("Title:", title);
 
-      // Anime durumu - airing değerine göre belirle
-      // airing false ise "Finished", true ise "OnAir"
-      console.log("Anime airing değeri:", anime.airing);
-      console.log("Anime status değeri:", anime.status);
+      // Anime status - determine based on airing value
+      // if airing is false then "Finished", if true then "OnAir"
+      console.log("Anime airing value:", anime.airing);
+      console.log("Anime status value:", anime.status);
       const animeStatus = anime.airing === true ? "OnAir" : "Finished";
-      console.log("Belirlenen anime durumu:", animeStatus);
+      console.log("Determined anime status:", animeStatus);
 
-      // Toplam bölüm sayısı - episodes alanından al
+      // Total number of episodes - get from episodes field
       const totalEpisodes = anime.episodes || 0;
-      console.log("Toplam bölüm sayısı:", totalEpisodes);
+      console.log("Total number of episodes:", totalEpisodes);
 
-      // TV/Movie durumu - type alanına göre belirle
-      // "Movie" ise true, diğer durumlarda (TV, OVA, vb.) false
-      console.log("Anime type değeri:", anime.type);
+      // TV/Movie status - determine based on type field
+      // If "Movie" then true, for others (TV, OVA, etc.) false
+      console.log("Anime type value:", anime.type);
       const isMovie = anime.type === "Movie";
       console.log("IsMovie değeri:", isMovie);
 
@@ -332,7 +289,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
           .map((theme: any) => theme.name)
           .join(", ");
         genres = genres ? `${genres}, ${themeNames}` : themeNames;
-        console.log("Temalar eklendi:", themeNames);
+        console.log("Themes added:", themeNames);
       }
 
       if (
@@ -344,21 +301,21 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
           .map((demo: any) => demo.name)
           .join(", ");
         genres = genres ? `${genres}, ${demoNames}` : demoNames;
-        console.log("Demografik bilgiler eklendi:", demoNames);
+        console.log("Demographic information added:", demoNames);
       }
-      console.log("Tüm kategoriler:", genres);
+      console.log("All categories:", genres);
 
-      // İngilizce türleri Türkçe'ye çevir
+      // Translate English genres to English
       const translatedGenres = translateGenres(genres);
-      console.log("Çevrilen türler:", translatedGenres);
+      console.log("Translated genres:", translatedGenres);
 
-      // MAL puanı - score alanından al
+      // MAL score - from score field
       const score = anime.score || 0;
-      console.log("MAL puanı:", score);
+      console.log("MAL score:", score);
 
-      // MAL sayfası - url alanından al
+      // MAL page - from url field
       const malLink = anime.url || "";
-      console.log("MAL sayfası:", malLink);
+      console.log("MAL page:", malLink);
 
       // Özet - synopsis alanından al
       //const synopsis = anime.synopsis || "";
@@ -372,7 +329,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
         AnimeStatus: animeStatus,
         TotalNumberOfEpisodes: totalEpisodes,
         IsMovie: isMovie,
-        Genre: translatedGenres, // Çevrilen türleri kullan
+        Genre: translatedGenres, // Use translated genres
         MALScore: score,
         MALAnimeLink: malLink,
         //Notes: synopsis,
@@ -465,7 +422,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                   if (option.title) return option.title;
                   if (option.name) return option.name;
                   if (option.title_english) return option.title_english;
-                  return "İsimsiz Anime";
+                  return "Unnamed Anime";
                 }}
                 loading={loading}
                 onInputChange={(_, newValue) => setSearchTerm(newValue)}
@@ -475,36 +432,37 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                   const itemCount = React.Children.count(children);
 
                   // Listbox içeriğini referans olarak al
-                  const listboxRef = React.useRef<HTMLUListElement>(null);
+                  const ref = React.useRef<HTMLDivElement>(null);
 
-                  // Scroll olayını dinle
                   React.useEffect(() => {
-                    const listboxNode = listboxRef.current;
-                    if (!listboxNode) return;
-
+                    // Load more results when user scrolls near the end of the list
                     const handleScroll = () => {
-                      const { scrollTop, scrollHeight, clientHeight } =
-                        listboxNode;
+                      if (!ref.current || loading || !hasMoreResults) return;
 
-                      // Kullanıcı listenin sonuna yaklaştığında daha fazla sonuç yükle
-                      if (
-                        scrollHeight - scrollTop - clientHeight < 100 &&
-                        !loading &&
-                        hasMoreResults
-                      ) {
+                      const scrollBottom =
+                        ref.current.scrollTop + ref.current.clientHeight;
+                      const threshold = ref.current.scrollHeight - 200; // 200px from bottom
+
+                      if (scrollBottom >= threshold) {
                         loadMoreResults();
                       }
                     };
 
-                    listboxNode.addEventListener("scroll", handleScroll);
+                    const currentRef = ref.current;
+                    if (currentRef) {
+                      currentRef.addEventListener("scroll", handleScroll);
+                    }
+
                     return () => {
-                      listboxNode.removeEventListener("scroll", handleScroll);
+                      if (currentRef) {
+                        currentRef.removeEventListener("scroll", handleScroll);
+                      }
                     };
                   }, [loading, hasMoreResults]);
 
                   return (
                     <ul
-                      ref={listboxRef}
+                      ref={ref}
                       {...other}
                       style={{
                         maxHeight: "300px",
@@ -536,7 +494,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                           }}
                         >
                           <Typography variant="caption">
-                            Başka sonuç yok
+                            No more results
                           </Typography>
                         </Box>
                       )}
@@ -546,7 +504,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Anime Ara (MyAnimeList)"
+                    label="Anime Search (MyAnimeList)"
                     variant="outlined"
                     fullWidth
                     InputLabelProps={{
@@ -580,7 +538,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                   />
                 )}
                 renderOption={(props, option) => {
-                  // Resim URL'sini al
+                  // Get image URL
                   let imageUrl = "";
                   if (
                     option.images &&
@@ -594,12 +552,12 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                     imageUrl = option.images.image_url;
                   }
 
-                  // Başlık
+                  // Title
                   const title =
                     option.title ||
-                    option.name ||
                     option.title_english ||
-                    "İsimsiz Anime";
+                    option.name ||
+                    "Unnamed Anime";
 
                   // Puan ve durum
                   const score = option.score || option.rating || "?";

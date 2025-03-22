@@ -5,6 +5,7 @@ import { Box, Modal, Typography, CircularProgress } from "@mui/material";
 import { theme } from "@/theme/customTheme";
 import { StyledTeaButton } from "../CollapsibleTableV2/Components/StyledComponents";
 import Constants from "@/constants/Constants";
+import { useSearchParams } from "next/navigation";
 
 const LazyScrollbars = lazy(() => import("react-custom-scrollbars-2"));
 const LazyNewInnerList = lazy(
@@ -41,6 +42,17 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
   genres: any;
 }) {
   if (!props.modalData.status || !props.genres) return null;
+  const searchParams = useSearchParams();
+  const fromWatchList = searchParams.get("fromWatchList") === "true";
+
+  React.useEffect(() => {
+    if (props.modalData && props.modalData.data) {
+      console.log("Modal data:", props.modalData.data);
+      console.log("WatchStatus value:", props.modalData.data.WatchStatus);
+      console.log("PlanToWatch value:", props.modalData.data.PlanToWatch);
+      console.log("Coming from Watch List:", fromWatchList ? "Yes" : "No");
+    }
+  }, [props.modalData, fromWatchList]);
 
   const list = Constants({ type: "modalList" }).toSpliced(8, 0, {
     key: "Genre",
@@ -49,6 +61,40 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
     type: "multi-select",
     options: props.genres,
   });
+
+  const handleUpdate = () => {
+    console.log("Data to be updated (before):", props.modalData.data);
+
+    // Veriyi klonla
+    const updatedData = { ...props.modalData.data };
+
+    // Sadece watchlist'ten geliyorsa değerleri değiştir
+    if (fromWatchList) {
+      // WatchStatus ve PlanToWatch değerlerini kesinlikle istenen değerlere ayarla
+      updatedData.WatchStatus = "-1";
+      updatedData.PlanToWatch = false;
+
+      console.log("Watchlist'ten açıldığı için özel değerler ayarlandı:");
+      console.log("WatchStatus değeri: -1 olarak ayarlandı");
+      console.log("PlanToWatch değeri: false olarak ayarlandı");
+    } else {
+      console.log("Normal düzenleme. Değerler değiştirilmedi.");
+    }
+
+    // Güncellenmiş veriyi modalData'ya geri yaz
+    props.setModalData({
+      ...props.modalData,
+      data: updatedData,
+    });
+
+    console.log("Güncellenecek veri (sonra):", updatedData);
+
+    // Kısa bir gecikme ile updateAnime'i çağır
+    // Bu, state güncellemesinin tamamlanmasını sağlar
+    setTimeout(() => {
+      props.updateAnime();
+    }, 100);
+  };
 
   return (
     <Modal
@@ -85,6 +131,10 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
           </LazyScrollbars>
         </Suspense>
 
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Coming from Watch List: {fromWatchList ? "Yes" : "No"}
+        </Typography>
+
         <Box
           sx={{
             display: "flex",
@@ -106,7 +156,7 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
             onClick={
               props.modalData?.type === "delete"
                 ? props.deleteAnime
-                : props.updateAnime
+                : handleUpdate
             }
           >
             <Typography variant="button">

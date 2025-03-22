@@ -48,6 +48,7 @@ declare namespace TEATable {
     SeriesID?: number;
     Series?: number;
     SeriesName?: string;
+    PlanToWatch?: boolean;
   }
 
   export interface IAnimeDetail {

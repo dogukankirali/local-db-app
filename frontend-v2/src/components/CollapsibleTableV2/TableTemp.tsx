@@ -38,6 +38,7 @@ declare namespace TEATableProps {
     };
     tableName?: string;
     resetPage?: boolean; // Sayfa numarasını sıfırlamak için yeni özellik
+    lastFetchParams?: TEATable.FetchDataParams; // Son fetch parametreleri
   }
 }
 
@@ -73,6 +74,26 @@ export default function TableTemp<T extends {}>(
       setPage(1);
     }
   }, [props.data]);
+
+  // Props'tan gelen sıralama parametrelerini kontrol et ve güncelle
+  useEffect(() => {
+    // Eğer props'tan lastFetchParams değeri geldiyse
+    if (props.lastFetchParams) {
+      // Order ve orderBy değerleri varsa, mevcut state'leri güncelle
+      if (props.lastFetchParams.order) {
+        setOrder(props.lastFetchParams.order as TEATable.Order);
+        console.log("Order state güncellendi:", props.lastFetchParams.order);
+      }
+
+      if (props.lastFetchParams.orderBy) {
+        setOrderBy(props.lastFetchParams.orderBy);
+        console.log(
+          "OrderBy state güncellendi:",
+          props.lastFetchParams.orderBy
+        );
+      }
+    }
+  }, [props.lastFetchParams]);
 
   useEffect(() => {
     const abortController = new AbortController();

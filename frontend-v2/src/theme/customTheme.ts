@@ -33,4 +33,7 @@ export const theme = {
   table_header: "#252526",
   table_row_light: "#252526",
   table_row_dark: "#1E1E1E",
+  error_light: "#450A0A",
+  error_text: "#F87171",
+  background_light: "#2D2D30",
 };

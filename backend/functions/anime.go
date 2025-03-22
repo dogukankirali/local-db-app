@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"local-db-app/models"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -744,5 +745,81 @@ func GetSeries(db *gorm.DB) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(seriesResponse)
+	}
+}
+
+// GetAnimeById, belirli bir ID'ye sahip animeyi getiren fonksiyon
+func GetAnimeById(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// CORS başlıklarını ekle
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// OPTIONS isteğine yanıt ver
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// ID parametresini al
+		idStr := r.URL.Query().Get("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			log.Printf("Geçersiz anime ID'si: %s", idStr)
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Geçersiz anime ID'si"})
+			return
+		}
+
+		log.Printf("GetAnimeById - anime ID: %d", id)
+
+		// Animeyi al
+		var anime models.Anime
+		result := db.Table("anime.animes").Select("*").Where("id = ?", id).Scan(&anime)
+		if result.Error != nil {
+			log.Printf("Anime alınamadı: %v", result.Error)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": result.Error.Error()})
+			return
+		}
+
+		// Anime bulunamadıysa
+		if result.RowsAffected == 0 {
+			log.Printf("Anime bulunamadı, ID: %d", id)
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Anime bulunamadı"})
+			return
+		}
+
+		// Anime'nin türlerini al
+		var genres []string
+		db.Table("anime.genres g").
+			Joins("JOIN anime.animes_genres ag ON g.id = ag.genre_id").
+			Where("ag.anime_id = ?", id).
+			Pluck("g.genre_name", &genres)
+
+		// Türleri virgülle ayrılmış şekilde birleştir
+		anime.Genre = strings.Join(genres, ", ")
+
+		// Seri adını al (eğer bir seriye aitse)
+		if anime.Series > 0 {
+			var seriesName string
+			db.Table("anime.anime_series").
+				Select("name").
+				Where("id = ?", anime.Series).
+				Scan(&seriesName)
+			anime.SeriesName = seriesName
+		}
+
+		log.Printf("Anime bulundu: %s (ID: %d)", anime.Name, anime.ID)
+
+		// Başarılı yanıt döndür
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   anime,
+		})
 	}
 }

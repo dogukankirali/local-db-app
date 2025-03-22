@@ -115,6 +115,30 @@ export module AnimeService {
     }
   }
 
+  export async function getAnime(id: number): Promise<any> {
+    try {
+      console.log(`Anime ID ${id} için detaylar alınıyor...`);
+      // Belirli ID'ye sahip animeyi alma
+      const res = await axios.get(`${path}/getAnimeById?id=${id}`);
+
+      // Backend yanıtı içindeki veriyi logla
+      console.log(`GetAnime ham yanıt:`, JSON.stringify(res.data, null, 2));
+      console.log("Veri yapısı:", Object.keys(res.data));
+
+      if (res.data && res.data.status === "success" && res.data.data) {
+        console.log("Başarılı yanıt, içeriği:", Object.keys(res.data.data));
+        console.log("Anime verisi:", JSON.stringify(res.data.data, null, 2));
+        return res;
+      } else {
+        console.error("Anime veri yapısı beklendiği gibi değil:", res.data);
+        return Promise.reject(new Error("Anime veri yapısı uygun değil"));
+      }
+    } catch (err) {
+      console.error(`Anime ID ${id} detayları alınırken hata:`, err);
+      return Promise.reject(err);
+    }
+  }
+
   export async function syncAnimeData(signal?: AbortSignal): Promise<any> {
     try {
       const res = await axios.get(`${path}/syncAnimeData`, { signal });
