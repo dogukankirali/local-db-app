@@ -148,11 +148,11 @@ export default function AnimePage() {
           }}
           disabled={!isAdmin}
           sx={{
+            backgroundColor: theme.danger,
             fontFamily: "inherit",
             opacity: !isAdmin ? 0.5 : 1,
             cursor: !isAdmin ? "not-allowed" : "pointer",
           }}
-          color="error"
         >
           <Typography variant="button">Delete</Typography>
         </StyledTeaButton>

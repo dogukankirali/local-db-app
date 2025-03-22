@@ -132,6 +132,9 @@ func main() {
 	migrations.CreateSeriesTable(db)
 	migrations.CreateUsersTable(db)
 
+	// PlanToWatch kolonu ekle
+	migrations.AddPlanToWatchColumn(db)
+
 	port := os.Getenv("PORT")
 
 	// API rotaları

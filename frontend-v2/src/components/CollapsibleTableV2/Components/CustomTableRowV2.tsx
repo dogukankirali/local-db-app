@@ -16,6 +16,7 @@ import {
   LinearProgressProps,
   Popover,
   Typography,
+  Collapse,
 } from "@mui/material";
 import moment from "moment-timezone";
 import { theme } from "../../../theme/customTheme";
@@ -25,6 +26,8 @@ import React from "react";
 import LocalMoviesIcon from "@mui/icons-material/LocalMovies";
 import TvIcon from "@mui/icons-material/Tv";
 import { genreColors } from "../../../constants/Constants";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 // IColumnItem tipini genişleterek hide özelliğini ekleyelim
 interface IExtendedColumnItem extends TEATable.IColumnItem {
@@ -196,7 +199,8 @@ export default function CustomTableRowV2(
 
   return (
     <>
-      <Dialog
+      {/* Dialog'u yorum satırına alıyoruz, gerekirse tamamen kaldırabiliriz */}
+      {/* <Dialog
         open={open}
         onClose={() => setOpen(!open)}
         aria-labelledby="alert-dialog-title"
@@ -235,16 +239,19 @@ export default function CustomTableRowV2(
             listType="detail"
           />
         )}
-      </Dialog>
+      </Dialog> */}
       <TableRow
         sx={{
-          "& > *": { borderBottom: "unset" },
+          "& > *": { borderBottom: open ? "none" : "unset" },
           backgroundColor: open
             ? theme.table_row_light
             : rowIndex % 2 === 0
             ? theme.table_row_dark
             : theme.table_row_light,
           cursor: "pointer",
+          borderTop:
+            rowIndex % 2 === 0 ? "1px solid rgba(255, 255, 255, 0.12)" : "none",
+          transition: "background-color 0.2s ease-in-out",
         }}
         onClick={() => setOpen(!open)}
       >
@@ -258,7 +265,26 @@ export default function CustomTableRowV2(
                 ? theme.table_row_dark
                 : theme.table_row_light,
             }}
-          ></TableCell>
+          >
+            {/* Akordiyon göstergesi ekliyoruz */}
+            <IconButton
+              aria-label="expand row"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Ana satıra tıklama olayını engellemek için
+                setOpen(!open);
+              }}
+              sx={{
+                transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <KeyboardArrowDownIcon />
+            </IconButton>
+          </TableCell>
         )}
         {headers.map((header, index) => {
           // Mobil cihazlar için kontrol
@@ -382,6 +408,9 @@ export default function CustomTableRowV2(
                   id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
                   align="center"
                   style={colStyle}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
+                  }}
                 >
                   {renderFunction(
                     props.singleData.id,
@@ -456,15 +485,51 @@ export default function CustomTableRowV2(
                   align="center"
                   style={colStyle}
                 >
-                  <img
-                    src={`${props.singleData[header.key]}`}
-                    onMouseEnter={(e) => {
-                      handlePopoverOpen(e, "cover");
-                    }}
-                    onMouseLeave={handlePopoverClose}
-                    alt={props.singleData["Name"] + "_cover"}
-                    style={{ width: 70, borderRadius: 10 }}
-                  />
+                  <div
+                    style={{ position: "relative", display: "inline-block" }}
+                  >
+                    <img
+                      src={`${props.singleData[header.key]}`}
+                      onMouseEnter={(e) => {
+                        handlePopoverOpen(e, "cover");
+                      }}
+                      onMouseLeave={handlePopoverClose}
+                      alt={props.singleData["Name"] + "_cover"}
+                      style={{ width: 70, borderRadius: 10 }}
+                    />
+                    {props.singleData["PlanToWatch"] === true && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          backgroundColor: "#FFD700",
+                          color: "#000",
+                          width: "24px",
+                          height: "24px",
+                          textAlign: "center",
+                          fontSize: "8px",
+                          fontWeight: "bold",
+                          padding: "3px 0",
+                          zIndex: 1,
+                          clipPath: "polygon(0 0, 100% 0, 100% 100%)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "2px",
+                            right: "2px",
+                            fontSize: "8px",
+                            fontWeight: "bold",
+                            transform: "rotate(45deg)",
+                          }}
+                        >
+                          PTW
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <Popover
                     id="mouse-over-popover"
                     sx={{
@@ -486,11 +551,48 @@ export default function CustomTableRowV2(
                     onClose={handlePopoverClose}
                     disableRestoreFocus
                   >
-                    <img
-                      src={`${props.singleData[header.key]}`}
-                      alt={props.singleData["Name"] + "_cover"}
-                      style={{ width: 400 }}
-                    />
+                    <div
+                      style={{ position: "relative", display: "inline-block" }}
+                    >
+                      <img
+                        src={`${props.singleData[header.key]}`}
+                        alt={props.singleData["Name"] + "_cover"}
+                        style={{ width: 400 }}
+                      />
+                      {props.singleData["PlanToWatch"] === true && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            backgroundColor: "#FFD700",
+                            color: "#000",
+                            width: "60px",
+                            height: "60px",
+                            textAlign: "center",
+                            fontSize: "14px",
+                            fontWeight: "bold",
+                            padding: "8px 0",
+                            zIndex: 1,
+                            clipPath: "polygon(0 0, 100% 0, 100% 100%)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "8px",
+                              right: "10px",
+                              fontSize: "14px",
+                              fontWeight: "bold",
+                              transform: "rotate(45deg)",
+                              transformOrigin: "center",
+                            }}
+                          >
+                            PTW
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </Popover>
                 </TableCell>
               );
@@ -637,7 +739,7 @@ export default function CustomTableRowV2(
                               padding: 0, // İç boşlukları sıfırlayın
                               width: "100%",
                               height: "auto",
-                              margin: "2px 0",
+                              margin: "0 2px",
                               ":hover": {
                                 backgroundColor: "transparent",
                               },
@@ -770,6 +872,9 @@ export default function CustomTableRowV2(
                   id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
                   align="center"
                   style={colStyle}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
+                  }}
                 >
                   {renderFunction(
                     props.singleData.id,
@@ -791,6 +896,74 @@ export default function CustomTableRowV2(
             }
           }
         })}
+      </TableRow>
+
+      {/* Akordiyon içeriği - satır genişletildiğinde gösterilecek */}
+      <TableRow
+        sx={{
+          backgroundColor: theme.table_row_light,
+        }}
+      >
+        <TableCell
+          style={{ paddingBottom: 0, paddingTop: 0, border: 0 }}
+          colSpan={headers.length + (props.collapsible?.isCollapsible ? 1 : 0)}
+        >
+          <Collapse
+            in={open}
+            timeout={300}
+            easing="cubic-bezier(0.4, 0, 0.2, 1)"
+            unmountOnExit
+            sx={{
+              willChange: "height, opacity",
+              transformOrigin: "top",
+              overflowY: "hidden",
+            }}
+          >
+            <Box
+              sx={{
+                margin: 2,
+                bgcolor: theme.background,
+                borderRadius: 1,
+                p: 2,
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  boxShadow: "0 6px 12px rgba(0,0,0,0.15)",
+                },
+              }}
+            >
+              <Typography
+                variant="h6"
+                gutterBottom
+                component="div"
+                sx={{ color: theme.primary_text, mb: 2 }}
+              >
+                {props.singleData.Name} - Detaylar
+              </Typography>
+
+              {props.collapsible.innerComponent && (
+                <props.collapsible.innerComponent
+                  key={props.singleData.id}
+                  data={props.singleData}
+                  update={props.updateData}
+                />
+              )}
+
+              {props.collapsible.inner?.type && (
+                <Inner
+                  data={props.singleData}
+                  type={props.collapsible.inner.type}
+                  list={props.collapsible.inner.list}
+                  onUpdate={props.updateInnerCard}
+                  sortHeader={props.collapsible.inner.sortHeader}
+                  tableColumns={props.collapsible.inner.tableColumns}
+                  tableName={props.collapsible.inner.tableName}
+                  listType="detail"
+                />
+              )}
+            </Box>
+          </Collapse>
+        </TableCell>
       </TableRow>
     </>
   );

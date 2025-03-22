@@ -143,6 +143,8 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				}
 			case "IsMovie":
 				animeFilter.IsMovie = filter.Value.([]interface{})
+			case "PlanToWatch":
+				animeFilter.PlanToWatch = filter.Value.([]interface{})
 			case "Score":
 				if filter.Value != nil {
 					animeFilter.Score = models.FloatNumberFilter{
@@ -216,6 +218,38 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 					whereString += fmt.Sprintf("and (a.is_movie = %s or a.is_movie = %s) ", genreArray[0], genreArray[1])
 				} else {
 					whereString += fmt.Sprintf("(a.is_movie = %s or a.is_movie = %s) ", genreArray[0], genreArray[1])
+				}
+			}
+		}
+		if len(animeFilter.PlanToWatch) != 0 {
+			var planToWatchArray []string
+			for i := range animeFilter.PlanToWatch {
+				// Tip kontrolü yaparak uygun şekilde string'e dönüştürme
+				switch v := animeFilter.PlanToWatch[i].(type) {
+				case string:
+					planToWatchArray = append(planToWatchArray, v)
+				case float64:
+					planToWatchArray = append(planToWatchArray, fmt.Sprintf("%t", v != 0))
+				case int:
+					planToWatchArray = append(planToWatchArray, fmt.Sprintf("%t", v != 0))
+				case bool:
+					planToWatchArray = append(planToWatchArray, fmt.Sprintf("%t", v))
+				default:
+					// Diğer tipler için string dönüşümü
+					planToWatchArray = append(planToWatchArray, fmt.Sprintf("%v", v))
+				}
+			}
+			if len(planToWatchArray) == 1 {
+				if len(whereString) != 0 {
+					whereString += fmt.Sprintf("and a.plan_to_watch = %s ", planToWatchArray[0])
+				} else {
+					whereString += fmt.Sprintf("a.plan_to_watch = %s ", planToWatchArray[0])
+				}
+			} else {
+				if len(whereString) != 0 {
+					whereString += fmt.Sprintf("and (a.plan_to_watch = %s or a.plan_to_watch = %s) ", planToWatchArray[0], planToWatchArray[1])
+				} else {
+					whereString += fmt.Sprintf("(a.plan_to_watch = %s or a.plan_to_watch = %s) ", planToWatchArray[0], planToWatchArray[1])
 				}
 			}
 		}
@@ -451,7 +485,8 @@ func UpdateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			AnimeLink:             reqBody.AnimeLink,
 			MALAnimeLink:          reqBody.MALAnimeLink,
 			Cover:                 reqBody.Cover,
-			Series:                reqBody.Series, // Series alanını da güncelle
+			Series:                reqBody.Series,      // Series alanını da güncelle
+			PlanToWatch:           reqBody.PlanToWatch, // PlanToWatch alanını ekle
 		}
 
 		err := db.Table("anime.animes a").Model(&models.Anime{}).Where("id = ?", reqBody.ID).Updates(&anime).Error
@@ -520,7 +555,8 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			AnimeLink:             reqBody.AnimeLink,
 			MALAnimeLink:          reqBody.MALAnimeLink,
 			Cover:                 reqBody.Cover,
-			Series:                reqBody.Series, // Series alanını da ekle
+			Series:                reqBody.Series,      // Series alanını da ekle
+			PlanToWatch:           reqBody.PlanToWatch, // PlanToWatch alanını ekle
 		}
 		err := db.Table("anime.animes").Create(&anime).Error
 		if err != nil {

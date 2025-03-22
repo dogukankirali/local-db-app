@@ -16,6 +16,7 @@ type Anime struct {
 	Cover                 string  `gorm:"column:cover"`
 	Series                int     `gorm:"column:series"`
 	SeriesName            string  `gorm:"column:series_name"`
+	PlanToWatch           bool    `gorm:"column:plan_to_watch"`
 }
 
 type AnimeCreate struct {
@@ -32,6 +33,7 @@ type AnimeCreate struct {
 	MALAnimeLink          string  `gorm:"column:mal_anime_link"`
 	Cover                 string  `gorm:"column:cover"`
 	Series                int     `gorm:"column:series"`
+	PlanToWatch           bool    `gorm:"column:plan_to_watch"`
 }
 
 type AnimeFilter struct {
@@ -43,6 +45,7 @@ type AnimeFilter struct {
 	Genre                 []interface{}     `gorm:"column:genre"`
 	Score                 FloatNumberFilter `gorm:"column:score"`
 	Series                []interface{}     `gorm:"column:series"`
+	PlanToWatch           []interface{}     `gorm:"column:plan_to_watch"`
 }
 
 type NumberFilter struct {
