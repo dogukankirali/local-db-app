@@ -1,6 +1,6 @@
 module local-db-app
 
-go 1.19
+go 1.21
 
 require (
 	github.com/darenliang/jikan-go v1.2.3
