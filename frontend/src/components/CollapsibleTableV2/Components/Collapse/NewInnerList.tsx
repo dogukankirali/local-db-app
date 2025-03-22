@@ -11,8 +11,9 @@ import {
 import moment from "moment-timezone";
 import { theme } from "../../../../theme/customTheme";
 import { customStyles, timezoneOptions } from "./Common";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import Select from "react-select";
+import AsyncSelect from "react-select/async";
 import {
   IOSSwitch,
   StyledMenuItem,
@@ -23,10 +24,6 @@ import {
   StyledTeaButton,
 } from "../StyledComponents";
 import { Utils } from "../../Utils/Utilities";
-import "@fontsource/roboto/300.css";
-import "@fontsource/roboto/400.css";
-import "@fontsource/roboto/500.css";
-import "@fontsource/roboto/700.css";
 
 export default function InnerList({
   data,
@@ -37,16 +34,36 @@ export default function InnerList({
 }: TEATable.ICustomCollapseProps.NewList) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Veri değişikliklerini izle
+  useEffect(() => {
+    if (data) {
+      console.log("InnerList - Veri değişti:", data);
+    }
+  }, [data]);
+
+  // Veri değişikliklerini güncelleyen yardımcı fonksiyon
+  const updateData = (key: string, value: any) => {
+    if (!setData) return;
+
+    console.log(`Alan değişti - ${key}:`, value);
+
+    setData((prevState: any) => {
+      const newData = {
+        ...prevState,
+        data: { ...prevState.data, [key]: value },
+      };
+      console.log("Güncellenmiş veri:", newData);
+      return newData;
+    });
+  };
+
   const handleImageUpload = () => {
     const file = inputRef.current?.files?.[0];
     const reader = new FileReader();
 
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      setData!((prevState: any) => ({
-        ...prevState,
-        data: { ...prevState.data, Cover: base64String },
-      }));
+      updateData("Cover", base64String);
     };
 
     reader.readAsDataURL(file as Blob);
@@ -80,7 +97,7 @@ export default function InnerList({
       sx={{
         display: "grid",
         gridTemplateColumns: "repeat(2, 1fr)",
-        gap: 1,
+        gap: 2,
         p: 3,
         "@media (max-width: 600px)": {
           gridTemplateColumns: "1fr",
@@ -89,24 +106,26 @@ export default function InnerList({
     >
       {list.map((item: any) => (
         <ListItemButton
+          key={item.key}
           sx={{
             display: "flex",
             flexDirection: "column",
-            gap: 0.5,
-            p: 1,
+            gap: 1,
+            p: 2,
             borderRadius: 2,
-            backgroundColor: Utils.ChangeColorAlpha(theme.foreground, 0.3),
+            backgroundColor: theme.input_background,
+            border: `1px solid ${theme.input_border}`,
             "& > *": {
               width: "100%",
             },
             "&:hover": {
-              backgroundColor: Utils.ChangeColorAlpha(theme.foreground, 0.3), // Hover durumunda arka plan rengi değişmez
+              backgroundColor: theme.input_background,
             },
             "&:active": {
-              backgroundColor: Utils.ChangeColorAlpha(theme.foreground, 0.3), // Tıklama durumunda arka plan rengi değişmez
+              backgroundColor: theme.input_background,
             },
             "&:hover, &:focus, &:active": {
-              backgroundColor: Utils.ChangeColorAlpha(theme.foreground, 0.3), // Hover, tıklama ve odaklanma durumlarında arka plan rengi değişmez
+              backgroundColor: theme.input_background,
             },
           }}
         >
@@ -114,7 +133,7 @@ export default function InnerList({
             sx={{
               display: "flex",
               gap: 1,
-              color: theme.input_text,
+              color: theme.primary_text,
               alignItems: "center",
             }}
           >
@@ -122,12 +141,19 @@ export default function InnerList({
               <ListItemIcon
                 sx={{
                   minWidth: "auto",
+                  color: theme.primary,
                 }}
               >
                 {item.icon}
               </ListItemIcon>
             )}
-            <ListItemText primary={item.value} />
+            <ListItemText
+              primary={item.value}
+              primaryTypographyProps={{
+                fontWeight: "600",
+                color: theme.primary_text,
+              }}
+            />
           </Box>
           <Box
             sx={{
@@ -143,34 +169,40 @@ export default function InnerList({
               <StyledTextField
                 size="small"
                 defaultValue={getStrValue(item)}
-                disabled={type === "delete"}
+                disabled={
+                  type === "delete" ||
+                  type === "detail" ||
+                  item.key === "SeriesName"
+                }
                 sx={{
                   width: "100%",
-                  backgroundColor: theme.background,
+                  backgroundColor: "transparent",
                   "& .MuiInputBase-input": {
-                    color: theme.input_text, // Font rengi
+                    color: theme.primary_text,
                   },
                   "& .MuiInputLabel-root": {
-                    color: theme.input_text, // Label rengi
+                    color: theme.secondary_text,
                   },
                   "& .MuiOutlinedInput-root": {
+                    backgroundColor: theme.input_background,
+                    borderRadius: "8px",
                     "& fieldset": {
-                      borderColor: theme.input_border, // Normal border rengi
+                      borderColor: theme.input_border,
                     },
                     "&:hover fieldset": {
-                      borderColor: theme.input_border, // Hover'da border rengi
+                      borderColor: theme.primary,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                      borderColor: theme.primary,
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                   },
                   "& .Mui-disabled": {
-                    color: theme.input_text, // Disable durumu için font rengi
-                    "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                    color: theme.primary_text,
+                    "-webkit-text-fill-color": theme.primary_text,
                   },
                 }}
               />
@@ -186,45 +218,44 @@ export default function InnerList({
                   size="small"
                   id={item.key}
                   defaultValue={data ? data[item.key as keyof typeof data] : ""}
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   onChange={(e) => {
-                    setData!((prevState: any) => ({
-                      ...prevState,
-                      data: { ...prevState.data, [item.key]: e.target.value },
-                    }));
+                    updateData(item.key, e.target.value);
                   }}
                   sx={{
-                    backgroundColor: theme.background,
+                    backgroundColor: "transparent",
                     "& .MuiInputBase-input": {
-                      color: theme.input_text, // Font rengi
+                      color: theme.primary_text,
                     },
                     "& .MuiInputLabel-root": {
-                      color: theme.input_text, // Label rengi
+                      color: theme.secondary_text,
                     },
                     "& .MuiOutlinedInput-root": {
+                      backgroundColor: theme.input_background,
+                      borderRadius: "8px 0 0 8px",
                       "& fieldset": {
-                        borderColor: theme.input_border, // Normal border rengi
+                        borderColor: theme.input_border,
                       },
                       "&:hover fieldset": {
-                        borderColor: theme.input_border, // Hover'da border rengi
+                        borderColor: theme.primary,
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                        borderColor: theme.primary,
                       },
                       "& .Mui-disabled": {
-                        color: theme.input_text, // Disable durumu için font rengi
-                        "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                        color: theme.primary_text,
+                        "-webkit-text-fill-color": theme.primary_text,
                       },
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                   }}
                 />
                 <StyledCustomButton
-                  bg={theme.scondary_button}
-                  text={theme.button_text}
+                  bg={theme.primary}
+                  text="#FFFFFF"
                   sx={{
                     borderRadius: "0px 5px 5px 0px",
                   }}
@@ -241,7 +272,7 @@ export default function InnerList({
                 fullWidth
                 size="small"
                 value={data ? data![item.key as keyof typeof data] : ""}
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 InputProps={{
                   onChange: (e) => {
                     try {
@@ -249,46 +280,45 @@ export default function InnerList({
                         item.key === "MALScore"
                           ? parseFloat(e.target.value)
                           : e.target.value;
-                      setData((prevState: any) => ({
-                        ...prevState,
-                        data: { ...prevState.data, [item.key]: newValue },
-                      }));
+                      updateData(item.key, newValue);
                     } catch (error) {
-                      console.error(error);
+                      console.error("Input değişikliği hatası:", error);
                     }
                   },
                   sx: {
-                    borderRadius: "5px 0px 0px 5px",
+                    borderRadius: "8px",
                   },
                 }}
                 id={item.key}
                 defaultValue={data ? data![item.key as keyof typeof data] : ""}
                 sx={{
-                  backgroundColor: theme.background,
+                  backgroundColor: "transparent",
                   "& .MuiInputBase-input": {
-                    color: theme.input_text, // Font rengi
+                    color: theme.primary_text,
                   },
                   "& .MuiInputLabel-root": {
-                    color: theme.input_text, // Label rengi
+                    color: theme.secondary_text,
                   },
                   "& .MuiOutlinedInput-root": {
+                    backgroundColor: theme.input_background,
+                    borderRadius: "8px",
                     "& fieldset": {
-                      borderColor: theme.input_border, // Normal border rengi
+                      borderColor: theme.input_border,
                     },
                     "&:hover fieldset": {
-                      borderColor: theme.input_border, // Hover'da border rengi
+                      borderColor: theme.primary,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                      borderColor: theme.primary,
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                   },
                   "& .Mui-disabled": {
-                    color: theme.input_text, // Disable durumu için font rengi
-                    "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                    color: theme.primary_text,
+                    "-webkit-text-fill-color": theme.primary_text,
                   },
                 }}
               />
@@ -296,7 +326,7 @@ export default function InnerList({
             {item.type === "timezone" && (
               <StyledSelectFormControl size="small" fullWidth>
                 <MaterialSelect
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   value={
                     timezoneOptions.filter(
                       (opt) => opt.value === data[item.key as keyof typeof data]
@@ -307,9 +337,60 @@ export default function InnerList({
                   }}
                   MenuProps={{
                     PaperProps: {
-                      style: {
+                      sx: {
+                        backgroundColor: theme.background,
+                        color: theme.primary_text,
                         maxHeight: 450,
                         overflowY: "auto",
+                        border: `1px solid ${theme.input_border}`,
+                        borderRadius: "8px",
+                        boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+                      },
+                    },
+                    anchorOrigin: {
+                      vertical: "bottom",
+                      horizontal: "left",
+                    },
+                    transformOrigin: {
+                      vertical: "top",
+                      horizontal: "left",
+                    },
+                  }}
+                  sx={{
+                    "& .MuiSelect-select": {
+                      color: theme.primary_text,
+                    },
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: theme.input_border,
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: theme.primary,
+                    },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: theme.primary,
+                    },
+                    "& .MuiSvgIcon-root": {
+                      color: theme.secondary_text,
+                    },
+                    "& .Mui-disabled": {
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      backgroundColor: theme.input_background,
+                      borderRadius: "8px",
+                      "& fieldset": {
+                        borderColor: theme.input_border,
+                      },
+                      "&:hover fieldset": {
+                        borderColor: theme.primary,
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: theme.primary,
+                      },
+                      "& .Mui-disabled": {
+                        color: theme.primary_text,
+                        "-webkit-text-fill-color": theme.primary_text,
                       },
                     },
                   }}
@@ -318,6 +399,21 @@ export default function InnerList({
                     <StyledMenuItem
                       key={String(option.value)}
                       value={String(option.value)}
+                      sx={{
+                        backgroundColor: "transparent",
+                        color: theme.primary_text,
+                        "&:hover": {
+                          backgroundColor: theme.input_background,
+                        },
+                        "&.Mui-selected": {
+                          backgroundColor: theme.primary,
+                          color: "#FFFFFF",
+                        },
+                        "&.Mui-selected:hover": {
+                          backgroundColor: theme.primary,
+                          opacity: 0.9,
+                        },
+                      }}
                     >
                       {option.label}
                     </StyledMenuItem>
@@ -327,92 +423,101 @@ export default function InnerList({
             )}
             {item.type === "score" && (
               <StyledTextField
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 fullWidth
                 size="small"
                 id={item.key}
                 defaultValue={data ? data![item.key as keyof typeof data] : 0}
                 onChange={(e) => {
-                  setData!((prevState: any) => ({
-                    ...prevState,
-                    data: {
-                      ...prevState.data,
-                      [item.key]: parseInt(e.target.value),
-                    },
-                  }));
+                  // String değeri float'a dönüştür
+                  const value = e.target.value;
+                  if (/^\d*[.,]?\d*$/.test(value)) {
+                    const normalizedValue = value.replace(",", ".");
+                    const floatValue = parseFloat(normalizedValue);
+                    updateData(item.key, floatValue);
+                  }
+                }}
+                InputProps={{
+                  type: "number",
+                  inputProps: {
+                    min: 0,
+                    max: 10,
+                    step: 0.1,
+                  },
                 }}
                 sx={{
-                  backgroundColor: theme.background,
+                  backgroundColor: "transparent",
                   "& .MuiInputBase-input": {
-                    color: theme.input_text, // Font rengi
+                    color: theme.primary_text,
                   },
                   "& .MuiInputLabel-root": {
-                    color: theme.input_text, // Label rengi
+                    color: theme.secondary_text,
                   },
                   "& .MuiOutlinedInput-root": {
+                    backgroundColor: theme.input_background,
+                    borderRadius: "8px",
                     "& fieldset": {
-                      borderColor: theme.input_border, // Normal border rengi
+                      borderColor: theme.input_border,
                     },
                     "&:hover fieldset": {
-                      borderColor: theme.input_border, // Hover'da border rengi
+                      borderColor: theme.primary,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                      borderColor: theme.primary,
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                   },
                   "& .Mui-disabled": {
-                    color: theme.input_text, // Disable durumu için font rengi
-                    "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                    color: theme.primary_text,
+                    "-webkit-text-fill-color": theme.primary_text,
                   },
                 }}
               />
             )}
             {item.type === "textarea" && (
               <StyledTextField
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 fullWidth
                 size="medium"
                 id={item.key}
                 defaultValue={data ? data[item.key as keyof typeof data] : ""}
                 onChange={(e) => {
-                  setData!((prevState: any) => ({
-                    ...prevState,
-                    data: { ...prevState.data, [item.key]: e.target.value },
-                  }));
+                  updateData(item.key, e.target.value);
                 }}
                 multiline
                 rows={2}
                 maxRows={4}
                 sx={{
-                  backgroundColor: theme.background,
+                  backgroundColor: "transparent",
                   "& .MuiInputBase-input": {
-                    color: theme.input_text, // Font rengi
+                    color: theme.primary_text,
                   },
                   "& .MuiInputLabel-root": {
-                    color: theme.input_text, // Label rengi
+                    color: theme.secondary_text,
                   },
                   "& .MuiOutlinedInput-root": {
+                    backgroundColor: theme.input_background,
+                    borderRadius: "8px",
                     "& fieldset": {
-                      borderColor: theme.input_border, // Normal border rengi
+                      borderColor: theme.input_border,
                     },
                     "&:hover fieldset": {
-                      borderColor: theme.input_border, // Hover'da border rengi
+                      borderColor: theme.primary,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                      borderColor: theme.primary,
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                   },
                   "& .Mui-disabled": {
-                    color: theme.input_text, // Disable durumu için font rengi
-                    "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                    color: theme.primary_text,
+                    "-webkit-text-fill-color": theme.primary_text,
                   },
                 }}
               />
@@ -420,55 +525,80 @@ export default function InnerList({
             {item.type === "number" && (
               <StyledTextField
                 fullWidth
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 size="small"
                 value={data ? data[item.key as keyof typeof data] : 0}
                 InputProps={{
                   onChange: (e) => {
-                    setData!((prevState: any) => ({
-                      ...prevState,
-                      data: {
-                        ...prevState.data,
-                        [item.key]: parseInt(e.target.value),
-                      },
-                    }));
+                    // String değeri sayıya dönüştür
+                    const numValue = parseInt(e.target.value);
+
+                    // WatchStatus için özel kontrol
+                    if (item.key === "WatchStatus" && data) {
+                      const totalEpisodes =
+                        typeof data["TotalNumberOfEpisodes"] === "number"
+                          ? data["TotalNumberOfEpisodes"]
+                          : parseInt(data["TotalNumberOfEpisodes"] as string) ||
+                            0;
+
+                      // Eğer girilen değer toplam bölüm sayısından büyükse, toplam bölüm sayısını kullan
+                      if (numValue > totalEpisodes) {
+                        updateData(item.key, totalEpisodes);
+                        return;
+                      }
+                    }
+
+                    updateData(item.key, numValue);
                   },
                   sx: {
-                    borderRadius: "5px 0px 0px 5px",
+                    borderRadius: "8px",
                   },
                   type: "number",
                   inputProps: {
                     min: 0,
+                    // WatchStatus için max değeri ayarla
+                    ...(item.key === "WatchStatus" && data
+                      ? {
+                          max:
+                            typeof data["TotalNumberOfEpisodes"] === "number"
+                              ? data["TotalNumberOfEpisodes"]
+                              : parseInt(
+                                  data["TotalNumberOfEpisodes"] as string
+                                ) || 0,
+                        }
+                      : {}),
                   },
                 }}
                 id={item.key}
                 defaultValue={data ? data![item.key as keyof typeof data] : 0}
                 sx={{
-                  backgroundColor: theme.background,
+                  backgroundColor: "transparent",
                   "& .MuiInputBase-input": {
-                    color: theme.input_text, // Font rengi
+                    color: theme.primary_text,
                   },
                   "& .MuiInputLabel-root": {
-                    color: theme.input_text, // Label rengi
+                    color: theme.secondary_text,
                   },
                   "& .MuiOutlinedInput-root": {
+                    backgroundColor: theme.input_background,
+                    borderRadius: "8px",
                     "& fieldset": {
-                      borderColor: theme.input_border, // Normal border rengi
+                      borderColor: theme.input_border,
                     },
                     "&:hover fieldset": {
-                      borderColor: theme.input_border, // Hover'da border rengi
+                      borderColor: theme.primary,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                      borderColor: theme.primary,
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                   },
                   "& .Mui-disabled": {
-                    color: theme.input_text, // Disable durumu için font rengi
-                    "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                    color: theme.primary_text,
+                    "-webkit-text-fill-color": theme.primary_text,
                   },
                 }}
               />
@@ -476,7 +606,7 @@ export default function InnerList({
             {item.type === "float" && (
               <StyledTextField
                 fullWidth
-                disabled={type === "delete"}
+                disabled={type === "delete" || type === "detail"}
                 size="small"
                 value={data ? data[item.key as keyof typeof data] : 0}
                 InputProps={{
@@ -484,47 +614,51 @@ export default function InnerList({
                     const { value } = e.target;
                     if (/^\d*[.,]?\d*$/.test(value)) {
                       const normalizedValue = value.replace(",", ".");
-                      setData((prevState: any) => ({
-                        ...prevState,
-                        data: {
-                          ...prevState.data,
-                          [item.key]: normalizedValue,
-                        },
-                      }));
+                      // String'i float'a dönüştür
+                      const floatValue = parseFloat(normalizedValue);
+                      updateData(item.key, floatValue);
                     }
                   },
+                  type: "number",
+                  inputProps: {
+                    min: 0,
+                    max: 10,
+                    step: 0.1,
+                  },
                   sx: {
-                    borderRadius: "5px 0px 0px 5px",
+                    borderRadius: "8px",
                   },
                 }}
                 id={item.key}
                 defaultValue={data ? data![item.key as keyof typeof data] : 0}
                 sx={{
-                  backgroundColor: theme.background,
+                  backgroundColor: "transparent",
                   "& .MuiInputBase-input": {
-                    color: theme.input_text, // Font rengi
+                    color: theme.primary_text,
                   },
                   "& .MuiInputLabel-root": {
-                    color: theme.input_text, // Label rengi
+                    color: theme.secondary_text,
                   },
                   "& .MuiOutlinedInput-root": {
+                    backgroundColor: theme.input_background,
+                    borderRadius: "8px",
                     "& fieldset": {
-                      borderColor: theme.input_border, // Normal border rengi
+                      borderColor: theme.input_border,
                     },
                     "&:hover fieldset": {
-                      borderColor: theme.input_border, // Hover'da border rengi
+                      borderColor: theme.primary,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                      borderColor: theme.primary,
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                   },
                   "& .Mui-disabled": {
-                    color: theme.input_text, // Disable durumu için font rengi
-                    "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                    color: theme.primary_text,
+                    "-webkit-text-fill-color": theme.primary_text,
                   },
                 }}
               />
@@ -588,14 +722,17 @@ export default function InnerList({
                       type="file"
                       ref={inputRef}
                       style={{ display: "none" }}
-                      disabled={type === "delete"}
+                      disabled={type === "delete" || type === "detail"}
                       onChange={handleImageUpload}
                     />
                     <img
-                      onClick={handleImageClick}
+                      onClick={type !== "detail" ? handleImageClick : undefined}
                       src={`${data![item.key as keyof typeof data]}`}
                       alt={data["Name"] + "_cover"}
-                      style={{ width: 100 }}
+                      style={{
+                        width: 100,
+                        cursor: type !== "detail" ? "pointer" : "default",
+                      }}
                     />
                   </Box>
                 )}
@@ -605,7 +742,7 @@ export default function InnerList({
               <StyledSelectFormControl size="small" fullWidth>
                 <Select
                   isMulti
-                  isDisabled={type === "delete"}
+                  isDisabled={type === "delete" || type === "detail"}
                   value={
                     data
                       ? data[item.key as keyof typeof data]
@@ -621,48 +758,65 @@ export default function InnerList({
                   onChange={(e) => {
                     const values = e.map((genre: any) => genre.value);
                     const result = values.join(", ");
-                    setData!((prevState: any) => ({
-                      ...prevState,
-                      data: { ...prevState.data, [item.key]: result },
-                    }));
+                    updateData(item.key, result);
                   }}
                   options={item.options}
                   styles={{
                     ...customStyles,
                     placeholder: (provided) => ({
                       ...provided,
-                      color: "rgba(255, 255, 255, 0.7)",
+                      color: theme.secondary_text,
                       fontWeight: "400",
                       fontSize: "1rem",
                       lineHeight: "1.4375em",
                     }),
-                    /* valueContainer: (provided) => ({
-                      width: 400,
-                    }), */
-                    container: (provided) => ({
+                    menu: (provided) => ({
                       ...provided,
+                      zIndex: 10,
+                      backgroundColor: theme.background,
+                      border: `1px solid ${theme.input_border}`,
+                      borderRadius: "8px",
+                      boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+                    }),
+                    menuList: (provided) => ({
+                      ...provided,
+                      padding: "8px",
+                    }),
+                    multiValue: (provided) => ({
+                      ...provided,
+                      backgroundColor: theme.primary,
+                      borderRadius: "4px",
+                    }),
+                    multiValueLabel: (provided) => ({
+                      ...provided,
+                      color: "#FFFFFF",
+                      fontWeight: "500",
+                    }),
+                    multiValueRemove: (provided) => ({
+                      ...provided,
+                      color: "#FFFFFF",
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 255, 255, 0.2)",
+                        color: "#FFFFFF",
+                      },
+                    }),
+                    valueContainer: (provided) => ({
+                      ...provided,
+                      padding: "8px",
                     }),
                     control: (provided, state) => ({
                       ...provided,
                       color: theme.primary_text,
-                      backgroundColor: "transparent",
+                      backgroundColor: theme.input_background,
                       borderColor: state.isFocused
-                        ? theme.scondary_button
-                        : theme.secondary_text,
+                        ? theme.primary
+                        : theme.input_border,
                       boxShadow: state.isFocused
-                        ? theme.scondary_button
-                        : "transparent",
+                        ? `0 0 0 1px ${theme.primary}`
+                        : "none",
+                      borderRadius: "8px",
                       ":hover": {
-                        borderColor: state.isFocused
-                          ? theme.scondary_button
-                          : theme.input_border,
-                        boxShadowColor: state.isFocused
-                          ? theme.scondary_button
-                          : theme.input_border,
-                      },
-                      ":focus": {
-                        borderColor: theme.input_border,
-                        boxShadowColor: state.isFocused ? "red" : "transparent",
+                        borderColor: theme.primary,
                       },
                     }),
                     input: (provided) => ({
@@ -675,9 +829,20 @@ export default function InnerList({
                         color: theme.primary_text,
                       },
                     }),
-                    menu: (provided) => ({
+                    option: (provided, state) => ({
                       ...provided,
-                      zIndex: 10,
+                      backgroundColor: state.isSelected
+                        ? theme.primary
+                        : state.isFocused
+                        ? theme.input_background
+                        : "transparent",
+                      color: state.isSelected ? "#FFFFFF" : theme.primary_text,
+                      "&:hover": {
+                        backgroundColor: state.isSelected
+                          ? theme.primary
+                          : theme.input_background,
+                        opacity: state.isSelected ? 0.9 : 1,
+                      },
                     }),
                   }}
                   theme={(t) => ({
@@ -687,7 +852,7 @@ export default function InnerList({
                       primary25: theme.primary25,
                       primary50: theme.primary50,
                       primary: theme.primary,
-                      neutral0: theme.neutral0,
+                      neutral0: theme.input_background,
                       neutral80: theme.neutral80,
                       neutral10: theme.neutral10,
                       neutral5: theme.neutral5,
@@ -699,7 +864,7 @@ export default function InnerList({
             {item.type === "select" && (
               <StyledSelectFormControl size="small" fullWidth>
                 <MaterialSelect
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   value={
                     data
                       ? data[item.key as keyof typeof data]
@@ -712,19 +877,19 @@ export default function InnerList({
                       : undefined
                   }
                   onChange={(e) => {
-                    setData!((prevState: any) => ({
-                      ...prevState,
-                      data: { ...prevState.data, [item.key]: e.target.value },
-                    }));
+                    updateData(item.key, e.target.value);
                   }}
                   MenuProps={{
                     PaperProps: {
                       sx: {
-                        backgroundColor: theme.background, // Menü arka plan rengi
-                        color: theme.input_text, // Menü yazı rengi
+                        backgroundColor: theme.background,
+                        color: theme.primary_text,
                         maxHeight: 450,
                         overflowY: "auto",
                         borderColor: theme.input_border,
+                        border: `1px solid ${theme.input_border}`,
+                        borderRadius: "8px",
+                        boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
                       },
                     },
                     anchorOrigin: {
@@ -737,45 +902,45 @@ export default function InnerList({
                     },
                     MenuListProps: {
                       sx: {
-                        padding: 0, // Menü içeriği içindeki boşlukları kaldırır
+                        padding: 0,
                       },
                     },
                   }}
                   sx={{
                     "& .MuiSelect-select": {
-                      color: theme.input_text, // Seçili öğe yazı rengi
+                      color: theme.primary_text,
                     },
                     "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.input_border, // Seçili öğe border rengi
+                      borderColor: theme.input_border,
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: theme.primary,
                     },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.secondary, // Odaklanmış durumda border rengi
+                      borderColor: theme.primary,
                     },
-                    "& .MuiMenuItem-root.Mui-selected": {
-                      backgroundColor: theme.secondary, // Seçili öğe arkaplan rengi
-                      color: theme.background, // Seçili öğe yazı rengi
-                    },
-                    "& .MuiMenuItem-root.Mui-selected:hover": {
-                      backgroundColor: theme.secondary, // Seçili öğe hover arkaplan rengi
-                      color: theme.background, // Seçili öğe hover yazı rengi
+                    "& .MuiSvgIcon-root": {
+                      color: theme.secondary_text,
                     },
                     "& .Mui-disabled": {
-                      color: theme.input_text, // Disable durumu için font rengi
-                      "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                      color: theme.primary_text,
+                      "-webkit-text-fill-color": theme.primary_text,
                     },
                     "& .MuiOutlinedInput-root": {
+                      backgroundColor: theme.input_background,
+                      borderRadius: "8px",
                       "& fieldset": {
-                        borderColor: theme.input_border, // Normal border rengi
+                        borderColor: theme.input_border,
                       },
                       "&:hover fieldset": {
-                        borderColor: theme.input_border, // Hover'da border rengi
+                        borderColor: theme.primary,
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: theme.input_border, // Odaklanmış durumda border rengi
+                        borderColor: theme.primary,
                       },
                       "& .Mui-disabled": {
-                        color: theme.input_text, // Disable durumu için font rengi
-                        "-webkit-text-fill-color": theme.input_text, // Chrome'da disable durumunu düzgün göstermek için
+                        color: theme.primary_text,
+                        "-webkit-text-fill-color": theme.primary_text,
                       },
                     },
                   }}
@@ -785,7 +950,21 @@ export default function InnerList({
                       key={String(option.key)}
                       value={option.key}
                       disabled={option.disabled}
-                      sx={{ backgroundColor: theme.background }}
+                      sx={{
+                        backgroundColor: "transparent",
+                        color: theme.primary_text,
+                        "&:hover": {
+                          backgroundColor: theme.input_background,
+                        },
+                        "&.Mui-selected": {
+                          backgroundColor: theme.primary,
+                          color: "#FFFFFF",
+                        },
+                        "&.Mui-selected:hover": {
+                          backgroundColor: theme.primary,
+                          opacity: 0.9,
+                        },
+                      }}
                     >
                       <StyledTooltip title={option.tooltip}>
                         <Box
@@ -804,10 +983,138 @@ export default function InnerList({
                 </MaterialSelect>
               </StyledSelectFormControl>
             )}
+            {item.type === "select-api" && (
+              <StyledSelectFormControl size="small" fullWidth>
+                <AsyncSelect
+                  isDisabled={type === "delete" || type === "detail"}
+                  value={
+                    data && data[item.key as keyof typeof data]
+                      ? {
+                          value: data[item.key as keyof typeof data],
+                          label: data["SeriesName"] || "Seçiniz",
+                        }
+                      : null
+                  }
+                  onChange={(selectedOption: any) => {
+                    if (selectedOption) {
+                      updateData(item.key, selectedOption.value);
+                      // SeriesName alanını da güncelle
+                      updateData("SeriesName", selectedOption.label);
+                    } else {
+                      updateData(item.key, null);
+                      updateData("SeriesName", "");
+                    }
+                  }}
+                  defaultOptions={true}
+                  cacheOptions
+                  loadOptions={async (inputValue) => {
+                    try {
+                      const { AnimeService } = await import(
+                        "../../../../services/AnimeServices"
+                      );
+                      const series = await AnimeService.getSeries();
+                      console.log("Yüklenen seriler:", series);
+
+                      // Eğer arama metni varsa, filtreleme yap
+                      if (inputValue) {
+                        return series.filter((option: any) =>
+                          option.label
+                            .toLowerCase()
+                            .includes(inputValue.toLowerCase())
+                        );
+                      }
+
+                      return series;
+                    } catch (error) {
+                      console.error("Series yüklenirken hata:", error);
+                      return [];
+                    }
+                  }}
+                  styles={{
+                    ...customStyles,
+                    placeholder: (provided) => ({
+                      ...provided,
+                      color: theme.secondary_text,
+                      fontWeight: "400",
+                      fontSize: "1rem",
+                      lineHeight: "1.4375em",
+                    }),
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 10,
+                      backgroundColor: theme.background,
+                      border: `1px solid ${theme.input_border}`,
+                      borderRadius: "8px",
+                      boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+                    }),
+                    menuList: (provided) => ({
+                      ...provided,
+                      padding: "8px",
+                    }),
+                    container: (provided) => ({
+                      ...provided,
+                    }),
+                    control: (provided, state) => ({
+                      ...provided,
+                      color: theme.primary_text,
+                      backgroundColor: theme.input_background,
+                      borderColor: state.isFocused
+                        ? theme.primary
+                        : theme.input_border,
+                      boxShadow: state.isFocused
+                        ? `0 0 0 1px ${theme.primary}`
+                        : "none",
+                      borderRadius: "8px",
+                      ":hover": {
+                        borderColor: theme.primary,
+                      },
+                    }),
+                    input: (provided) => ({
+                      ...provided,
+                      color: theme.primary_text,
+                      ":hover": {
+                        cursor: "text",
+                      },
+                      ":disabled": {
+                        color: theme.primary_text,
+                      },
+                    }),
+                    option: (provided, state) => ({
+                      ...provided,
+                      backgroundColor: state.isSelected
+                        ? theme.primary
+                        : state.isFocused
+                        ? theme.input_background
+                        : "transparent",
+                      color: state.isSelected ? "#FFFFFF" : theme.primary_text,
+                      "&:hover": {
+                        backgroundColor: state.isSelected
+                          ? theme.primary
+                          : theme.input_background,
+                        opacity: state.isSelected ? 0.9 : 1,
+                      },
+                    }),
+                  }}
+                  theme={(t) => ({
+                    ...t,
+                    colors: {
+                      ...t.colors,
+                      primary25: theme.primary25,
+                      primary50: theme.primary50,
+                      primary: theme.primary,
+                      neutral0: theme.input_background,
+                      neutral80: theme.neutral80,
+                      neutral10: theme.neutral10,
+                      neutral5: theme.neutral5,
+                    },
+                  })}
+                />
+              </StyledSelectFormControl>
+            )}
             {(item.type === "boolean" || item.type === "boolean-readOnly") && (
               <Box>
                 <IOSSwitch
-                  disabled={type === "delete"}
+                  disabled={type === "delete" || type === "detail"}
                   //disabled={item.type === "boolean-readOnly"}
                   defaultChecked={
                     data
@@ -824,10 +1131,7 @@ export default function InnerList({
                     },
                   }}
                   onChange={(e) => {
-                    setData!((prevState: any) => ({
-                      ...prevState,
-                      data: { ...prevState.data, [item.key]: e.target.checked },
-                    }));
+                    updateData(item.key, e.target.checked);
                   }}
                 />
               </Box>

@@ -1,0 +1,397 @@
+declare namespace TEATable {
+  type ColumnTypes =
+    | "string"
+    | "number"
+    | "timestamp"
+    | "boolean"
+    | "tv-movie"
+    | "selection"
+    | "button"
+    | "uptime"
+    | "blank"
+    | "function"
+    | "base64"
+    | "link"
+    | "pill"
+    | "score"
+    | "episode"
+    | "status"
+    | "series"
+    | "node";
+  type InnerTypes =
+    | "table"
+    | "tableList"
+    | "tableListWithIcons"
+    | "list"
+    | "listWithIcons";
+  export interface IColumnItem {
+    key: string | ((id: string, index: number, data?: any) => JSX.Element);
+    value: string;
+    width?: string;
+    type?: string;
+  }
+
+  export interface IAnime {
+    ID: number;
+    Name: string;
+    AnimeStatus: string;
+    WatchStatus: string;
+    TotalNumberOfEpisodes: string;
+    IsMovie: boolean;
+    Genre: string[];
+    Score: string;
+    MALScore: number;
+    Notes: string;
+    AnimeLink: string;
+    MALAnimeLink: string;
+    Cover: string;
+    SeriesID?: number;
+    Series?: number;
+    SeriesName?: string;
+    PlanToWatch?: boolean;
+  }
+
+  export interface IAnimeDetail {
+    ID: number;
+    Name: string;
+    AnimeStatus: string;
+    WatchStatus: string;
+    TotalNumberOfEpisodes: string;
+    IsMovie: boolean;
+    Genre: string;
+    Score: string;
+    MALScore: number;
+    Notes: string;
+    AnimeLink: string;
+    MALAnimeLink: string;
+    Cover: string;
+    SeriesID?: number;
+    Series?: number;
+    SeriesName?: string;
+  }
+
+  export interface IColumnItems extends Array<IColumnItem> {}
+
+  type NumberFilterType = {
+    key: string;
+    value: number | null;
+    operand: ">" | "<" | "=";
+  };
+
+  type StringFilterType = {
+    key: string;
+    value: string | string[];
+    operand?: never;
+  };
+
+  type IFilterType =
+    | {
+        key: string;
+        selections: any;
+        itemKey: string;
+      }
+    | NumberFilterType
+    | StringFilterType;
+
+  interface IFilterTypes extends Array<IFilterType> {}
+
+  type FetchDataParams = {
+    order: Order;
+    orderBy: string;
+    abortController: AbortController;
+    page: number;
+    count: number;
+    filters?: {
+      key: string;
+      selections: any;
+      itemKey: string;
+    }[];
+  };
+
+  type FetchData = (params: {
+    order?: Order;
+    orderBy?: string;
+    abortController?: AbortController;
+    page?: number;
+    count?: number;
+    filters?: IFilterType[];
+  }) => Promise<void>;
+
+  export interface ITableProps<T> {
+    data: {
+      data: T[];
+      pagination: {
+        totalPageCount: number;
+      };
+    };
+    setData?: React.Dispatch<
+      React.SetStateAction<{
+        data: T[];
+        pagination: {
+          totalPageCount: number;
+        };
+      }>
+    >;
+    header: IColumnItem[];
+    sortHeader?: React.Dispatch<React.SetStateAction<IColumnItem[]>>;
+    collapsible: {
+      isCollapsible: boolean;
+      inner?: {
+        type: string;
+        list: any[];
+        sortHeader?: any;
+        tableColumns?: any;
+        tableName?: string;
+      };
+    };
+    updateInnerCard?: (data: any) => void;
+    tableRerender: FetchData;
+    rowsPerPage?: number;
+    loading?: boolean;
+    style?: {
+      height?: number;
+    };
+    dimensions?: {
+      height?: number;
+    };
+    extendedTable?: boolean;
+    extraDependecies?: any[];
+    selectionFilters?: any;
+    setSelectionFilters?: any;
+    tableName: string;
+  }
+
+  type OptimisticUpdate<T = any> = (data: T) => void;
+
+  type ITableCollapse<T = any> = {
+    isCollapsible: boolean;
+    size?: import("@mui/material").Breakpoint | "fullscreen";
+    inner?: {
+      type?: InnerTypes;
+      table?: any; // * type yazılacak
+      tableColumns?: any; // * type yazılacak
+      sortHeader?: SetStateAction<any[]>;
+      tableName?: string;
+      list?: any;
+      listWithIcons?: any; // * type yazılacak
+      tableList?: any; // * type yazılacak
+      tableListWithIcons?: any; // * type yazılacak,
+      listType?: string;
+    };
+    innerComponent?:
+      | React.FC<{ data: T; update: OptimisticUpdate }>
+      | React.FC<{ data: T; update?: OptimisticUpdate }>;
+  };
+
+  type DownloadFileType = "csv" | "pdf" | "xlsx";
+
+  type UseTableSettings = (opts?: { extend?: boolean }) => {
+    rowsPerPage: number;
+    setRowsPerPage: React.Dispatch<React.SetStateAction<number>>;
+    anchorElSettings: HTMLButtonElement | null;
+    setAnchorElSettings: React.Dispatch<
+      React.SetStateAction<HTMLButtonElement | null>
+    >;
+    handleClickSettings: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    extendTable?: boolean;
+    setExtendTable?: React.Dispatch<React.SetStateAction<boolean>>;
+  };
+
+  type TableSettingsProps = Omit<
+    ReturnType<UseTableSettings>,
+    "handleClickSettings"
+  > & {
+    headerOpts: IColumnItem[];
+    headers: IColumnItem[];
+    setHeaders: React.Dispatch<React.SetStateAction<IColumnItem[]>>;
+  };
+
+  type TableFilterProps = {
+    //TODO move table filters type to here
+  };
+
+  export type IColumnItemsGeneric<T> = {
+    key:
+      | (keyof T extends string ? keyof T : never)
+      | ((e: string, i: number, data?: T) => JSX.Element);
+    value: string;
+    type: ColumnTypes;
+    width?: string;
+    ref?: any;
+  }[];
+
+  type OnInnerUpdate = (key: string) => Promise<boolean | null>;
+
+  export interface INewTableProps<T> {
+    tableName: string;
+    data: TEAData.WPagination<T> | undefined;
+    setData?: React.Dispatch<React.SetStateAction<TEAData.WPagination<T>>>;
+    header: IColumnItems;
+    sortHeader?: React.Dispatch<React.SetStateAction<TEATable.IColumnItems>>;
+    collapsible: ITableCollapse<T>;
+    style?: any;
+    selectionFilters?: IFilterType[];
+    setSelectionFilters?: any;
+    tableRerender: FetchData;
+    loading?: boolean;
+    rowsPerPage?: number;
+    updateInnerCard?: OnInnerUpdate;
+    isInnerTable?: boolean;
+    extendedTable?: boolean;
+    extraDependecies?: any[];
+    dimensions?: {
+      width: number;
+      height: number;
+    };
+    resetPage?: boolean;
+  }
+
+  export type TableLocalProps<T> = Omit<
+    TEATable.INewTableProps<T>,
+    "data" | "setData" | "tableRerender"
+  > & {
+    data: T[];
+  };
+
+  export interface TableHeaderProps {
+    headers: IColumnItem[];
+    setHeaders?: React.Dispatch<React.SetStateAction<IColumnItem[]>>;
+    isCollapsible?: boolean;
+    order: Order;
+    orderBy: string;
+    setOrder: React.Dispatch<React.SetStateAction<Order>>;
+    setOrderBy: React.Dispatch<React.SetStateAction<string>>;
+    tableName: string;
+  }
+
+  type Order = "asc" | "desc";
+
+  interface IInnerCardItem {
+    key: string;
+    value: string;
+    icon: any;
+    type: string;
+  }
+
+  interface InnerCardUpdateItem {
+    key: string;
+    value: string;
+  }
+
+  interface IInnerCardItems extends Array<IInnerCardItem> {}
+
+  interface ITable {
+    data: any[];
+    pagination: IPagination;
+  }
+
+  interface IListItem {
+    key: any;
+    value: any;
+    icon?: JSX.Element;
+    type?: string;
+  }
+  interface IList extends Array<IListItem> {}
+
+  interface ICustomTableRowProps {
+    singleData: any;
+    headers: IColumnItems;
+    collapsible: ITableCollapse;
+    index?: number;
+    updateInnerCard: (
+      key: string,
+      value: string,
+      type: string | null
+    ) => Promise<boolean | null>;
+  }
+
+  interface ICustomTableRowPropsV2<T = Record<string, any>> {
+    index?: number;
+    headers: IColumnItem[];
+    collapsible: {
+      isCollapsible: boolean;
+      inner?: {
+        type: string;
+        list: any[];
+        sortHeader?: any;
+        tableColumns?: any;
+        tableName?: string;
+      };
+    };
+    updateInnerCard?: (data: any) => void;
+    updateData?: (data: T) => void;
+    filterState?: any;
+    setFilterState?: any;
+    singleData: T;
+  }
+
+  namespace ICustomCollapseProps {
+    interface Table {
+      data: any;
+      tableName: string;
+      tableColumns: any;
+      sortHeader?: SetStateAction<any[]>;
+    }
+
+    interface List {
+      data: any;
+      list: any;
+      onUpdate?: any; //OnInnerUpdate;
+      dataState?: IAnimeDetail;
+      setDataState?: any;
+      wIcons?: boolean;
+    }
+
+    interface NewList {
+      data: IAnimeDetail;
+      list: any;
+      setData?: any;
+      wIcons?: boolean;
+      type: string;
+    }
+
+    interface Inner {
+      type: InnerTypes;
+      data: any;
+      onUpdate?: OnInnerUpdate;
+      list?: any;
+      tableName?: string;
+      tableColumns?: any;
+      sortHeader?: SetStateAction<any[]>;
+      listType?: string;
+    }
+
+    interface TableList {
+      data: any;
+      onUpdate: OnInnerUpdate;
+      list: any;
+      tableName: string;
+      tableColumns: any;
+      sortHeader?: SetStateAction<any[]>;
+    }
+
+    interface TableListWIcons {
+      data: any;
+      onUpdate: OnInnerUpdate;
+      list: any;
+      tableName: string;
+      tableColumns: any;
+      sortHeader?: SetStateAction<any[]>;
+    }
+  }
+}
+
+declare namespace TEAData {
+  interface Pagination {
+    currentPage: number;
+    itemCount: number;
+    totalItemCount: number;
+    itemsPerPage: number;
+    totalPageCount: number;
+  }
+
+  interface WPagination<T> {
+    data: T[];
+    pagination: Pagination;
+  }
+}
