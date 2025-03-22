@@ -1,6 +1,5 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { Row } from "reactstrap";
 import CollapsibleTable from "../../TableTemp";
 import { theme } from "../../../../theme/customTheme";
 import React from "react";
@@ -11,7 +10,6 @@ export default function InnerTable({
   tableName,
   sortHeader,
 }: TEATable.ICustomCollapseProps.Table) {
-
   return (
     <>
       <Box sx={{ margin: 1 }}>
@@ -24,7 +22,7 @@ export default function InnerTable({
           {tableName}
         </Typography>
       </Box>
-      <Row className="mt-2 mb-4">
+      <div className="my-4">
         <CollapsibleTable
           tableName={tableName}
           data={data.innerTableData}
@@ -37,7 +35,7 @@ export default function InnerTable({
           style={{ border: "1px" }}
           selectionFilters={[]}
         />
-      </Row>
+      </div>
     </>
   );
 }

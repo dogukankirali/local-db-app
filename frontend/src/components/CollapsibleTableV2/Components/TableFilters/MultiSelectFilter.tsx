@@ -13,6 +13,7 @@ type MultiSelectFilterProps = {
     value: string;
     label: string;
   }[];
+  style?: React.CSSProperties;
 };
 
 export default function MultiSelectFilter({
@@ -21,6 +22,7 @@ export default function MultiSelectFilter({
   elKey,
   handleStateChange,
   options,
+  style,
 }: MultiSelectFilterProps) {
   const customStyles = useCustomStyles();
 
@@ -37,47 +39,83 @@ export default function MultiSelectFilter({
     });
   };
 
-  const properValue = value.map((v) => ({ value: v, label: v }));
+  const properValue = value.map((v) => {
+    const option = options.find((opt) => opt.value === v);
+    return option ? { value: v, label: option.label } : { value: v, label: v };
+  });
+
+  const isSeries = elKey === "Series";
 
   return (
-    <div>
+    <div style={style}>
       <Select
         isMulti
         placeholder={label}
-        // components={{
-        //   MenuList,
-        // }}
         captureMenuScroll={false}
         options={options}
         styles={{
           ...customStyles,
           placeholder: (provided) => ({
             ...provided,
-            color: "rgba(255, 255, 255, 0.7)",
+            color: theme.secondary_text,
             fontWeight: "400",
             fontSize: "1rem",
             lineHeight: "1.4375em",
           }),
-          // valueContainer: (provided) => ({}),
+          menu: (provided) => ({
+            ...provided,
+            zIndex: 10,
+            width: isSeries ? "auto" : provided.width,
+            minWidth: isSeries ? "250px" : provided.minWidth,
+            backgroundColor: theme.background,
+            border: `1px solid ${theme.input_border}`,
+            borderRadius: "8px",
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+          }),
+          menuList: (provided) => ({
+            ...provided,
+            maxHeight: isSeries ? "300px" : provided.maxHeight,
+            padding: "8px",
+          }),
+          multiValue: (provided) => ({
+            ...provided,
+            maxWidth: isSeries ? "100%" : provided.maxWidth,
+            overflow: "visible",
+            backgroundColor: theme.primary,
+            borderRadius: "4px",
+          }),
+          multiValueLabel: (provided) => ({
+            ...provided,
+            whiteSpace: isSeries ? "normal" : provided.whiteSpace,
+            overflow: "visible",
+            color: "#FFFFFF",
+            fontWeight: "500",
+          }),
+          multiValueRemove: (provided) => ({
+            ...provided,
+            color: "#FFFFFF",
+            "&:hover": {
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+              color: "#FFFFFF",
+            },
+          }),
+          valueContainer: (provided) => ({
+            ...provided,
+            flexWrap: "wrap",
+            maxHeight: isSeries ? "100px" : provided.maxHeight,
+            overflow: "auto",
+            padding: "8px",
+          }),
           control: (provided, state) => ({
             ...provided,
             color: theme.primary_text,
-            backgroundColor: "transparent",
-            borderColor: state.isFocused
-              ? theme.scondary_button
-              : theme.secondary_text,
-            boxShadow: state.isFocused ? theme.scondary_button : "transparent",
+            backgroundColor: theme.input_background,
+            borderColor: state.isFocused ? theme.primary : theme.input_border,
+            boxShadow: state.isFocused ? `0 0 0 1px ${theme.primary}` : "none",
+            borderRadius: "8px",
+            minHeight: isSeries ? "50px" : provided.minHeight,
             ":hover": {
-              borderColor: state.isFocused
-                ? theme.scondary_button
-                : theme.input_border,
-              boxShadowColor: state.isFocused
-                ? theme.scondary_button
-                : theme.input_border,
-            },
-            ":focus": {
-              borderColor: theme.input_border,
-              boxShadowColor: state.isFocused ? "red" : "transparent",
+              borderColor: theme.primary,
             },
           }),
           input: (provided) => ({
@@ -87,7 +125,21 @@ export default function MultiSelectFilter({
               cursor: "text",
             },
           }),
-          menu: (provided) => ({ ...provided, zIndex: 10 }),
+          option: (provided, state) => ({
+            ...provided,
+            backgroundColor: state.isSelected
+              ? theme.primary
+              : state.isFocused
+              ? theme.input_background
+              : "transparent",
+            color: state.isSelected ? "#FFFFFF" : theme.primary_text,
+            "&:hover": {
+              backgroundColor: state.isSelected
+                ? theme.primary
+                : theme.input_background,
+              opacity: state.isSelected ? 0.9 : 1,
+            },
+          }),
         }}
         value={properValue}
         theme={(t) => ({
@@ -103,7 +155,6 @@ export default function MultiSelectFilter({
             neutral5: theme.neutral5,
           },
         })}
-        // defaultValue={}
         onChange={onChange}
       />
     </div>

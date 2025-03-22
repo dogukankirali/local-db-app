@@ -19,7 +19,6 @@ import {
   inputLabelClasses,
   formHelperTextClasses,
 } from "@mui/material";
-import { Input as BSInput, InputProps as BSInputProps } from "reactstrap";
 import React from "react";
 
 export const StyledTextField = styled(TextField)(() => {
@@ -147,48 +146,42 @@ export const StyledTeaButton = styled((props: ButtonProps) => (
 ))(() => {
   return {
     fontFamily: "Work Sans",
-    backgroundColor: customTheme.scondary_button,
-    color: customTheme.button_text,
+    backgroundColor: customTheme.primary,
+    color: "#FFFFFF",
     borderRadius: 20,
     textTransform: "none",
+    fontWeight: "500",
     ":hover": {
-      backgroundColor: Utils.ChangeColorAlpha(customTheme.scondary_button, 0.8),
+      backgroundColor: Utils.ChangeColorAlpha(customTheme.primary, 0.8),
     },
   };
 });
 
-export const StyledFormInput = styled(
-  (
-    props: BSInputProps & {
-      onEnter?: () => void;
-    }
-  ) => (
-    <BSInput
-      placeholder="..."
-      {...props}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          props.onEnter?.();
-        }
-        props.onKeyDown?.(e);
-      }}
-    />
-  )
-)(() => {
-  return {
-    backgroundColor: "transparent",
-    color: customTheme.primary_text,
-    border: "solid",
-    borderColor: customTheme.secondary_text,
-    borderWidth: 1,
-    ":focus": {
-      color: customTheme.primary_text,
-      backgroundColor: customTheme.table_header,
-      borderColor: customTheme.scondary_button,
-      boxShadow: `0 0 0 1px ${customTheme.scondary_button}`,
-    },
-  };
-});
+interface StyledInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  onEnter?: () => void;
+}
+
+export const StyledFormInput = React.forwardRef<
+  HTMLInputElement,
+  StyledInputProps
+>(({ onEnter, onKeyDown, className, ...props }, ref) => (
+  <input
+    ref={ref}
+    {...props}
+    className={`bg-transparent text-primary-text border border-secondary-text rounded px-3 py-2 focus:border-[${
+      customTheme.scondary_button
+    }] focus:ring-1 focus:ring-[${
+      customTheme.scondary_button
+    }] focus:outline-none ${className || ""}`}
+    placeholder="..."
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        onEnter?.();
+      }
+      onKeyDown?.(e);
+    }}
+  />
+));
 
 export const StyledNeutralButton = styled((props: ButtonProps) => (
   <Button variant="contained" {...props} />
@@ -292,5 +285,5 @@ export const StyledTooltip = styled(({ className, ...props }: TooltipProps) => (
   [`& .${tooltipClasses.tooltip}`]: {
     backgroundColor: theme.palette.common.black,
     fontSize: theme.typography.pxToRem(14),
-  },
+  },
 }));

@@ -1,163 +1,184 @@
-import {
-  Dialog,
-  DialogTitle,
-  Typography,
-  DialogActions,
-  Box,
-  DialogContent,
-  DialogContentText,
-} from "@mui/material";
-import Scrollbars from "react-custom-scrollbars-2";
-import Constants from "../../constants/Constants";
-import { theme } from "../../theme/customTheme";
-import InnerList from "../CollapsibleTableV2/Components/Collapse/NewInnerList";
-import { StyledTeaButton } from "../CollapsibleTableV2/Components/StyledComponents";
-import { useState } from "react";
+"use client";
 
-export default function UpdateDeleteAnimeModal(props: {
+import React, { memo, Suspense, lazy } from "react";
+import { Box, Modal, Typography, CircularProgress } from "@mui/material";
+import { theme } from "@/theme/customTheme";
+import { StyledTeaButton } from "../CollapsibleTableV2/Components/StyledComponents";
+import Constants from "@/constants/Constants";
+import { useSearchParams } from "next/navigation";
+
+const LazyScrollbars = lazy(() => import("react-custom-scrollbars-2"));
+const LazyNewInnerList = lazy(
+  () => import("../CollapsibleTableV2/Components/Collapse/NewInnerList")
+);
+
+const modalStyle = {
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: "80%",
+  maxHeight: "90vh",
+  bgcolor: theme.background,
+  boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
+  p: 4,
+  borderRadius: 2,
+  outline: "none",
+  overflow: "hidden",
+  border: `1px solid ${theme.input_border}`,
+};
+
+const LoadingFallback = () => (
+  <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+    <CircularProgress sx={{ color: theme.primary }} />
+  </Box>
+);
+
+const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
   modalData: any;
   setModalData: any;
   updateAnime: any;
   deleteAnime: any;
   genres: any;
 }) {
-  const [confirm, setConfirm] = useState(false);
+  if (!props.modalData.status || !props.genres) return null;
+  const searchParams = useSearchParams();
+  const fromWatchList = searchParams.get("fromWatchList") === "true";
+
+  React.useEffect(() => {
+    if (props.modalData && props.modalData.data) {
+      console.log("Modal data:", props.modalData.data);
+      console.log("WatchStatus value:", props.modalData.data.WatchStatus);
+      console.log("PlanToWatch value:", props.modalData.data.PlanToWatch);
+      console.log("Coming from Watch List:", fromWatchList ? "Yes" : "No");
+    }
+  }, [props.modalData, fromWatchList]);
+
+  const list = Constants({ type: "modalList" }).toSpliced(8, 0, {
+    key: "Genre",
+    value: "Genre",
+    icon: <></>,
+    type: "multi-select",
+    options: props.genres,
+  });
+
+  const handleUpdate = () => {
+    console.log("Data to be updated (before):", props.modalData.data);
+
+    // Veriyi klonla
+    const updatedData = { ...props.modalData.data };
+
+    // Sadece watchlist'ten geliyorsa değerleri değiştir
+    if (fromWatchList) {
+      // WatchStatus ve PlanToWatch değerlerini kesinlikle istenen değerlere ayarla
+      updatedData.WatchStatus = "-1";
+      updatedData.PlanToWatch = false;
+
+      console.log("Watchlist'ten açıldığı için özel değerler ayarlandı:");
+      console.log("WatchStatus değeri: -1 olarak ayarlandı");
+      console.log("PlanToWatch değeri: false olarak ayarlandı");
+    } else {
+      console.log("Normal düzenleme. Değerler değiştirilmedi.");
+    }
+
+    // Güncellenmiş veriyi modalData'ya geri yaz
+    props.setModalData({
+      ...props.modalData,
+      data: updatedData,
+    });
+
+    console.log("Güncellenecek veri (sonra):", updatedData);
+
+    // Kısa bir gecikme ile updateAnime'i çağır
+    // Bu, state güncellemesinin tamamlanmasını sağlar
+    setTimeout(() => {
+      props.updateAnime();
+    }, 100);
+  };
+
   return (
-    <>
-      <Dialog
-        open={props.modalData.status}
-        onClose={() => props.setModalData({ status: !props.modalData.status })}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        maxWidth="xl"
-        PaperProps={{ sx: { backgroundColor: theme.background } }}
-        sx={{ "& .MuiDialog-paper": { width: "80%" } }}
-      >
-        <DialogTitle id="alert-dialog-title" sx={{ color: theme.primary_text }}>
-          {props.modalData?.data !== undefined && (
-            <Typography variant="h5">
-              {props.modalData?.type === "delete"
-                ? `Delete - ${props.modalData?.data.Name}`
-                : `Update - ${props.modalData?.data!.Name}`}
-            </Typography>
-          )}
-        </DialogTitle>
-        <Scrollbars
-          style={{
-            height: 900,
-            overflow: "hidden",
-            width: "100%",
-          }}
+    <Modal
+      open={true}
+      onClose={() => props.setModalData({ status: false })}
+      aria-labelledby="modal-title"
+      aria-describedby="modal-description"
+      keepMounted={false}
+    >
+      <Box sx={modalStyle}>
+        <Typography
+          variant="h5"
+          sx={{ color: theme.primary_text, mb: 2, fontWeight: "600" }}
         >
-          {props.modalData?.data && props.genres && (
-            <InnerList
-              data={props.modalData?.data!}
-              list={Constants({ type: "modalList" }).toSpliced(8, 0, {
-                key: "Genre",
-                value: "Genre",
-                icon: <></>,
-                type: "multi-select",
-                options: props.genres!,
-              })}
+          {props.modalData?.type === "delete"
+            ? `Sil - ${props.modalData?.data.Name}`
+            : `Güncelle - ${props.modalData?.data!.Name}`}
+        </Typography>
+
+        <Suspense fallback={<LoadingFallback />}>
+          <LazyScrollbars
+            style={{
+              height: "calc(90vh - 200px)",
+              width: "100%",
+            }}
+            autoHide
+          >
+            <LazyNewInnerList
+              data={props.modalData?.data}
+              list={list}
               setData={props.setModalData}
               type={props.modalData?.type}
             />
-          )}
-        </Scrollbars>
-        <DialogActions>
-          <Box
-            sx={{
-              display: "flex",
-              gap: 1,
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            {props.modalData?.type === "delete" ? (
-              <>
-                <StyledTeaButton
-                  sx={{ backgroundColor: theme.warning }}
-                  onClick={() => {
-                    setConfirm(true);
-                  }}
-                >
-                  <Typography variant="button"> Delete </Typography>
-                </StyledTeaButton>
-                <StyledTeaButton
-                  sx={{ backgroundColor: theme.danger }}
-                  onClick={() => {
-                    props.setModalData({ status: false });
-                  }}
-                >
-                  <Typography variant="button"> Cancel </Typography>
-                </StyledTeaButton>
-              </>
-            ) : (
-              <>
-                <StyledTeaButton
-                  sx={{ backgroundColor: theme.primary }}
-                  onClick={() => {
-                    props.updateAnime();
-                  }}
-                >
-                  <Typography variant="button"> Update </Typography>
-                </StyledTeaButton>
-                <StyledTeaButton
-                  sx={{ backgroundColor: theme.danger }}
-                  onClick={() => {
-                    props.setModalData({ status: false });
-                  }}
-                >
-                  <Typography variant="button"> Cancel </Typography>
-                </StyledTeaButton>
-              </>
-            )}
-          </Box>
-        </DialogActions>
-      </Dialog>
-      <Dialog
-        open={confirm}
-        onClose={() => setConfirm(!confirm)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        maxWidth="sm"
-        PaperProps={{ sx: { backgroundColor: theme.background } }}
-        sx={{ "& .MuiDialog-paper": { width: "80%" } }}
-      >
-        <DialogTitle id="alert-dialog-title" sx={{ color: theme.primary_text }}>
-          {"Are you sure you want to delete this anime?"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText
-            id="alert-dialog-description"
-            sx={{ color: theme.primary_text }}
-          >
-            "Are you sure you want to delete the anime named{" "}
-            {props.modalData.data !== undefined && props.modalData.data.Name}?"
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
+          </LazyScrollbars>
+        </Suspense>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Coming from Watch List: {fromWatchList ? "Yes" : "No"}
+        </Typography>
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            alignItems: "center",
+            justifyContent: "flex-end",
+            mt: 2,
+          }}
+        >
           <StyledTeaButton
-            autoFocus
-            sx={{ backgroundColor: theme.warning }}
-            onClick={() => {
-              setConfirm(false);
-              props.deleteAnime();
+            sx={{
+              backgroundColor:
+                props.modalData?.type === "delete"
+                  ? theme.danger
+                  : theme.primary,
+              color: "#FFFFFF",
+              fontWeight: "500",
             }}
+            onClick={
+              props.modalData?.type === "delete"
+                ? props.deleteAnime
+                : handleUpdate
+            }
           >
-            <Typography variant="button"> Delete </Typography>
+            <Typography variant="button">
+              {props.modalData?.type === "delete" ? "Sil" : "Güncelle"}
+            </Typography>
           </StyledTeaButton>
           <StyledTeaButton
-            sx={{ backgroundColor: theme.danger }}
+            sx={{
+              backgroundColor: "transparent",
+              color: theme.primary_text,
+              border: `1px solid ${theme.input_border}`,
+            }}
             onClick={() => {
-              setConfirm(false);
               props.setModalData({ status: false });
             }}
           >
-            <Typography variant="button"> Cancel </Typography>
+            <Typography variant="button">İptal</Typography>
           </StyledTeaButton>
-        </DialogActions>
-      </Dialog>
-    </>
+        </Box>
+      </Box>
+    </Modal>
   );
-}
+});
+
+export default UpdateDeleteAnimeModal;

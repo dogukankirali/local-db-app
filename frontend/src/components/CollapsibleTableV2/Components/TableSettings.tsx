@@ -60,15 +60,16 @@ export default function TableSettings({
       }}
       sx={{
         "& .MuiPopover-paper": {
-          backgroundColor: theme.background, // Sabit kırmızı renk
+          backgroundColor: theme.background,
           overflow: "visible",
+          maxWidth: "calc(100vw - 32px)",
         },
       }}
     >
       <Box
         sx={{
-          width: 300,
-          m: 4,
+          width: { xs: "100%", sm: 300 },
+          m: { xs: 2, sm: 4 },
           display: "flex",
           flexDirection: "column",
           gap: 2,
@@ -168,46 +169,33 @@ export default function TableSettings({
                 PaperProps: {
                   sx: {
                     "& .MuiMenuItem-root": {
-                      backgroundColor: theme.background, // Menü öğeleri arka plan rengi
-                      color: theme.input_text, // Menü öğeleri yazı rengi
+                      backgroundColor: theme.background,
+                      color: theme.input_text,
                       "&.Mui-selected": {
-                        backgroundColor: theme.secondary, // Seçili öğe arka plan rengi
-                        color: theme.background, // Seçili öğe yazı rengi
+                        backgroundColor: theme.secondary,
+                        color: theme.background,
                       },
                       "&.Mui-selected:hover": {
-                        backgroundColor: theme.secondary, // Seçili öğe hover arka plan rengi
-                        color: theme.background, // Seçili öğe hover yazı rengi
+                        backgroundColor: theme.secondary,
+                        color: theme.background,
                       },
                       "&:hover": {
-                        backgroundColor: theme.secondary, // Menü öğeleri hover arka plan rengi
-                        color: theme.input_text, // Menü öğeleri hover yazı rengi
+                        backgroundColor: theme.secondary,
+                        color: theme.input_text,
                       },
                     },
-                  },
-                },
-                anchorOrigin: {
-                  vertical: "bottom",
-                  horizontal: "left",
-                },
-                transformOrigin: {
-                  vertical: "top",
-                  horizontal: "left",
-                },
-                MenuListProps: {
-                  sx: {
-                    padding: 0, // Menü içeriği içindeki boşlukları kaldırır
                   },
                 },
               }}
               sx={{
                 "& .MuiSelect-select": {
-                  color: theme.input_text, // Seçili öğe yazı rengi
+                  color: theme.input_text,
                 },
                 "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: theme.input_border, // Seçili öğe border rengi
+                  borderColor: theme.input_border,
                 },
                 "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: theme.secondary, // Odaklanmış durumda border rengi
+                  borderColor: theme.secondary,
                 },
               }}
             >

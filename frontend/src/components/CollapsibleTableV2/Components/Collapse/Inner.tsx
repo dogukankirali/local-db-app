@@ -2,7 +2,7 @@ import { Box, Divider } from "@mui/material";
 import InnerList from "./NewInnerList";
 import InnerTable from "./InnerTable";
 import { InnerMap } from "./Common";
-
+import { theme } from "../../../../theme/customTheme";
 export default function Inner({
   type,
   data,
@@ -16,12 +16,12 @@ export default function Inner({
   const show = InnerMap[type];
 
   return (
-    <Box>
+    <Box sx={{ backgroundColor: theme.input_background }}>
       {show.list && (
         <InnerList
           data={data}
           list={list}
-          type={listType!}
+          type={listType || "detail"}
           wIcons={show.list.icon}
         />
       )}
