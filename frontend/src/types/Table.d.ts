@@ -35,7 +35,7 @@ declare namespace TEATable {
     ID: number;
     Name: string;
     AnimeStatus: string;
-    WatchStatus: string;
+    WatchStatus: number;
     TotalNumberOfEpisodes: string;
     IsMovie: boolean;
     Genre: string[];
@@ -55,7 +55,7 @@ declare namespace TEATable {
     ID: number;
     Name: string;
     AnimeStatus: string;
-    WatchStatus: string;
+    WatchStatus: number;
     TotalNumberOfEpisodes: string;
     IsMovie: boolean;
     Genre: string;

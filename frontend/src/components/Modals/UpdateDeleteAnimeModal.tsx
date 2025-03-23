@@ -131,10 +131,6 @@ const UpdateDeleteAnimeModal = memo(function UpdateDeleteAnimeModal(props: {
           </LazyScrollbars>
         </Suspense>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Coming from Watch List: {fromWatchList ? "Yes" : "No"}
-        </Typography>
-
         <Box
           sx={{
             display: "flex",

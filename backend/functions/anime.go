@@ -420,8 +420,8 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			// SeriesName alanını doldur
 			for i := range animes {
 				// Debug log ekle
-				fmt.Printf("Anime ID: %d, Name: %s, Series: %d, SeriesName: %s\n",
-					animes[i].ID, animes[i].Name, animes[i].Series, animes[i].SeriesName)
+				/* fmt.Printf("Anime ID: %d, Name: %s, Series: %d, SeriesName: %s\n",
+				animes[i].ID, animes[i].Name, animes[i].Series, animes[i].SeriesName) */
 
 				// SeriesName zaten SQL sorgusunda s.name as series_name olarak alınıyor
 				// Eğer hala boş geliyorsa, manuel olarak dolduralım
@@ -444,10 +444,10 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			}
 
 			// Tüm anime verilerini debug et
-			for i, anime := range animes {
+			/* for i, anime := range animes {
 				fmt.Printf("Anime[%d]: ID=%d, Name=%s, Series=%d, SeriesName=%s\n",
 					i, anime.ID, anime.Name, anime.Series, anime.SeriesName)
-			}
+			} */
 
 			response = models.AnimeResponse{
 				Data:       animes,
@@ -471,8 +471,8 @@ func UpdateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		}
 
 		// Debug log ekle
-		fmt.Printf("Güncelleme isteği alındı: ID=%d, Name=%s, Series=%d, SeriesName=%s\n",
-			reqBody.ID, reqBody.Name, reqBody.Series, reqBody.SeriesName)
+		fmt.Printf("Güncelleme isteği alındı: ID=%d, Name=%s, Series=%d, SeriesName=%s, WatchStatus=%d\n ",
+			reqBody.ID, reqBody.Name, reqBody.Series, reqBody.SeriesName, reqBody.WatchStatus)
 
 		anime := models.Anime{
 			Name:                  reqBody.Name,
@@ -490,11 +490,25 @@ func UpdateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			PlanToWatch:           reqBody.PlanToWatch, // PlanToWatch alanını ekle
 		}
 
-		err := db.Table("anime.animes a").Model(&models.Anime{}).Where("id = ?", reqBody.ID).Updates(&anime).Error
+		// Doğrudan SQL sorgusu ile güncelleme yap
+		updateQuery := `
+			UPDATE anime.animes 
+			SET name = $1, anime_status = $2, watch_status = $3, total_number_of_episodes = $4,
+				is_movie = $5, score = $6, mal_score = $7, notes = $8, anime_link = $9,
+				mal_anime_link = $10, cover = $11, series = $12, plan_to_watch = $13
+			WHERE id = $14
+		`
+
+		err := db.Exec(updateQuery,
+			anime.Name, anime.AnimeStatus, anime.WatchStatus, anime.TotalNumberOfEpisodes,
+			anime.IsMovie, anime.Score, anime.MALScore, anime.Notes, anime.AnimeLink,
+			anime.MALAnimeLink, anime.Cover, anime.Series, anime.PlanToWatch, reqBody.ID).Error
+
 		if err != nil {
 			fmt.Println("Update error:", err)
 			return
 		}
+
 		animeId := int(reqBody.ID)
 		condition := fmt.Sprintf("anime_id = '%d'", animeId)
 		result := db.Table("anime.animes_genres").Where(condition).Delete(&models.Anime{})
@@ -561,7 +575,7 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		}
 		err := db.Table("anime.animes").Create(&anime).Error
 		if err != nil {
-			errorMessage := "Sunucu hatası oluştu."
+			errorMessage := fmt.Sprintf("Sunucu hatası oluştu: %v", err)
 			response := models.ErrorResponse{
 				Message: errorMessage,
 			}
@@ -821,5 +835,25 @@ func GetAnimeById(db *gorm.DB) http.HandlerFunc {
 			"status": "success",
 			"data":   anime,
 		})
+	}
+}
+
+func UpdateFinishedAnimeStatus(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// WatchStatus'u -1 olan animeleri güncelle
+		result := db.Table("anime.animes").
+			Where("watch_status = ?", -1).
+			Update("watch_status", gorm.Expr("total_number_of_episodes"))
+
+		if result.Error != nil {
+			http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		message := fmt.Sprintf("Güncellenen anime sayısı: %d", result.RowsAffected)
+		response := models.ErrorResponse{
+			Message: message,
+		}
+		json.NewEncoder(w).Encode(&response)
 	}
 }
