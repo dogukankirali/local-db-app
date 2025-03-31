@@ -388,9 +388,9 @@ export default function Constants({
   }
 }
 
-//export const path = "https://localhost:3007";
+//export const path = "https://localhost:8080";
 
-//export const path = "https://192.168.1.33:3007";
+//export const path = "https://192.168.1.33:8080";
 
 export const path = process.env.REACT_APP_PATH;
 

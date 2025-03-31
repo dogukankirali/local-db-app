@@ -945,15 +945,12 @@ export default function InnerList({
                 <MaterialSelect
                   disabled={type === "delete" || type === "detail"}
                   value={
-                    data
-                      ? data[item.key as keyof typeof data]
-                        ? item.options.filter(
-                            (option: { key: string; label: string }) =>
-                              data![item.key as keyof typeof data] ===
-                              option.key
-                          )[0].key
-                        : item.options[0].key
-                      : undefined
+                    data && data[item.key as keyof typeof data]
+                      ? item.options.find(
+                          (option: { key: string; label: string }) =>
+                            data[item.key as keyof typeof data] === option.key
+                        )?.key || item.options[0].key
+                      : item.options[0].key
                   }
                   onChange={(e) => {
                     updateData(item.key, e.target.value);
@@ -969,57 +966,6 @@ export default function InnerList({
                         border: `1px solid ${theme.input_border}`,
                         borderRadius: "8px",
                         boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
-                      },
-                    },
-                    anchorOrigin: {
-                      vertical: "bottom",
-                      horizontal: "left",
-                    },
-                    transformOrigin: {
-                      vertical: "top",
-                      horizontal: "left",
-                    },
-                    MenuListProps: {
-                      sx: {
-                        padding: 0,
-                      },
-                    },
-                  }}
-                  sx={{
-                    "& .MuiSelect-select": {
-                      color: theme.primary_text,
-                    },
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.input_border,
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.primary,
-                    },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.primary,
-                    },
-                    "& .MuiSvgIcon-root": {
-                      color: theme.secondary_text,
-                    },
-                    "& .Mui-disabled": {
-                      color: theme.primary_text,
-                      "-webkit-text-fill-color": theme.primary_text,
-                    },
-                    "& .MuiOutlinedInput-root": {
-                      backgroundColor: theme.input_background,
-                      borderRadius: "8px",
-                      "& fieldset": {
-                        borderColor: theme.input_border,
-                      },
-                      "&:hover fieldset": {
-                        borderColor: theme.primary,
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: theme.primary,
-                      },
-                      "& .Mui-disabled": {
-                        color: theme.primary_text,
-                        "-webkit-text-fill-color": theme.primary_text,
                       },
                     },
                   }}

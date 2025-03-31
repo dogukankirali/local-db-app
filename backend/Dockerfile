@@ -13,7 +13,7 @@ RUN go get
 RUN go build -o bin .
 RUN mkdir -p /etc/ssl/certs
 
-EXPOSE 3007
+EXPOSE 8080
 
 # NGINX'i başlat
 CMD ["/app/bin"]

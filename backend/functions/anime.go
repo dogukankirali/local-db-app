@@ -546,17 +546,12 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var reqBody models.Anime
 		var genres []models.Genre
-		//var response interface{}
 
 		errDec := json.NewDecoder(r.Body).Decode(&reqBody)
 		if errDec != nil {
 			http.Error(w, errDec.Error(), http.StatusBadRequest)
 			return
 		}
-
-		// Debug log ekle
-		fmt.Printf("Oluşturma isteği alındı: Name=%s, Series=%d, SeriesName=%s\n",
-			reqBody.Name, reqBody.Series, reqBody.SeriesName)
 
 		anime := models.AnimeCreate{
 			Name:                  reqBody.Name,
@@ -570,8 +565,8 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			AnimeLink:             reqBody.AnimeLink,
 			MALAnimeLink:          reqBody.MALAnimeLink,
 			Cover:                 reqBody.Cover,
-			Series:                reqBody.Series,      // Series alanını da ekle
-			PlanToWatch:           reqBody.PlanToWatch, // PlanToWatch alanını ekle
+			Series:                reqBody.Series,
+			PlanToWatch:           reqBody.PlanToWatch,
 		}
 		err := db.Table("anime.animes").Create(&anime).Error
 		if err != nil {

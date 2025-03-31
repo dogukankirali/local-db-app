@@ -24,10 +24,10 @@ import {
   StyledTooltip,
 } from "../StyledComponents";
 import { Utils } from "../../Utils/Utilities";
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
+import "@fontsource/roboto/300.css";
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
+import "@fontsource/roboto/700.css";
 
 export default function InnerList({
   data,
@@ -56,21 +56,21 @@ export default function InnerList({
       setDataState!((prevState: any) => ({
         ...prevState,
         Cover: base64String,
-      }))
+      }));
     };
 
     reader.readAsDataURL(file as Blob);
   };
 
-  console.log(data)
+  console.log(data);
 
   const handleImageClick = () => {
     inputRef.current?.click();
   };
 
   useEffect(() => {
-    setDataState(data)
-  },[data])
+    setDataState(data);
+  }, [data]);
 
   const getStrValue = (item: any) => {
     switch (item.type) {
@@ -82,9 +82,9 @@ export default function InnerList({
         else return "-";
       case "uptime":
         if (data[item.key])
-          return moment
-            .duration(data[item.key], "seconds")
-            .format("D [D] H [H] m [M] s [S]");
+          return (
+            moment.duration(data[item.key], "seconds").asSeconds() + " seconds"
+          );
         else return "-";
       default:
         return "-";
@@ -92,7 +92,7 @@ export default function InnerList({
   };
 
   const openInNewTab = (url: any) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -175,9 +175,8 @@ export default function InnerList({
             {["string", "uptime", "timestamp"].includes(item.type) && (
               <Input
                 size="small"
-                sx={{ width: "100%"}}
+                sx={{ width: "100%" }}
                 defaultValue={getStrValue(item)}
-                
               />
             )}
             {item.type === "link" && (
@@ -195,54 +194,51 @@ export default function InnerList({
                     setDataState!((prevState: any) => ({
                       ...prevState,
                       [item.key]: e.target.value,
-                    }))
+                    }));
                   }}
                 />
                 <StyledCustomButton
                   bg={theme.scondary_button}
                   text={theme.button_text}
                   sx={{
-                    borderRadius: "0px 5px 5px 0px"
+                    borderRadius: "0px 5px 5px 0px",
                   }}
                   onClick={() => {
-                    openInNewTab(dataState![item.key as keyof typeof dataState])
+                    openInNewTab(
+                      dataState![item.key as keyof typeof dataState]
+                    );
                   }}
                 >
-                  <Typography >
-                    Open
-                  </Typography>
-
+                  <Typography>Open</Typography>
                 </StyledCustomButton>
               </ButtonGroup>
             )}
             {item.type === "input" && (
-                <StyledTextField
-                  fullWidth
-                  size="small"
-                  value={
-                    dataState![item.key as keyof typeof dataState]
-                  }
-                  InputProps={{
-                    onChange: (e) => {
-                      if(item.key === "MALScore") {
-                        setDataState!((prevState: any) => ({
-                          ...prevState,
-                          [item.key]: parseFloat(e.target.value),
-                        }))
-                      } else {
-                        setDataState!((prevState: any) => ({
-                          ...prevState,
-                          [item.key]: e.target.value,
-                        }))
-                      }
-                    },
-                    sx: {
-                      borderRadius: "5px 0px 0px 5px",
-                    },
-                  }}
-                  id={item.key}
-                  defaultValue={dataState![item.key as keyof typeof dataState]}
-                />
+              <StyledTextField
+                fullWidth
+                size="small"
+                value={dataState![item.key as keyof typeof dataState]}
+                InputProps={{
+                  onChange: (e) => {
+                    if (item.key === "MALScore") {
+                      setDataState!((prevState: any) => ({
+                        ...prevState,
+                        [item.key]: parseFloat(e.target.value),
+                      }));
+                    } else {
+                      setDataState!((prevState: any) => ({
+                        ...prevState,
+                        [item.key]: e.target.value,
+                      }));
+                    }
+                  },
+                  sx: {
+                    borderRadius: "5px 0px 0px 5px",
+                  },
+                }}
+                id={item.key}
+                defaultValue={dataState![item.key as keyof typeof dataState]}
+              />
             )}
             {item.type === "timezone" && (
               <StyledSelectFormControl size="small" fullWidth>
@@ -254,7 +250,7 @@ export default function InnerList({
                   }
                   onChange={(e) => {
                     if (!e.target.value) return;
-                    console.log(e, "timezone")
+                    console.log(e, "timezone");
                   }}
                   MenuProps={{
                     PaperProps: {
@@ -278,72 +274,92 @@ export default function InnerList({
             )}
             {item.type === "score" && (
               <StyledTextField
-              fullWidth
-              size="small"
-              id={item.key}
-              defaultValue={dataState![item.key as keyof typeof dataState]}
-              onChange={(e) => {
-                setDataState!((prevState: any) => ({
-                  ...prevState,
-                  [item.key]: parseInt(e.target.value),
-                }))
-              }}
-            />
+                fullWidth
+                size="small"
+                id={item.key}
+                defaultValue={dataState![item.key as keyof typeof dataState]}
+                onChange={(e) => {
+                  setDataState!((prevState: any) => ({
+                    ...prevState,
+                    [item.key]: parseInt(e.target.value),
+                  }));
+                }}
+              />
             )}
             {item.type === "textarea" && (
-                <StyledTextField
-                  fullWidth
-                  size="medium"
-                  id={item.key}
-                  defaultValue={dataState![item.key as keyof typeof dataState]}
-                  onChange={(e) => {
-                    setDataState!((prevState: any) => ({
-                      ...prevState,
-                      [item.key]: e.target.value,
-                    }))
-                  }}
-                  multiline
-                  rows={2}
-                  maxRows={4}
-                />
+              <StyledTextField
+                fullWidth
+                size="medium"
+                id={item.key}
+                defaultValue={dataState![item.key as keyof typeof dataState]}
+                onChange={(e) => {
+                  setDataState!((prevState: any) => ({
+                    ...prevState,
+                    [item.key]: e.target.value,
+                  }));
+                }}
+                multiline
+                rows={2}
+                maxRows={4}
+              />
             )}
             {item.type === "number" && (
-                <StyledTextField
-                  fullWidth
-
-                  size="small"
-                  value={
-                     dataState![item.key as keyof typeof dataState]
-                  }
-                  InputProps={{
-                    onChange: (e) => {
-                      setDataState!((prevState: any) => ({
-                        ...prevState,
-                        [item.key]: parseInt(e.target.value),
-                      }))
-                    },
-                    sx: {
-                      borderRadius: "5px 0px 0px 5px",
-                    },
-                    type: "number",
-                    inputProps: {
-                      min: 0
-                    }
-
-                  }}
-                  id={item.key}
-                  defaultValue={data[item.key]}
-                />
+              <StyledTextField
+                fullWidth
+                size="small"
+                value={dataState![item.key as keyof typeof dataState]}
+                InputProps={{
+                  onChange: (e) => {
+                    setDataState!((prevState: any) => ({
+                      ...prevState,
+                      [item.key]: parseInt(e.target.value),
+                    }));
+                  },
+                  sx: {
+                    borderRadius: "5px 0px 0px 5px",
+                  },
+                  type: "number",
+                  inputProps: {
+                    min: 0,
+                  },
+                }}
+                id={item.key}
+                defaultValue={data[item.key]}
+              />
             )}
             {item.type === "base64" && (
-              <Box sx={{ display: "grid", placeItems: "center", width: "100%"}}><input type="file" ref={inputRef} style={{ display: 'none' }} onChange={handleImageUpload} /><img onClick={handleImageClick} src={`${dataState![item.key as keyof typeof dataState]}`} alt={data["Name"] + "_cover"} style={{ width: 100 }} /></Box>
+              <Box
+                sx={{ display: "grid", placeItems: "center", width: "100%" }}
+              >
+                <input
+                  type="file"
+                  ref={inputRef}
+                  style={{ display: "none" }}
+                  onChange={handleImageUpload}
+                />
+                <img
+                  onClick={handleImageClick}
+                  src={`${dataState![item.key as keyof typeof dataState]}`}
+                  alt={data["Name"] + "_cover"}
+                  style={{ width: 100 }}
+                />
+              </Box>
             )}
             {item.type === "multi-select" && (
               <StyledSelectFormControl size="small" fullWidth>
                 <Select
                   isMulti
                   value={
-                    item.options.filter((option: { value: string, label: string }) => (dataState![item.key as keyof typeof dataState]! as string).split(", ").some((str: string) => str === option.value)) ?? []
+                    item.options.filter(
+                      (option: { value: string; label: string }) =>
+                        (
+                          dataState![
+                            item.key as keyof typeof dataState
+                          ]! as string
+                        )
+                          .split(", ")
+                          .some((str: string) => str === option.value)
+                    ) ?? []
                   }
                   onChange={(e) => {
                     const values = e.map((genre: any) => genre.value);
@@ -351,7 +367,7 @@ export default function InnerList({
                     setDataState!((prevState: any) => ({
                       ...prevState,
                       [item.key]: result,
-                    }))
+                    }));
                   }}
                   options={item.options}
                   styles={{
@@ -369,7 +385,9 @@ export default function InnerList({
                       borderColor: state.isFocused
                         ? theme.scondary_button
                         : theme.secondary_text,
-                      boxShadow: state.isFocused ? theme.scondary_button : "transparent",
+                      boxShadow: state.isFocused
+                        ? theme.scondary_button
+                        : "transparent",
                       ":hover": {
                         borderColor: state.isFocused
                           ? theme.scondary_button
@@ -399,14 +417,17 @@ export default function InnerList({
               <StyledSelectFormControl size="small" fullWidth>
                 <MaterialSelect
                   value={
-                    item.options.filter((option: { key: string, label: string }) => dataState![item.key as keyof typeof dataState] === option.key)[0].key
-                    //{value: "deneme", label: "deneme"}
-                  } 
+                    item.options.filter(
+                      (option: { key: string; label: string }) =>
+                        dataState![item.key as keyof typeof dataState] ===
+                        option.key
+                    )[0]?.key || ""
+                  }
                   onChange={(e) => {
                     setDataState!((prevState: any) => ({
                       ...prevState,
                       [item.key]: e.target.value,
-                    })) 
+                    }));
                   }}
                   MenuProps={{
                     PaperProps: {
@@ -458,7 +479,7 @@ export default function InnerList({
                     setDataState!((prevState: any) => ({
                       ...prevState,
                       [item.key]: e.target.checked,
-                    }))
+                    }));
                   }}
                 />
               </Box>

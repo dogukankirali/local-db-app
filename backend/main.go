@@ -5,7 +5,6 @@ import (
 	"fmt"
 	anime_functions "local-db-app/functions"
 	"local-db-app/middleware"
-	"local-db-app/migrations"
 	"log"
 	"net/http"
 	"os"
@@ -172,6 +171,17 @@ func main() {
 
 	router := mux.NewRouter()
 
+	// CORS ayarları
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*", "moz-extension://*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		Debug:          false,
+	})
+
+	// Router'a CORS middleware'ini ekle
+	handler := c.Handler(router)
+
 	dsn := fmt.Sprintf("host='%s' port=%d user='%s' password=%s dbname='%s' sslmode=disable", host, dbport, user, password, dbname)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		PrepareStmt: true, // SQL ifadelerini önbelleğe al
@@ -197,15 +207,10 @@ func main() {
 		}
 	}()
 
-	// Sadece temel tablo oluşturma işlemini yap, diğer migration işlemlerini kaldır
-	migrations.CreateSeriesTable(db)
-	migrations.CreateUsersTable(db)
-
-	// PlanToWatch kolonu ekle
-	migrations.AddPlanToWatchColumn(db)
-
-	// Watch List tablosunu oluştur
-	migrations.CreateWatchListTable(db)
+	// Veritabanı başlangıç işlemlerini gerçekleştir
+	if err := InitializeDatabase(db); err != nil {
+		log.Printf("Veritabanı başlangıç işlemleri sırasında hata: %v", err)
+	}
 
 	port := os.Getenv("PORT")
 
@@ -270,30 +275,8 @@ func main() {
 	spa := spaHandler{staticPath: "frontend/build", indexPath: "index.html"}
 	router.PathPrefix("/").Handler(spa)
 
-	// CORS ayarları
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins: []string{
-			"http://localhost:3000",
-			"https://localhost:3000",
-			"http://localhost:8080",
-			"https://localhost:8080",
-			"*",
-		},
-		AllowedMethods: []string{
-			"GET", "POST", "PUT", "DELETE", "OPTIONS",
-		},
-		AllowedHeaders: []string{
-			"Content-Type",
-			"Accept",
-			"Authorization",
-			"X-Requested-With",
-		},
-		AllowCredentials: true,
-		Debug:            false,
-	}).Handler(router)
-
 	srv := &http.Server{
-		Handler: corsHandler,
+		Handler: handler,
 		Addr:    ":" + port,
 	}
 
