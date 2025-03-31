@@ -248,15 +248,14 @@ export default function CustomTableRowV2(
             : rowIndex % 2 === 0
             ? theme.table_row_dark
             : theme.table_row_light,
-          cursor: "pointer",
           borderTop:
             rowIndex % 2 === 0 ? "1px solid rgba(255, 255, 255, 0.12)" : "none",
           transition: "background-color 0.2s ease-in-out",
         }}
-        onClick={() => setOpen(!open)}
       >
         {props.collapsible?.isCollapsible && (
           <TableCell
+            onClick={() => setOpen(!open)}
             sx={{
               width: "1%",
               backgroundColor: open
@@ -264,6 +263,7 @@ export default function CustomTableRowV2(
                 : rowIndex % 2 === 0
                 ? theme.table_row_dark
                 : theme.table_row_light,
+              cursor: "pointer",
             }}
           >
             {/* Akordiyon göstergesi ekliyoruz */}
@@ -652,7 +652,9 @@ export default function CustomTableRowV2(
                   align="center"
                   style={colStyle}
                 >
-                  {props.singleData[header.key] === -1 ? (
+                  {props.singleData[header.key] !== 0 &&
+                  props.singleData[header.key] ===
+                    props.singleData["TotalNumberOfEpisodes"] ? (
                     <Typography sx={{ color: theme.primary_text }}>
                       Finished
                     </Typography>
@@ -666,18 +668,25 @@ export default function CustomTableRowV2(
                     </>
                   )}{" "}
                   <Box sx={{ width: "100%" }}>
-                    {props.singleData[header.key] === -1 ? (
-                      <LinearProgressWithLabel
-                        sx={{
-                          "& .MuiLinearProgress-colorPrimary": {
-                            backgroundColor: "red",
-                          },
-                          "& .MuiLinearProgress-barColorPrimary": {
-                            backgroundColor: epSetter(100),
-                          },
-                        }}
-                        value={100}
-                      />
+                    {props.singleData[header.key] ===
+                    props.singleData["TotalNumberOfEpisodes"] ? (
+                      <>
+                        {props.singleData[header.key] !== 0 ? (
+                          <LinearProgressWithLabel
+                            sx={{
+                              "& .MuiLinearProgress-colorPrimary": {
+                                backgroundColor: "red",
+                              },
+                              "& .MuiLinearProgress-barColorPrimary": {
+                                backgroundColor: epSetter(100),
+                              },
+                            }}
+                            value={100}
+                          />
+                        ) : (
+                          "-"
+                        )}
+                      </>
                     ) : (
                       <LinearProgressWithLabel
                         sx={{

@@ -1,15 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	anime_functions "local-db-app/functions"
 	"local-db-app/middleware"
-	"local-db-app/migrations"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -50,6 +51,73 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
+}
+
+type UpdateEpisodeRequest struct {
+	Name        string `json:"name"`
+	WatchStatus int    `json:"watchStatus"`
+}
+
+func updateAnimeEpisode(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req UpdateEpisodeRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var anime struct {
+			ID          uint   `json:"id" gorm:"primaryKey"`
+			Name        string `json:"name"`
+			WatchStatus int    `json:"watchStatus"`
+		}
+
+		// Başlığı temizle ve bölüm numarasını çıkar
+		cleanTitle := strings.TrimSpace(req.Name)
+		cleanTitle = strings.ReplaceAll(cleanTitle, "  ", " ")
+
+		// Bölüm numarasını çıkar
+		episode := 0
+		if strings.Contains(cleanTitle, "Bölüm") {
+			parts := strings.Split(cleanTitle, "Bölüm")
+			if len(parts) > 1 {
+				episodeStr := strings.TrimSpace(parts[1])
+				episodeStr = strings.Split(episodeStr, " ")[0] // Sadece sayıyı al
+				episodeStr = strings.Trim(episodeStr, ".")
+				if ep, err := strconv.Atoi(episodeStr); err == nil {
+					episode = ep
+				}
+			}
+			// Bölüm kısmını başlıktan çıkar
+			cleanTitle = strings.TrimSpace(parts[0])
+		}
+
+		// Önce tam eşleşme ara
+		result := db.Table("anime.animes").Where("LOWER(name) = LOWER(?)", cleanTitle).First(&anime)
+		if result.Error != nil {
+			// Tam eşleşme bulunamazsa, başlığın başlangıcını içeren anime'yi ara
+			result = db.Table("anime.animes").Where("LOWER(name) LIKE LOWER(?)", cleanTitle+"%").First(&anime)
+			if result.Error != nil {
+				http.Error(w, "Anime bulunamadı", http.StatusNotFound)
+				return
+			}
+		}
+
+		// Eğer bölüm numarası bulunduysa, onu kullan
+		if episode > 0 {
+			anime.WatchStatus = episode
+		} else {
+			anime.WatchStatus = req.WatchStatus
+		}
+
+		if err := db.Table("anime.animes").Save(&anime).Error; err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(anime)
+	}
 }
 
 func main() {
@@ -103,6 +171,17 @@ func main() {
 
 	router := mux.NewRouter()
 
+	// CORS ayarları
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*", "moz-extension://*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		Debug:          false,
+	})
+
+	// Router'a CORS middleware'ini ekle
+	handler := c.Handler(router)
+
 	dsn := fmt.Sprintf("host='%s' port=%d user='%s' password=%s dbname='%s' sslmode=disable", host, dbport, user, password, dbname)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		PrepareStmt: true, // SQL ifadelerini önbelleğe al
@@ -128,15 +207,10 @@ func main() {
 		}
 	}()
 
-	// Sadece temel tablo oluşturma işlemini yap, diğer migration işlemlerini kaldır
-	migrations.CreateSeriesTable(db)
-	migrations.CreateUsersTable(db)
-
-	// PlanToWatch kolonu ekle
-	migrations.AddPlanToWatchColumn(db)
-
-	// Watch List tablosunu oluştur
-	migrations.CreateWatchListTable(db)
+	// Veritabanı başlangıç işlemlerini gerçekleştir
+	if err := InitializeDatabase(db); err != nil {
+		log.Printf("Veritabanı başlangıç işlemleri sırasında hata: %v", err)
+	}
 
 	port := os.Getenv("PORT")
 
@@ -148,6 +222,8 @@ func main() {
 	router.HandleFunc("/createAnime", anime_functions.CreateAnimeTableData(db))
 	router.HandleFunc("/deleteAnime", anime_functions.DeleteAnimeTableData(db))
 	router.HandleFunc("/createAnimeWithFile", anime_functions.CreateAnimeTableDataWithFile(db))
+	router.HandleFunc("/api/anime/update-episode", updateAnimeEpisode(db))
+	router.HandleFunc("/updateFinishedAnimeStatus", anime_functions.UpdateFinishedAnimeStatus(db))
 
 	// Senkronizasyon API ucu
 	router.HandleFunc("/syncAnimeData", anime_functions.SyncAnimeData(db))
@@ -199,41 +275,11 @@ func main() {
 	spa := spaHandler{staticPath: "frontend/build", indexPath: "index.html"}
 	router.PathPrefix("/").Handler(spa)
 
-	// CORS middleware'ini ekle
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins: []string{
-			"http://localhost:3000",  // trailing slash olmadan
-			"https://localhost:3000", // HTTPS için
-			"http://localhost:8080",  // backend portu için
-			"https://localhost:8080", // backend HTTPS için
-			"*",                      // Tüm kaynaklar için
-		},
-		AllowedMethods: []string{
-			"GET", "POST", "PUT", "DELETE", "OPTIONS", // OPTIONS ekleyin
-		},
-		AllowedHeaders: []string{
-			"Content-Type",
-			"Authorization",
-			"X-Requested-With",
-			"Accept",
-			"Origin",
-			"*", // Tüm başlıklar için
-		},
-		AllowCredentials: true, // Kimlik bilgilerini kabul et
-		// Debug modunu açalım
-		Debug: true,
-	}).Handler(router)
-
 	srv := &http.Server{
-		Handler: corsHandler,
+		Handler: handler,
 		Addr:    ":" + port,
 	}
 
 	log.Println("Server starting at port " + port)
 	log.Fatal(srv.ListenAndServeTLS(certFile, keyFile))
-	/* if devMode {
-	        log.Fatal(srv.ListenAndServeTLS("localhost.pem", "localhost-key.pem"))
-	    } else {
-	        log.Fatal(srv.ListenAndServe())
-	} */
 }

@@ -24,6 +24,7 @@ import {
   StyledTeaButton,
 } from "../StyledComponents";
 import { Utils } from "../../Utils/Utilities";
+import EditIcon from "@mui/icons-material/Edit";
 
 export default function InnerList({
   data,
@@ -107,6 +108,8 @@ export default function InnerList({
       {list.map((item: any) => (
         <ListItemButton
           key={item.key}
+          disableRipple
+          disableTouchRipple
           sx={{
             display: "flex",
             flexDirection: "column",
@@ -115,6 +118,7 @@ export default function InnerList({
             borderRadius: 2,
             backgroundColor: theme.input_background,
             border: `1px solid ${theme.input_border}`,
+            cursor: "default",
             "& > *": {
               width: "100%",
             },
@@ -444,6 +448,18 @@ export default function InnerList({
                     max: 10,
                     step: 0.1,
                   },
+                  sx: {
+                    "& input": {
+                      "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button":
+                        {
+                          "-webkit-appearance": "none",
+                          margin: 0,
+                        },
+                      "&[type=number]": {
+                        "-moz-appearance": "textfield",
+                      },
+                    },
+                  },
                 }}
                 sx={{
                   backgroundColor: "transparent",
@@ -552,6 +568,16 @@ export default function InnerList({
                   },
                   sx: {
                     borderRadius: "8px",
+                    "& input": {
+                      "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button":
+                        {
+                          "-webkit-appearance": "none",
+                          margin: 0,
+                        },
+                      "&[type=number]": {
+                        "-moz-appearance": "textfield",
+                      },
+                    },
                   },
                   type: "number",
                   inputProps: {
@@ -627,6 +653,16 @@ export default function InnerList({
                   },
                   sx: {
                     borderRadius: "8px",
+                    "& input": {
+                      "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button":
+                        {
+                          "-webkit-appearance": "none",
+                          margin: 0,
+                        },
+                      "&[type=number]": {
+                        "-moz-appearance": "textfield",
+                      },
+                    },
                   },
                 }}
                 id={item.key}
@@ -696,15 +732,35 @@ export default function InnerList({
                       {data && (
                         <>
                           {data![item.key as keyof typeof data] && (
-                            <img
-                              key={data![
-                                item.key as keyof typeof data
-                              ]?.toString()}
-                              onClick={handleImageClick}
-                              src={`${data![item.key as keyof typeof data]}`}
-                              alt={data["Name"] + "_cover"}
-                              style={{ width: 100 }}
-                            />
+                            <Box sx={{ position: "relative" }}>
+                              <img
+                                key={data![
+                                  item.key as keyof typeof data
+                                ]?.toString()}
+                                onClick={handleImageClick}
+                                src={`${data![item.key as keyof typeof data]}`}
+                                alt={data["Name"] + "_cover"}
+                                style={{ width: 100 }}
+                              />
+                              <Box
+                                sx={{
+                                  position: "absolute",
+                                  top: 5,
+                                  right: 5,
+                                  backgroundColor: theme.primary,
+                                  borderRadius: "50%",
+                                  padding: "4px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <EditIcon
+                                  sx={{ fontSize: 16, color: "#FFFFFF" }}
+                                />
+                              </Box>
+                            </Box>
                           )}
                         </>
                       )}
@@ -716,6 +772,7 @@ export default function InnerList({
                       display: "grid",
                       placeItems: "center",
                       width: "100%",
+                      position: "relative",
                     }}
                   >
                     <input
@@ -725,15 +782,37 @@ export default function InnerList({
                       disabled={type === "delete" || type === "detail"}
                       onChange={handleImageUpload}
                     />
-                    <img
-                      onClick={type !== "detail" ? handleImageClick : undefined}
-                      src={`${data![item.key as keyof typeof data]}`}
-                      alt={data["Name"] + "_cover"}
-                      style={{
-                        width: 100,
-                        cursor: type !== "detail" ? "pointer" : "default",
-                      }}
-                    />
+                    <Box sx={{ position: "relative" }}>
+                      <img
+                        onClick={
+                          type !== "detail" ? handleImageClick : undefined
+                        }
+                        src={`${data![item.key as keyof typeof data]}`}
+                        alt={data["Name"] + "_cover"}
+                        style={{
+                          width: 100,
+                          cursor: type !== "detail" ? "pointer" : "default",
+                        }}
+                      />
+                      {type === "update" && (
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            top: 5,
+                            right: 5,
+                            backgroundColor: theme.primary,
+                            borderRadius: "50%",
+                            padding: "4px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <EditIcon sx={{ fontSize: 16, color: "#FFFFFF" }} />
+                        </Box>
+                      )}
+                    </Box>
                   </Box>
                 )}
               </>
@@ -866,15 +945,12 @@ export default function InnerList({
                 <MaterialSelect
                   disabled={type === "delete" || type === "detail"}
                   value={
-                    data
-                      ? data[item.key as keyof typeof data]
-                        ? item.options.filter(
-                            (option: { key: string; label: string }) =>
-                              data![item.key as keyof typeof data] ===
-                              option.key
-                          )[0].key
-                        : item.options[0].key
-                      : undefined
+                    data && data[item.key as keyof typeof data]
+                      ? item.options.find(
+                          (option: { key: string; label: string }) =>
+                            data[item.key as keyof typeof data] === option.key
+                        )?.key || item.options[0].key
+                      : item.options[0].key
                   }
                   onChange={(e) => {
                     updateData(item.key, e.target.value);
@@ -890,57 +966,6 @@ export default function InnerList({
                         border: `1px solid ${theme.input_border}`,
                         borderRadius: "8px",
                         boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
-                      },
-                    },
-                    anchorOrigin: {
-                      vertical: "bottom",
-                      horizontal: "left",
-                    },
-                    transformOrigin: {
-                      vertical: "top",
-                      horizontal: "left",
-                    },
-                    MenuListProps: {
-                      sx: {
-                        padding: 0,
-                      },
-                    },
-                  }}
-                  sx={{
-                    "& .MuiSelect-select": {
-                      color: theme.primary_text,
-                    },
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.input_border,
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.primary,
-                    },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: theme.primary,
-                    },
-                    "& .MuiSvgIcon-root": {
-                      color: theme.secondary_text,
-                    },
-                    "& .Mui-disabled": {
-                      color: theme.primary_text,
-                      "-webkit-text-fill-color": theme.primary_text,
-                    },
-                    "& .MuiOutlinedInput-root": {
-                      backgroundColor: theme.input_background,
-                      borderRadius: "8px",
-                      "& fieldset": {
-                        borderColor: theme.input_border,
-                      },
-                      "&:hover fieldset": {
-                        borderColor: theme.primary,
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: theme.primary,
-                      },
-                      "& .Mui-disabled": {
-                        color: theme.primary_text,
-                        "-webkit-text-fill-color": theme.primary_text,
                       },
                     },
                   }}
