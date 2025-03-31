@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1><i class="fas fa-tv"></i> Anime Watchlist</h1>
+      </div>
+
+      <div class="content">
+        <div class="status-message" id="statusMessage"></div>
+
+        <div class="action-buttons">
+          <button id="addToWatchlist" class="btn primary">
+            <i class="fas fa-plus"></i> Add to Watchlist
+          </button>
+          <button id="openWatchlist" class="btn secondary">
+            <i class="fas fa-list"></i> View Watchlist
+          </button>
+        </div>
+
+        <!-- Quick actions are temporarily hidden
+        <div class="quick-actions">
+          <button id="markAsWatching" class="btn action-btn">
+            <i class="fas fa-play"></i> Watching
+          </button>
+          <button id="markAsCompleted" class="btn action-btn">
+            <i class="fas fa-check"></i> Completed
+          </button>
+          <button id="markAsPlanned" class="btn action-btn">
+            <i class="fas fa-clock"></i> Plan to Watch
+          </button>
+        </div>
+        -->
+      </div>
+
+      <div class="footer">
+        <span class="version">v1.0</span>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

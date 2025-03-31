@@ -251,7 +251,7 @@ export default function AnimePage() {
 
       // If coming from watchlist, set WatchStatus and PlanToWatch values once
       if (fromWatchList) {
-        updatedData.WatchStatus = "-1";
+        updatedData.WatchStatus = -1;
         updatedData.PlanToWatch = false;
 
         console.log(
@@ -458,7 +458,7 @@ export default function AnimePage() {
             if (fromWatchList === "true") {
               // Force set WatchStatus and PlanToWatch values
               // Even if the backend fields have different names, change the values here
-              convertedData["WatchStatus"] = "-1";
+              convertedData["WatchStatus"] = -1;
               convertedData["PlanToWatch"] = false;
 
               console.log(

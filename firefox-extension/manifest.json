@@ -1,0 +1,47 @@
+{
+  "manifest_version": 2,
+  "name": "Anime Watchlist",
+  "version": "1.0",
+  "description": "Track your anime watching progress and add animes from MyAnimeList",
+  "icons": {
+    "48": "icons/kakashi.ico",
+    "96": "icons/kakashi.ico"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "<all_urls>",
+    "https://localhost:8080/*",
+    "https://myanimelist.net/*",
+    "https://anizium.com/*",
+    "https://turkanime.co/*",
+    "https://www.turkanime.co/*",
+    "https://www.tranimeizle.top/*",
+    "webRequest",
+    "webRequestBlocking"
+  ],
+  "browser_action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "48": "icons/kakashi.ico",
+      "96": "icons/kakashi.ico"
+    }
+  },
+  "background": {
+    "scripts": ["background/background.js"],
+    "persistent": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://myanimelist.net/anime/*",
+        "https://anizium.com/*",
+        "https://turkanime.co/*",
+        "https://www.turkanime.co/*",
+        "https://www.tranimeizle.top/*",
+        "https://tranimeizle.top/*"
+      ],
+      "js": ["content/content.js"]
+    }
+  ]
+}
