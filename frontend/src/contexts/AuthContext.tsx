@@ -15,7 +15,7 @@ import {
   UpdateProfileRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
-} from "../services/AuthService";
+} from "../Services/AuthService";
 import { useRouter } from "next/navigation";
 
 // Context için tip tanımlaması
