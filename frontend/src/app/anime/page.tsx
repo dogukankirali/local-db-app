@@ -27,13 +27,14 @@ import { StyledTeaButton } from "@/components/CollapsibleTableV2/Components/Styl
 import "@/assets/custom.css";
 import CreateAnimeModal from "@/components/Modals/CreateAnimeModal";
 import Constants from "@/constants/Constants";
-import { AnimeService } from "@/services/AnimeServices";
+import { AnimeService } from "@/Services/AnimeServices";
 import TableHeaders from "@/components/CollapsibleTableV2/Components/Headers/Headers";
 import UpdateDeleteAnimeModal from "@/components/Modals/UpdateDeleteAnimeModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
+import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 
 export default function AnimePage() {
   const [windowSize, setWindowSize] = useState({
@@ -121,6 +122,32 @@ export default function AnimePage() {
           gap: 1,
         }}
       >
+        <Tooltip
+          title={
+            data?.PlanToWatch ? "Already in Watchlist" : "Add to Watchlist"
+          }
+        >
+          <StyledTeaButton
+            onClick={() => {
+              addToWatchlist(data);
+            }}
+            sx={{
+              backgroundColor: theme.success_alt,
+              color: "white",
+              "&:hover": {
+                backgroundColor: theme.success,
+              },
+              fontFamily: "inherit",
+              opacity: data?.PlanToWatch ? 0.5 : 1,
+              cursor: data?.PlanToWatch ? "not-allowed" : "pointer",
+              minHeight: "38px",
+            }}
+            size="small"
+            disabled={data?.PlanToWatch}
+          >
+            <PlaylistAddIcon fontSize="small" />
+          </StyledTeaButton>
+        </Tooltip>
         <StyledTeaButton
           onClick={() => {
             setModalData({
@@ -545,6 +572,53 @@ export default function AnimePage() {
       }).showToast();
     }
   };
+
+  async function addToWatchlist(animeData: TEATable.IAnime) {
+    try {
+      // Create a copy of the anime data
+      const updatedData: TEATable.IAnime = { ...animeData };
+
+      // Set WatchStatus to -1 and PlanToWatch to true
+      updatedData.PlanToWatch = true;
+
+      console.log("Adding to watchlist with values:");
+      console.log("WatchStatus value: set to -1");
+      console.log("PlanToWatch value: set to true");
+
+      const res = await AnimeService.updateAnime(updatedData);
+      if (res.status === 200) {
+        Toastify({
+          text: "Anime successfully added to watchlist",
+          duration: 3000,
+          close: true,
+          gravity: "top",
+          position: "right",
+          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
+          stopOnFocus: true,
+        }).showToast();
+
+        // Reset order parameters to get new data
+        getData({
+          page: 1,
+          count: 10,
+          filters: [],
+          order: "asc", // Specify default sorting direction
+          orderBy: "Name", // Specify default sorting field
+        });
+      }
+    } catch (err) {
+      console.error("Error adding anime to watchlist:", err);
+      Toastify({
+        text: "An error occurred while adding anime to watchlist",
+        duration: 3000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
+        stopOnFocus: true,
+      }).showToast();
+    }
+  }
 
   return (
     <div>
