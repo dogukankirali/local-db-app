@@ -19,9 +19,9 @@ declare namespace TEATableProps {
     data?: TEAData.WPagination<T>;
     setData?: React.Dispatch<React.SetStateAction<TEAData.WPagination<T>>>;
     header: TEATable.IColumnItems;
-    sortHeader: React.Dispatch<React.SetStateAction<TEATable.IColumnItems>>;
+    sortHeader?: React.Dispatch<React.SetStateAction<TEATable.IColumnItems>>;
     collapsible: TEATable.ITableCollapse<T>;
-    updateInnerCard?: (data: T) => void;
+    updateInnerCard?: TEATable.OnInnerUpdate;
     tableRerender: TEATable.FetchData;
     style?: React.CSSProperties;
     selectionFilters?: TEATable.IFilterType[];

@@ -16,7 +16,7 @@ import { StyledTeaButton } from "../CollapsibleTableV2/Components/StyledComponen
 import Constants from "@/constants/Constants";
 import FileUpload from "../Common/FileUpload";
 import axios from "axios";
-import { AnimeService } from "@/services/AnimeServices";
+import { AnimeService } from "@/Services/AnimeServices";
 import { genreColors } from "@/constants/Constants";
 import { translateGenres } from "@/utils/genreTranslations";
 
