@@ -1035,7 +1035,7 @@ export default function InnerList({
                   loadOptions={async (inputValue) => {
                     try {
                       const { AnimeService } = await import(
-                        "../../../../services/AnimeServices"
+                        "../../../../Services/AnimeServices"
                       );
                       const series = await AnimeService.getSeries();
                       console.log("Yüklenen seriler:", series);

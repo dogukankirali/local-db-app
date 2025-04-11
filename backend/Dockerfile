@@ -1,19 +1,26 @@
-# İlk aşama: Üretim için build yap
-FROM --platform=arm64 golang:1.20-alpine
+# Base image
+FROM --platform=linux/arm64 golang:1.23-alpine
 
+# Çalışma dizinini ayarla
 WORKDIR /app
 
-COPY ./functions ./functions
-COPY ./models ./models
-COPY go.mod .
-COPY go.sum .
-COPY main.go .
+# Gerekli sistem paketlerini yükle
+RUN apk add --no-cache git gcc musl-dev
 
-RUN go get
-RUN go build -o bin .
-RUN mkdir -p /etc/ssl/certs
+# Go modüllerini kopyala
+COPY go.mod go.sum ./
 
+# Bağımlılıkları yükle (go get yerine)
+RUN go mod download
+
+# Tüm kaynak kodları kopyala
+COPY . .
+
+# ARM64 için build
+RUN GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o main .
+
+# Portu aç
 EXPOSE 8080
 
-# NGINX'i başlat
-CMD ["/app/bin"]
+# Uygulamayı çalıştır
+CMD ["./main"]

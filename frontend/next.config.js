@@ -16,6 +16,7 @@ const nextConfig = {
   // Diğer Next.js yapılandırmaları
   reactStrictMode: true,
   // swcMinify seçeneği kaldırıldı çünkü artık varsayılan olarak etkin
+  output: "standalone",
 };
 
 module.exports = nextConfig;
