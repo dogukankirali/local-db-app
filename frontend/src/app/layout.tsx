@@ -1,22 +1,8 @@
 import type { Metadata } from "next";
-import { Poppins, Montserrat } from "next/font/google";
 import Layout from "@/components/layout/Layout";
 import MUIProvider from "@/providers/MUIProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
-
-const poppins = Poppins({
-  weight: ["300", "400", "500", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-poppins",
-});
-
-const montserrat = Montserrat({
-  weight: ["300", "400", "500", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-montserrat",
-});
+import "@/styles/fonts.css"; // Local fontlar için style dosyası
 
 export const metadata: Metadata = {
   title: "Local DB App",
@@ -29,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr" className={`${poppins.variable} ${montserrat.variable}`}>
-      <body className={poppins.className}>
+    <html lang="tr">
+      <body>
         <MUIProvider>
           <AuthProvider>
             <Layout>{children}</Layout>

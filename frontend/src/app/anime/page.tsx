@@ -1,6 +1,6 @@
 "use client";
 
-import React, { JSX } from "react";
+import React, { JSX, Suspense } from "react";
 import {
   Box,
   Container,
@@ -36,7 +36,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 
-export default function AnimePage() {
+function AnimePageContent() {
   const [windowSize, setWindowSize] = useState({
     width: 0,
     height: 0,
@@ -713,5 +713,13 @@ export default function AnimePage() {
         handleCreate={createAnime}
       />
     </div>
+  );
+}
+
+export default function AnimePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AnimePageContent />
+    </Suspense>
   );
 }

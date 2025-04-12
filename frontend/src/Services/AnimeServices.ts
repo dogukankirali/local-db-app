@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const path = process.env.NEXT_PUBLIC_API_URL || "https://localhost:8080";
+console.log(path);
 
 /* router.HandleFunc("/getAnimeTable", allfunctions.GetAnimeTableData(db));
 router.HandleFunc("/getGenres", allfunctions.GetGenres(db));

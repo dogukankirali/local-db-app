@@ -1,19 +1,34 @@
 # Build stage
 FROM node:20-alpine AS builder
 
-# Çalışma dizinini ayarla
 WORKDIR /app
 
-# Package.json ve package-lock.json dosyalarını kopyala
+# API URL'i sabit olarak tanımla
+ENV NEXT_PUBLIC_API_URL=https://animeservice.dogukankirali.com
+
+# Gerekli paketleri yükle
+RUN apk add --no-cache curl fontconfig openssl
+
+# Poppins fontlarını indir
+RUN mkdir -p /app/public/fonts && \
+    cd /app/public/fonts && \
+    wget https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLGT9Z1xlFQ.woff2 -O Poppins-Medium.woff2 && \
+    wget https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLDz8Z1xlFQ.woff2 -O Poppins-Regular.woff2 && \
+    wget https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCz7Z1xlFQ.woff2 -O Poppins-SemiBold.woff2 && \
+    wget https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLDD4Z1xlFQ.woff2 -O Poppins-Bold.woff2 && \
+    wget https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLBT5Z1xlFQ.woff2 -O Poppins-Light.woff2
+
+# Package dosyalarını kopyala
 COPY package*.json ./
 
 # Bağımlılıkları yükle
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Kaynak kodları kopyala
 COPY . .
 
-# Next.js uygulamasını build et
+# Build et
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Production stage
@@ -21,30 +36,32 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Node.js ortamını production'a ayarla
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=https://animeservice.dogukankirali.com
 
-# Sistem paketlerini yükle
-RUN addgroup --system --gid 1001 nodejs && \
+# Gerekli paketleri yükle
+RUN apk add --no-cache curl fontconfig openssl && \
+    addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Gerekli dosyaları kopyala
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server.js ./server.js
 
 # Kullanıcı izinlerini ayarla
 RUN chown -R nextjs:nodejs /app
 
-# Nextjs kullanıcısına geç
 USER nextjs
 
-# Port'u aç
 EXPOSE 3000
 
-# Env variable'ları ayarla (düzeltilmiş syntax)
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Uygulamayı çalıştır
-CMD ["node", "server.js"] 
+# HTTPS ile başlat
+CMD ["npm", "run", "start:https"]
