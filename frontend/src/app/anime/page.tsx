@@ -12,24 +12,24 @@ import {
   MenuItem,
   Divider,
 } from "@mui/material";
-import TableTemp from "@/components/CollapsibleTableV2/TableTemp";
+import TableTemp from "../../components/CollapsibleTableV2/TableTemp";
 import { useEffect, useRef, useState } from "react";
 import {
   getFilledFilters,
   useTableFilters,
-} from "@/components/CollapsibleTableV2/Components/TableFilters/TableFilters";
+} from "../../components/CollapsibleTableV2/Components/TableFilters/TableFilters";
 import axios from "axios";
 import Toastify from "toastify-js";
 import "toastify-js/src/toastify.css";
-import { theme } from "@/theme/customTheme";
-import { useTableSettings } from "@/components/CollapsibleTableV2/Components/TableSettings";
-import { StyledTeaButton } from "@/components/CollapsibleTableV2/Components/StyledComponents";
-import "@/assets/custom.css";
-import CreateAnimeModal from "@/components/Modals/CreateAnimeModal";
-import Constants from "@/constants/Constants";
-import { AnimeService } from "@/Services/AnimeServices";
-import TableHeaders from "@/components/CollapsibleTableV2/Components/Headers/Headers";
-import UpdateDeleteAnimeModal from "@/components/Modals/UpdateDeleteAnimeModal";
+import { theme } from "../../theme/customTheme";
+import { useTableSettings } from "../../components/CollapsibleTableV2/Components/TableSettings";
+import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
+import "../../assets/custom.css";
+import CreateAnimeModal from "../../components/Modals/CreateAnimeModal";
+import Constants from "../../constants/Constants";
+import { AnimeService } from "../../Services/AnimeServices";
+import TableHeaders from "../../components/CollapsibleTableV2/Components/Headers/Headers";
+import UpdateDeleteAnimeModal from "../../components/Modals/UpdateDeleteAnimeModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";

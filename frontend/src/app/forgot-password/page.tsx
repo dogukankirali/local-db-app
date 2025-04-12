@@ -13,7 +13,7 @@ import {
   useTheme,
 } from "@mui/material";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function ForgotPasswordPage() {

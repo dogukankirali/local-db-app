@@ -16,8 +16,8 @@ import {
   useTheme,
 } from "@mui/material";
 import { AccountCircle, Save } from "@mui/icons-material";
-import { useAuth } from "@/contexts/AuthContext";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { useAuth } from "../../contexts/AuthContext";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
 
 export default function ProfilePage() {
   const { user, updateProfile, loading, error: authError } = useAuth();

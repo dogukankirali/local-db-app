@@ -22,12 +22,12 @@ const menuItems = [
     path: "/manga",
   },
   {
-    text: "Kitaplar",
+    text: "Books",
     icon: <ImportContactsIcon sx={{ fontSize: 48 }} />,
     path: "/book",
   },
   {
-    text: "Diziler",
+    text: "Series",
     icon: <LiveTvIcon sx={{ fontSize: 48 }} />,
     path: "/series",
   },

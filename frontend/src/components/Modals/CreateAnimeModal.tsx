@@ -1,6 +1,15 @@
 "use client";
 
-import React, { memo, Suspense, lazy, useEffect, useState } from "react";
+import React, {
+  memo,
+  Suspense,
+  lazy,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   Box,
   Modal,
@@ -11,14 +20,15 @@ import {
   TextField,
   Autocomplete,
 } from "@mui/material";
-import { theme } from "@/theme/customTheme";
+import { theme } from "../../theme/customTheme";
 import { StyledTeaButton } from "../CollapsibleTableV2/Components/StyledComponents";
-import Constants from "@/constants/Constants";
+import Constants from "../../constants/Constants";
 import FileUpload from "../Common/FileUpload";
 import axios from "axios";
-import { AnimeService } from "@/Services/AnimeServices";
-import { genreColors } from "@/constants/Constants";
-import { translateGenres } from "@/utils/genreTranslations";
+import { AnimeService } from "../../Services/AnimeServices";
+import { genreColors } from "../../constants/Constants";
+import { translateGenres } from "../../utils/genreTranslations";
+import { debounce } from "lodash";
 
 const LazyScrollbars = lazy(() => import("react-custom-scrollbars-2"));
 const LazyNewInnerList = lazy(
@@ -151,11 +161,11 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreResults, setHasMoreResults] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Form verilerindeki değişiklikleri izle
   useEffect(() => {
     if (props.createModalData && props.createModalData.data) {
-      console.log("Form verileri değişti:", props.createModalData.data);
     }
   }, [props.createModalData]);
 
@@ -166,11 +176,11 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
       setHasMoreResults(false);
       return;
     }
+    let pageCount = 1;
 
     setLoading(true);
     try {
       const response = await AnimeService.searchAnime(query, page);
-      console.log("API yanıtı:", response);
 
       if (response && response.success && response.data) {
         // Check MAL API response
@@ -184,33 +194,28 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
           }
 
           // Check if there are more results
-          const { items, per_page, current_page, last_visible_page } =
-            response.data.pagination;
-          console.log(
-            `Page: ${current_page}/${last_visible_page}, Items: ${items.count}`
-          );
+          const { has_next_page, last_visible_page } = response.data.pagination;
           // If not on the last page and there are items on this page
-          setHasMoreResults(
-            current_page < last_visible_page && items.count > 0
-          );
+          if (pageCount < last_visible_page) {
+            pageCount++;
+          }
+          setHasMoreResults(has_next_page === true);
           // Keep track of the current page for pagination
-          setCurrentPage(current_page);
+          setCurrentPage(pageCount);
         } else {
-          console.log("API response failed or no data:", response);
           if (page === 1) {
             setSearchResults([]);
           }
           setHasMoreResults(false);
         }
       } else {
-        console.log("API yanıtı başarısız veya veri yok:", response);
         if (page === 1) {
           setSearchResults([]);
         }
         setHasMoreResults(false);
       }
     } catch (error) {
-      console.log("Anime arama hatası:", error);
+      console.error("Anime arama hatası:", error);
       if (page === 1) {
         setSearchResults([]);
       }
@@ -221,20 +226,56 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
   };
 
   // Daha fazla sonuç yükle
-  const loadMoreResults = () => {
-    if (loading || !hasMoreResults) return;
+  const loadMoreResults = useCallback(async () => {
+    if (loading || !hasMoreResults || isLoadingMore || !searchTerm) {
+      return;
+    }
 
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
-    searchAnime(searchTerm, nextPage);
-  };
+    try {
+      setIsLoadingMore(true);
+      const nextPage = currentPage + 1;
+
+      await searchAnime(searchTerm, nextPage);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error("Error loading more results:", error);
+      setHasMoreResults(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [loading, hasMoreResults, isLoadingMore, currentPage, searchTerm]);
+
+  // Debounced scroll handler
+  const debouncedLoadMore = useMemo(
+    () => debounce(loadMoreResults, 300),
+    [loadMoreResults]
+  );
+
+  // Autocomplete ListboxComponent içindeki handleScroll
+  const handleScroll = useCallback(
+    (event: React.UIEvent<HTMLUListElement>) => {
+      const target = event.currentTarget;
+      const scrollBottom = target.scrollTop + target.clientHeight;
+      const threshold = target.scrollHeight - 100; // Threshold'u 100px'e düşürdük
+
+      if (scrollBottom >= threshold) {
+        debouncedLoadMore();
+      }
+    },
+    [debouncedLoadMore]
+  );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      debouncedLoadMore.cancel();
+    };
+  }, [debouncedLoadMore]);
 
   // Anime seçildiğinde form verilerini güncelle
   const handleAnimeSelect = (anime: MALAnime | null) => {
     setSelectedAnime(anime);
     if (anime) {
-      console.log("Selected anime:", anime);
-
       // Get image URL
       let imageUrl = "";
       if (anime.images && anime.images.jpg && anime.images.jpg.image_url) {
@@ -244,29 +285,21 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
       } else if (anime.images && anime.images.image_url) {
         imageUrl = anime.images.image_url;
       }
-      console.log("Image URL:", imageUrl);
 
       // Title - get from title field
       const title =
         anime.title || anime.title_english || anime.name || "Unnamed Anime";
-      console.log("Title:", title);
 
       // Anime status - determine based on airing value
       // if airing is false then "Finished", if true then "OnAir"
-      console.log("Anime airing value:", anime.airing);
-      console.log("Anime status value:", anime.status);
       const animeStatus = anime.airing === true ? "OnAir" : "Finished";
-      console.log("Determined anime status:", animeStatus);
 
       // Total number of episodes - get from episodes field
       const totalEpisodes = anime.episodes || 0;
-      console.log("Total number of episodes:", totalEpisodes);
 
       // TV/Movie status - determine based on type field
       // If "Movie" then true, for others (TV, OVA, etc.) false
-      console.log("Anime type value:", anime.type);
       const isMovie = anime.type === "Movie";
-      console.log("IsMovie değeri:", isMovie);
 
       // Türler - genres listesindeki name değerlerini birleştir
       let genres = "";
@@ -277,7 +310,6 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
       ) {
         genres = anime.genres.map((genre: any) => genre.name).join(", ");
       }
-      console.log("Türler:", genres);
 
       // Temalar ve demografik bilgileri de ekle (varsa)
       if (
@@ -289,7 +321,6 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
           .map((theme: any) => theme.name)
           .join(", ");
         genres = genres ? `${genres}, ${themeNames}` : themeNames;
-        console.log("Themes added:", themeNames);
       }
 
       if (
@@ -301,21 +332,16 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
           .map((demo: any) => demo.name)
           .join(", ");
         genres = genres ? `${genres}, ${demoNames}` : demoNames;
-        console.log("Demographic information added:", demoNames);
       }
-      console.log("All categories:", genres);
 
       // Translate English genres to English
       const translatedGenres = translateGenres(genres);
-      console.log("Translated genres:", translatedGenres);
 
       // MAL score - from score field
       const score = anime.score || 0;
-      console.log("MAL score:", score);
 
       // MAL page - from url field
       const malLink = anime.url || "";
-      console.log("MAL page:", malLink);
 
       // Özet - synopsis alanından al
       //const synopsis = anime.synopsis || "";
@@ -418,7 +444,6 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
               <Autocomplete
                 options={searchResults}
                 getOptionLabel={(option) => {
-                  // Farklı veri yapılarını destekle
                   if (option.title) return option.title;
                   if (option.name) return option.name;
                   if (option.title_english) return option.title_english;
@@ -427,79 +452,13 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                 loading={loading}
                 onInputChange={(_, newValue) => setSearchTerm(newValue)}
                 onChange={(_, newValue) => handleAnimeSelect(newValue)}
-                ListboxComponent={(props) => {
-                  const { children, ...other } = props;
-                  const itemCount = React.Children.count(children);
-
-                  // Listbox içeriğini referans olarak al
-                  const ref = React.useRef<HTMLUListElement>(null);
-
-                  React.useEffect(() => {
-                    // Load more results when user scrolls near the end of the list
-                    const handleScroll = () => {
-                      if (!ref.current || loading || !hasMoreResults) return;
-
-                      const scrollBottom =
-                        ref.current.scrollTop + ref.current.clientHeight;
-                      const threshold = ref.current.scrollHeight - 200; // 200px from bottom
-
-                      if (scrollBottom >= threshold) {
-                        loadMoreResults();
-                      }
-                    };
-
-                    const currentRef = ref.current;
-                    if (currentRef) {
-                      currentRef.addEventListener("scroll", handleScroll);
-                    }
-
-                    return () => {
-                      if (currentRef) {
-                        currentRef.removeEventListener("scroll", handleScroll);
-                      }
-                    };
-                  }, [loading, hasMoreResults]);
-
-                  return (
-                    <ul
-                      ref={ref}
-                      {...other}
-                      style={{
-                        maxHeight: "300px",
-                        overflow: "auto",
-                        padding: 0,
-                        margin: 0,
-                        listStyle: "none",
-                        backgroundColor: theme.background,
-                      }}
-                    >
-                      {children}
-                      {loading && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            p: 1,
-                          }}
-                        >
-                          <CircularProgress size={24} />
-                        </Box>
-                      )}
-                      {!loading && !hasMoreResults && itemCount > 0 && (
-                        <Box
-                          sx={{
-                            textAlign: "center",
-                            p: 1,
-                            color: theme.secondary_text,
-                          }}
-                        >
-                          <Typography variant="caption">
-                            No more results
-                          </Typography>
-                        </Box>
-                      )}
-                    </ul>
-                  );
+                ListboxProps={{
+                  style: {
+                    maxHeight: "300px",
+                    overflow: "auto",
+                    scrollBehavior: "smooth",
+                  },
+                  onScroll: handleScroll,
                 }}
                 renderInput={(params) => (
                   <TextField
@@ -538,28 +497,20 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                   />
                 )}
                 renderOption={(props, option) => {
-                  // Get image URL
                   let imageUrl = "";
-                  if (
-                    option.images &&
-                    option.images.jpg &&
-                    option.images.jpg.image_url
-                  ) {
+                  if (option.images?.jpg?.image_url) {
                     imageUrl = option.images.jpg.image_url;
                   } else if (option.image_url) {
                     imageUrl = option.image_url;
-                  } else if (option.images && option.images.image_url) {
+                  } else if (option.images?.image_url) {
                     imageUrl = option.images.image_url;
                   }
 
-                  // Title
                   const title =
                     option.title ||
                     option.title_english ||
                     option.name ||
                     "Unnamed Anime";
-
-                  // Puan ve durum
                   const score = option.score || option.rating || "?";
                   const status = option.status || option.airing_status || "?";
 
