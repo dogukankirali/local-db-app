@@ -119,6 +119,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             );
           })}
         </List>
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: 16,
+            width: "100%",
+            textAlign: "center",
+            color: "text.secondary",
+            fontSize: "0.875rem",
+          }}
+        >
+          v1.1.3
+        </Box>
       </Drawer>
     );
   }
@@ -191,6 +203,24 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           );
         })}
       </List>
+      <Box
+        sx={{
+          position: "absolute",
+          bottom: 16,
+          width: "100%",
+          textAlign: "center",
+          color: "text.secondary",
+          fontSize: "0.875rem",
+          opacity: open ? 1 : 0,
+          transition: (theme) =>
+            theme.transitions.create("opacity", {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
+        }}
+      >
+        v1.1.3
+      </Box>
     </Box>
   );
 }

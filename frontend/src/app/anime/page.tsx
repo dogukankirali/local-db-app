@@ -143,7 +143,7 @@ function AnimePageContent() {
               minHeight: "38px",
             }}
             size="small"
-            disabled={data?.PlanToWatch}
+            disabled={!isAdmin || data?.PlanToWatch}
           >
             <PlaylistAddIcon fontSize="small" />
           </StyledTeaButton>
