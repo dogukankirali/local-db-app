@@ -47,7 +47,7 @@ export default function HomePage() {
         align="center"
         sx={{ mb: isMobile ? 3 : 6, fontWeight: 500 }}
       >
-        Hoş Geldiniz
+        Welcome
       </Typography>
       <Grid container spacing={isMobile ? 2 : 4}>
         {menuItems.map((item) => (
