@@ -2,9 +2,9 @@
 
 import React, { memo, Suspense, lazy } from "react";
 import { Box, Modal, Typography, CircularProgress } from "@mui/material";
-import { theme } from "@/theme/customTheme";
+import { theme } from "../../theme/customTheme";
 import { StyledTeaButton } from "../CollapsibleTableV2/Components/StyledComponents";
-import Constants from "@/constants/Constants";
+import Constants from "../../constants/Constants";
 import { useSearchParams } from "next/navigation";
 
 const LazyScrollbars = lazy(() => import("react-custom-scrollbars-2"));

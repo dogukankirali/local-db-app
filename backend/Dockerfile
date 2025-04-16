@@ -1,8 +1,12 @@
 # Base image
-FROM --platform=linux/arm64 golang:1.23-alpine
+#FROM --platform=linux/arm64 golang:1.23-alpine
+FROM --platform=linux/amd64 golang:1.23-alpine
 
 # Çalışma dizinini ayarla
 WORKDIR /app
+
+# Gerekli sistem paketlerini yükle
+RUN apk add --no-cache git gcc musl-dev ca-certificates && update-ca-certificates
 
 # Gerekli sistem paketlerini yükle
 RUN apk add --no-cache git gcc musl-dev
@@ -17,7 +21,8 @@ RUN go mod download
 COPY . .
 
 # ARM64 için build
-RUN GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o main .
+#RUN GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o main .
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o main .
 
 # Portu aç
 EXPOSE 8080

@@ -281,5 +281,11 @@ func main() {
 	}
 
 	log.Println("Server starting at port " + port)
-	log.Fatal(srv.ListenAndServeTLS(certFile, keyFile))
+	if env == "production" {
+		log.Println("Starting in production mode (HTTP)")
+		log.Fatal(srv.ListenAndServe()) // 👈 Bu satırı ekle
+	} else {
+		log.Println("Starting in development mode (HTTPS)")
+		log.Fatal(srv.ListenAndServeTLS(certFile, keyFile))
+	}
 }

@@ -1,24 +1,26 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    // ESLint kontrollerini tamamen devre dışı bırak
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // TypeScript kontrollerini de devre dışı bırakalım
     ignoreBuildErrors: true,
   },
   experimental: {
-    turbo: {
-      rules: {
-        // Turbopack rules configuration
-      },
-    },
+    optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lodash'],
+    appDir: true,
+    serverComponentsExternalPackages: ['@cloudflare/next-on-pages'],
   },
-  // Diğer Next.js yapılandırmaları
   reactStrictMode: true,
-  // Static dosyaların doğru servis edilmesi için
   assetPrefix: "",
+  output: 'standalone',
+  distDir: '.next',
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   webpack: (config) => {
     config.module.rules.push({
       test: /\.(woff|woff2|eot|ttf|otf)$/,
@@ -31,8 +33,57 @@ const nextConfig = {
         },
       },
     });
+
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        maxSize: 200000,
+        minSize: 10000,
+        cacheGroups: {
+          default: false,
+          vendors: false,
+          commons: {
+            name: 'commons',
+            chunks: 'all',
+            minChunks: 2,
+          },
+          lib: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendor',
+            chunks: 'all',
+          },
+        },
+      },
+    };
+
+    config.cache = {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename],
+      },
+      cacheDirectory: path.resolve(process.cwd(), '.next/cache'),
+      maxAge: 1000 * 60 * 60 * 24,
+    };
+
+    config.resolve.fallback = {
+      fs: false,
+      path: false,
+    };
+
     return config;
   },
-};
-
-module.exports = nextConfig;
+  images: {
+    domains: ["example.com", "cloudflare.com"],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+  compress: true,
+  poweredByHeader: false,
+  // Client-side manifest sorununu çözmek için
+  webpack5: true,
+  future: {
+    webpack5: true,
+  },
+}; 
