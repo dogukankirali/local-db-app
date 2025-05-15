@@ -4,8 +4,8 @@
   "version": "1.0",
   "description": "Track your anime watching progress and add animes from MyAnimeList",
   "icons": {
-    "48": "icons/kakashi.ico",
-    "96": "icons/kakashi.ico"
+      "48": "icons/sharingan-48.png",
+      "96": "icons/sharingan-96.png"
   },
   "permissions": ["activeTab", "storage", "webRequest", "scripting"],
   "host_permissions": [
