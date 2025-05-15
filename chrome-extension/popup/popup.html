@@ -11,12 +11,29 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1><i class="fas fa-tv"></i> Anime Watchlist</h1>
+        <h1><i class="fas fa-tv"></i> Anime Watchlist2</h1>
       </div>
 
       <div class="content">
         <div class="status-message" id="statusMessage"></div>
 
+        <button id="toggleExtensionBtn" class="btn secondary" style="margin-bottom: 10px;"><i class="fas fa-power-off"></i> Extension: On</button>
+        <div id="serviceUrlContainer" style="display:none; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+          <input type="text" id="serviceUrlInput" placeholder="Service URL (örn: https://localhost:8080)" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;" />
+          <button id="saveServiceUrlBtn" class="btn primary"><i class="fas fa-save"></i> Kaydet</button>
+        </div>
+        <div id="dashboardUrlContainer" style="display:none; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+          <input type="text" id="dashboardUrlInput" placeholder="Dashboard URL (örn: http://localhost:3000)" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;" />
+          <button id="saveDashboardUrlBtn" class="btn primary"><i class="fas fa-save"></i> Kaydet</button>
+        </div>
+        <div id="changeUrlBtnGroup" style="display:flex; gap:8px; margin-top:8px; display:none;">
+          <button id="changeServiceUrlBtn" class="btn secondary"><i class="fas fa-edit"></i> Change Service URL</button>
+          <button id="changeDashboardUrlBtn" class="btn secondary"><i class="fas fa-edit"></i> Change Dashboard URL</button>
+        </div>
+        <div id="currentUrlsBox" style="display:none; background:#23272f; color:#b3b3b3; border-radius:8px; padding:10px 14px; margin:10px 0; font-size:0.92em;">
+          <div style="margin-bottom:4px;"><strong>Service URL:</strong> <span id="currentServiceUrlTextBox"></span></div>
+          <div><strong>Dashboard URL:</strong> <span id="currentDashboardUrlTextBox"></span></div>
+        </div>
         <div class="action-buttons">
           <button id="addToWatchlist" class="btn primary">
             <i class="fas fa-plus"></i> Add to Watchlist

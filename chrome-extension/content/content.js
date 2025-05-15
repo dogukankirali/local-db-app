@@ -4,6 +4,7 @@ console.log("Content script yükleniyor...", new Date().toISOString());
 // Anime bilgilerini saklamak için değişkenler
 let currentAnimeInfo = null;
 let currentEpisode = 0;
+let extensionEnabled = true;
 
 // MyAnimeList sayfasında buton ekleme fonksiyonu
 function addWatchlistButtonToMAL() {
@@ -416,17 +417,28 @@ function cleanTitle(title) {
   return title.replace(/[^\w\s-]/g, "").trim();
 }
 
+function removeExtensionButtons() {
+  document.querySelectorAll('.add-to-watchlist-btn, .update-watch-status-btn').forEach(btn => btn.remove());
+}
+
 function initialize() {
-  const url = window.location.href;
-  if (url.includes("myanimelist.net/anime")) {
-    addWatchlistButtonToMAL();
-  } else if (url.includes("tranimeizle.top")) {
-    addUpdateButtonToTranime();
-  } else if (url.includes("turkanime.co")) {
-    addUpdateButtonToTurkanime();
-  } else if (url.includes("anizium.com")) {
-    addUpdateButtonToAnizium();
-  }
+  chrome.storage.local.get("extension_enabled", (result) => {
+    extensionEnabled = result.extension_enabled !== false; // default: true
+    if (!extensionEnabled) {
+      removeExtensionButtons();
+      return;
+    }
+    const url = window.location.href;
+    if (url.includes("myanimelist.net/anime")) {
+      addWatchlistButtonToMAL();
+    } else if (url.includes("tranimeizle.top")) {
+      addUpdateButtonToTranime();
+    } else if (url.includes("turkanime.co")) {
+      addUpdateButtonToTurkanime();
+    } else if (url.includes("anizium.com")) {
+      addUpdateButtonToAnizium();
+    }
+  });
 }
 
 // Sayfa yüklendiğinde ve URL değiştiğinde initialize fonksiyonunu çalıştır
@@ -441,3 +453,15 @@ new MutationObserver(() => {
     initialize();
   }
 }).observe(document, { subtree: true, childList: true });
+
+// Listen for extensionToggled messages
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "extensionToggled") {
+    extensionEnabled = message.enabled;
+    if (!extensionEnabled) {
+      removeExtensionButtons();
+    } else {
+      initialize();
+    }
+  }
+});
