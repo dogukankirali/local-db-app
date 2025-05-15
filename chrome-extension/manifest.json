@@ -20,8 +20,8 @@
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "48": "icons/kakashi.ico",
-      "96": "icons/kakashi.ico"
+      "48": "icons/sharingan-48.png",
+      "96": "icons/sharingan-96.png"
     }
   },
   "background": {
