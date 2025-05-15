@@ -4,6 +4,12 @@ console.log("Content script yükleniyor...", new Date().toISOString());
 // Anime bilgilerini saklamak için değişkenler
 let currentAnimeInfo = null;
 let currentEpisode = 0;
+let extensionEnabled = true;
+
+// Check extension enabled state from storage
+browser.storage.local.get("extension_enabled").then((result) => {
+  extensionEnabled = result.extension_enabled !== false; // default: true
+});
 
 // MyAnimeList sayfasında buton ekleme fonksiyonu
 function addWatchlistButtonToMAL() {
@@ -484,68 +490,81 @@ function cleanTitle(title) {
     .trim();
 }
 
-// Initialize on page load
+// Helper to remove all extension buttons
+function removeExtensionButtons() {
+  document.querySelectorAll('.add-to-watchlist-btn, .update-watch-status-btn').forEach(btn => btn.remove());
+}
+
+// Modified initialize
 function initialize() {
-  console.log("Initialize fonksiyonu çağrıldı", new Date().toISOString());
-  console.log("Document readyState:", document.readyState);
-  console.log("Document body:", document.body ? "Mevcut" : "Yok");
+  browser.storage.local.get("extension_enabled").then((result) => {
+    extensionEnabled = result.extension_enabled !== false; // default: true
+    console.log("Initialize fonksiyonu çağrıldı", new Date().toISOString());
+    console.log("Document readyState:", document.readyState);
+    console.log("Document body:", document.body ? "Mevcut" : "Yok");
 
-  const currentUrl = window.location.href;
-  console.log("Mevcut URL:", currentUrl);
+    const currentUrl = window.location.href;
+    console.log("Mevcut URL:", currentUrl);
 
-  // MAL için kontrol
-  if (currentUrl.includes("myanimelist.net")) {
-    console.log("MyAnimeList sayfası tespit edildi");
-    addWatchlistButtonToMAL();
-  }
-
-  // Tranime için kontrol
-  if (
-    currentUrl.includes("tranimeizle.top") ||
-    currentUrl.includes("www.tranimeizle.top")
-  ) {
-    console.log("Tranimeizle sayfası tespit edildi");
-    const button = addUpdateButtonToTranime();
-
-    if (button && document.body) {
-      document.body.appendChild(button);
-      console.log("Buton sayfaya eklendi");
-    } else {
-      console.log(
-        "Buton eklenemedi - button:",
-        button ? "Var" : "Yok",
-        "document.body:",
-        document.body ? "Var" : "Yok"
-      );
+    if (!extensionEnabled) {
+      removeExtensionButtons();
+      return;
     }
-  }
 
-  // Turkanime için kontrol
-  if (
-    currentUrl.includes("turkanime.co") ||
-    currentUrl.includes("www.turkanime.co")
-  ) {
-    console.log("Turkanime sayfası tespit edildi");
-    const button = addUpdateButtonToTurkanime();
-
-    if (button && document.body) {
-      document.body.appendChild(button);
-      console.log("Buton sayfaya eklendi");
-    } else {
-      console.log(
-        "Buton eklenemedi - button:",
-        button ? "Var" : "Yok",
-        "document.body:",
-        document.body ? "Var" : "Yok"
-      );
+    // MAL için kontrol
+    if (currentUrl.includes("myanimelist.net")) {
+      console.log("MyAnimeList sayfası tespit edildi");
+      addWatchlistButtonToMAL();
     }
-  }
 
-  // Anizium için kontrol
-  if (currentUrl.includes("anizium.com")) {
-    console.log("Anizium sayfası tespit edildi");
-    addUpdateButtonToAnizium();
-  }
+    // Tranime için kontrol
+    if (
+      currentUrl.includes("tranimeizle.top") ||
+      currentUrl.includes("www.tranimeizle.top")
+    ) {
+      console.log("Tranimeizle sayfası tespit edildi");
+      const button = addUpdateButtonToTranime();
+
+      if (button && document.body) {
+        document.body.appendChild(button);
+        console.log("Buton sayfaya eklendi");
+      } else {
+        console.log(
+          "Buton eklenemedi - button:",
+          button ? "Var" : "Yok",
+          "document.body:",
+          document.body ? "Var" : "Yok"
+        );
+      }
+    }
+
+    // Turkanime için kontrol
+    if (
+      currentUrl.includes("turkanime.co") ||
+      currentUrl.includes("www.turkanime.co")
+    ) {
+      console.log("Turkanime sayfası tespit edildi");
+      const button = addUpdateButtonToTurkanime();
+
+      if (button && document.body) {
+        document.body.appendChild(button);
+        console.log("Buton sayfaya eklendi");
+      } else {
+        console.log(
+          "Buton eklenemedi - button:",
+          button ? "Var" : "Yok",
+          "document.body:",
+          document.body ? "Var" : "Yok"
+        );
+      }
+    }
+
+    // Anizium için kontrol
+    if (currentUrl.includes("anizium.com")) {
+      console.log("Anizium sayfası tespit edildi");
+      addUpdateButtonToAnizium();
+    }
+  });
 }
 
 // Sayfa yüklendiğinde initialize fonksiyonunu çalıştır
@@ -576,6 +595,14 @@ new MutationObserver(() => {
 
 // Content script mesaj dinleyicisi
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "extensionToggled") {
+    extensionEnabled = message.enabled;
+    if (!extensionEnabled) {
+      removeExtensionButtons();
+    } else {
+      initialize();
+    }
+  }
   if (message.action === "getAnimeInfo") {
     sendResponse({ animeInfo: currentAnimeInfo });
   }
