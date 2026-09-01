@@ -8,6 +8,7 @@
 /frontend/.env
 /frontend/certs
 /frontend/.open-next
+/multifunction-table/node_modules
 /.pnp
 .pnp.js
 
