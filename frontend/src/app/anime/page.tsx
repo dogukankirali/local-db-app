@@ -306,13 +306,7 @@ function AnimePageContent() {
         setModalData({ status: false });
 
         // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error("Error updating anime:", err);
@@ -344,13 +338,7 @@ function AnimePageContent() {
         setModalData({ status: false });
 
         // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error(err);
@@ -382,13 +370,7 @@ function AnimePageContent() {
         setCreateModalData({ status: false });
 
         // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error(err);
@@ -598,13 +580,7 @@ function AnimePageContent() {
         }).showToast();
 
         // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error("Error adding anime to watchlist:", err);
