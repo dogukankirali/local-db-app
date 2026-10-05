@@ -24,7 +24,14 @@
     "default_icon": "icon48.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "anitracker-pro@local-db-app",
+      "strict_min_version": "109.0"
+    }
   },
   "content_scripts": [
     {
