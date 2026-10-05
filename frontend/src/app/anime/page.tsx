@@ -224,6 +224,7 @@ function AnimePageContent() {
     }
   };
 
+  const isAppending = useRef<boolean>(false);
   const lastFetchParams = useRef<TEATable.FetchDataParams | undefined>(
     undefined
   );
@@ -309,7 +310,7 @@ function AnimePageContent() {
         setModalData({ status: false });
 
         // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error("Error updating anime:", err);
@@ -341,7 +342,7 @@ function AnimePageContent() {
         setModalData({ status: false });
 
         // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error(err);
@@ -373,7 +374,7 @@ function AnimePageContent() {
         setCreateModalData({ status: false });
 
         // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error(err);
@@ -583,7 +584,7 @@ function AnimePageContent() {
         }).showToast();
 
         // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" }); } }
+        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
       }
     } catch (err) {
       console.error("Error adding anime to watchlist:", err);
@@ -688,9 +689,16 @@ function AnimePageContent() {
                 pagination={tableData.pagination}
                 loading={dataLoading}
                 gridSize={gridSize}
-                onPageChange={(e, p) => {
-                  const params = lastFetchParams.current || { page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" };
-                  getData({ ...params, page: p });
+                onPageChange={() => {}}
+                onLoadMore={() => {
+                  if (tableData?.pagination && !dataLoading) {
+                    const nextPage = tableData.pagination.currentPage + 1;
+                    if (nextPage <= tableData.pagination.totalPageCount) {
+                      isAppending.current = true;
+                      const params = lastFetchParams.current || { page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" };
+                      getData({ ...params, page: nextPage });
+                    }
+                  }
                 }}
               />
             ) : (

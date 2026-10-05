@@ -10,6 +10,7 @@ interface AnimeGridProps {
   onPageChange: (event: React.ChangeEvent<unknown>, value: number) => void;
   loading: boolean;
   gridSize: number;
+  onLoadMore: () => void;
 }
 
 const getStatusLabel = (status: number) => {
@@ -26,7 +27,7 @@ const getStatusColor = (status: number) => {
   return theme.secondary; // Unknown
 };
 
-export default function AnimeGrid({ data, pagination, onPageChange, loading, gridSize }: AnimeGridProps) {
+export default function AnimeGrid({ data, pagination, onPageChange, loading, gridSize, onLoadMore }: AnimeGridProps) {
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 5, color: theme.primary_text }}>
@@ -45,7 +46,14 @@ export default function AnimeGrid({ data, pagination, onPageChange, loading, gri
 
   return (
     <Box sx={{ p: 2, height: "100%", overflow: "hidden" }}>
-      <Scrollbars autoHide>
+      <Scrollbars 
+        autoHide 
+        onScrollFrame={(values) => {
+          if (values.top >= 0.99 && !loading) {
+            onLoadMore();
+          }
+        }}
+      >
         <Box sx={{ p: 1 }}>
       <Grid container spacing={3}>
         {data.map((anime, index) => (
@@ -165,26 +173,7 @@ export default function AnimeGrid({ data, pagination, onPageChange, loading, gri
         ))}
       </Grid>
       
-      {/* Pagination */}
-      {pagination && pagination.totalPageCount > 1 && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 5, mb: 3 }}>
-          <Pagination
-            count={pagination.totalPageCount}
-            page={pagination.currentPage}
-            onChange={onPageChange}
-            color="primary"
-            sx={{
-              "& .MuiPaginationItem-root": {
-                color: theme.primary_text,
-              },
-              "& .Mui-selected": {
-                backgroundColor: `${theme.primary} !important`,
-                color: "#fff",
-              },
-            }}
-          />
-        </Box>
-      )}
+      
     </Box>
       </Scrollbars>
     </Box>
