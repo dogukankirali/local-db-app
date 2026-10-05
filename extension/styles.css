@@ -71,7 +71,7 @@ body { width: 340px; margin: 0; font-family: 'Roboto', sans-serif; background: v
 /* Search & Dropdown */
 .search-container { position: relative; margin-bottom: 15px; }
 .mat-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit; font-size: 13px; outline: none; transition: border-color 0.2s, border-radius 0.2s; }
-.mat-input:focus { border-color: var(--primary); border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;}
+.mat-input:focus { border-color: var(--primary); outline: none; }
 .dropdown { position: absolute; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; z-index: 10; border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; padding: 0; display: none; margin-top: 0;}
 .dropdown-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
 .dropdown-item:last-child { border-bottom: none; }
@@ -125,7 +125,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 .mat-button-group { display: flex; align-items: center; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
 .mat-button-group button { background: var(--bg); color: var(--text); border: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.2s; }
 .mat-button-group button:hover { background: var(--border); color: var(--primary); }
-.mat-button-group input { background: var(--surface); color: var(--text); border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); text-align: center; width: 46px; height: 30px; font-size: 14px; font-weight: bold; outline: none; margin: 0; padding: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; line-height: 30px;}
+.mat-button-group input { background: var(--surface); color: var(--text); border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); text-align: center; width: 46px; height: 30px; font-size: 14px; font-weight: bold; outline: none; margin: 0; padding: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; line-height: 30px; -moz-appearance: textfield !important; appearance: textfield !important;}
 
 /* Score Input */
 .score-input-wrapper { display: flex; align-items: baseline; justify-content: flex-end; gap: 2px; font-size: 14px; font-weight: bold; color: var(--text-secondary); }
@@ -146,7 +146,14 @@ input:checked + .slider:before { transform: translateX(14px); }
 .stat-bar { background: var(--surface); padding: 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; margin-bottom: 6px;}
 .stat-bar-fill { background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--danger); padding: 4px 8px; border-radius: 4px; margin-top: 4px; display: flex; justify-content: space-between;}
 
-input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] {
+    -moz-appearance: textfield !important;
+    appearance: textfield !important;
+}
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+}
 
 /* ============================================================
    SYNCER TAB — Stiller

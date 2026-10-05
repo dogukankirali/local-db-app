@@ -579,17 +579,17 @@ async function checkCurrentPageContext() {
 
         const url = tab.url;
 
-        // 1. MyAnimeList Sayfası
-        if (url.includes('myanimelist.net/anime/')) {
+        // 1. MyAnimeList Sayfası VEYA Anizium Anime Detay Sayfası
+        if (url.includes('myanimelist.net/anime/') || (url.includes('anizium.co/anime/') || url.includes('anizium.com/anime/'))) {
             pageActionDiv.style.display = 'block';
-            label.textContent = '📋 MyAnimeList Sayfası';
+            label.textContent = url.includes('myanimelist') ? '📋 MyAnimeList Sayfası' : '📋 Anizium Anime Sayfası';
             btn.textContent = '➕ Bu Animeyi Watchlist\'e Ekle';
             btn.onclick = () => handleAddFromMAL(tab.id);
             return;
         }
 
-        // 2. İzleme Siteleri
-        const isStreaming = ['turkanime.co', 'tranimeizle.top', 'anizium.com'].some(domain => url.includes(domain));
+        // 2. İzleme Siteleri (Video Oynatılan Bölüm Sayfaları)
+        const isStreaming = ['turkanime.co', 'tranimeizle.top', 'anizium.co', 'anizium.com'].some(domain => url.includes(domain));
         if (isStreaming) {
             pageActionDiv.style.display = 'block';
             label.textContent = '📺 İzleme Sitesi Bölüm Algılandı';

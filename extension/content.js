@@ -52,7 +52,7 @@ setInterval(() => {
             chrome.runtime.sendMessage({ action: 'url_changed', url: lastUrl });
         }
         if (isTopFrame && extensionEnabled) {
-            setTimeout(initSyncerButtons, 500);
+            setTimeout(initSyncerButtons, 600);
         }
     }
 }, 1000);
@@ -229,11 +229,17 @@ window.addEventListener('keydown', (e) => {
 
 
 // ============================================================
-// PART 2: AniSyncer Site Butonları (MAL + TurkAnime + Tranimeizle + Anizium)
+// PART 2: AniSyncer Site Butonları (MAL + Anizium + TrAnimeİzle + TürkAnime)
 // ============================================================
 
 function extractEpisodeNumber(url) {
-    const epPattern = /episode-(\d+)/i;
+    try {
+        const u = new URL(url);
+        const epParam = u.searchParams.get("episode") || u.searchParams.get("ep");
+        if (epParam && !isNaN(parseInt(epParam))) return parseInt(epParam);
+    } catch(e) {}
+
+    const epPattern = /episode[-_](\d+)/i;
     const epMatch = url.match(epPattern);
     if (epMatch) return parseInt(epMatch[1]);
 
@@ -250,17 +256,17 @@ function cleanTitle(title) {
 }
 
 function getMALAnimeData() {
-    const nameEl = document.querySelector(".title-name.h1_bold_none strong");
+    const nameEl = document.querySelector(".title-name.h1_bold_none strong") || document.querySelector("h1");
     if (!nameEl) return null;
 
     const statusEl = Array.from(document.querySelectorAll(".spaceit_pad")).find(el => el.textContent.includes("Status:"));
     const episodesEl = Array.from(document.querySelectorAll(".spaceit_pad")).find(el => el.textContent.includes("Episodes:"));
     const typeEl = Array.from(document.querySelectorAll(".spaceit_pad")).find(el => el.textContent.includes("Type:"));
-    const coverEl = document.querySelector(".leftside img");
+    const coverEl = document.querySelector(".leftside img, img[itemprop='image']");
 
     return {
         Name: nameEl.textContent.trim(),
-        AnimeStatus: statusEl ? statusEl.textContent.replace("Status:", "").trim() : "",
+        AnimeStatus: statusEl ? statusEl.textContent.replace("Status:", "").trim() : "Finished Airing",
         WatchStatus: 0,
         TotalNumberOfEpisodes: episodesEl ? parseInt(episodesEl.textContent.replace("Episodes:", "").trim()) || 0 : 0,
         IsMovie: typeEl ? typeEl.textContent.replace("Type:", "").trim().toLowerCase() === "movie" : false,
@@ -271,7 +277,36 @@ function getMALAnimeData() {
         Cover: coverEl ? coverEl.src : "",
         AnimeLink: "",
         Series: 0,
-        PlanToWatch: false
+        PlanToWatch: true
+    };
+}
+
+function getAniziumDetailData() {
+    const titleEl = document.querySelector("h1, .anime-title, .anime-details h1, .film-title");
+    const title = titleEl ? cleanTitle(titleEl.textContent) : cleanTitle(document.title);
+    
+    // Total episodes parsing from text like "You have watched 50 out of a total of 51 episodes!"
+    let totalEps = 0;
+    const pageText = document.body.innerText || "";
+    const epMatch = pageText.match(/out of a total of (\d+) episodes/i) || pageText.match(/(\d+)\s*bölüm/i);
+    if (epMatch) totalEps = parseInt(epMatch[1]);
+
+    const coverEl = document.querySelector(".anime-poster img, .poster img, img.img-fluid, img[src*='poster'], .film-poster img");
+
+    return {
+        Name: title,
+        AnimeStatus: "Currently Airing",
+        WatchStatus: 0,
+        TotalNumberOfEpisodes: totalEps,
+        IsMovie: false,
+        Score: -1,
+        MALScore: 0,
+        Notes: "",
+        MALAnimeLink: "",
+        Cover: coverEl ? coverEl.src : "",
+        AnimeLink: window.location.href,
+        Series: 0,
+        PlanToWatch: true
     };
 }
 
@@ -284,8 +319,14 @@ function getStreamingEpisodeData() {
         const titleEl = document.querySelector(".playlist-title h1") || document.querySelector("h1");
         if (titleEl) title = cleanTitle(titleEl.textContent);
     } else {
-        const h1 = document.querySelector("h1");
-        if (h1) title = cleanTitle(h1.textContent);
+        const h1 = document.querySelector("h1, .anime-title, .watch-title");
+        if (h1 && h1.textContent.trim()) {
+            title = cleanTitle(h1.textContent);
+        } else {
+            let t = document.title || "";
+            t = t.replace(/(İzle|Türkçe Dublaj|4K|Anizium|Full HD|Sezon|Bölüm|\d+\.|\-|\|)/gi, " ");
+            title = cleanTitle(t);
+        }
     }
 
     return {
@@ -294,71 +335,210 @@ function getStreamingEpisodeData() {
     };
 }
 
+// ------------------------------------------------------------
+// 1. MAL Sayfası Entegrasyonu (Görsel 2'deki gibi)
+// ------------------------------------------------------------
 function addMALWatchlistButton() {
     const url = window.location.href;
     if (!url.includes("myanimelist.net/anime/")) return;
+    if (document.querySelector(".add-to-anisync-mal-btn")) return;
 
-    const container = document.querySelector(".user-status-block");
-    if (container && !document.querySelector(".add-to-watchlist-btn")) {
-        const watchlistButton = document.createElement("button");
-        watchlistButton.className = "add-to-watchlist-btn";
-        watchlistButton.textContent = "Add to Watchlist";
-        watchlistButton.style.cssText = `
-            display: inline-block;
-            margin-left: 10px;
-            padding: 0 12px;
-            height: 30px;
-            line-height: 28px;
-            font-size: 12px;
-            color: #fff;
-            background-color: #4f74c8;
-            border: 1px solid #3c5aa6;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-weight: 500;
-        `;
+    // Hedef yer: "Add to My List" / "Add to Favorites" linklerinin hemen altı (Görsel 2)
+    const allLinks = Array.from(document.querySelectorAll("a, span, div"));
+    const addToListLink = allLinks.find(el => el.textContent.trim().toLowerCase() === "add to my list") ||
+                          allLinks.find(el => el.textContent.trim().toLowerCase() === "add to favorites");
 
-        watchlistButton.addEventListener("mouseover", () => watchlistButton.style.backgroundColor = "#3c5aa6");
-        watchlistButton.addEventListener("mouseout", () => watchlistButton.style.backgroundColor = "#4f74c8");
+    let container = null;
+    let refNode = null;
 
-        watchlistButton.addEventListener("click", async () => {
-            const data = getMALAnimeData();
-            if (!data) return alert("Anime bilgileri okunamadı!");
+    if (addToListLink && addToListLink.parentElement) {
+        container = addToListLink.parentElement;
+        refNode = addToListLink.nextSibling;
+    } else {
+        container = document.querySelector(".user-status-block") || 
+                    document.querySelector(".js-sns-icon-container") || 
+                    document.querySelector(".leftside");
+    }
 
-            watchlistButton.textContent = "Ekleniyor...";
-            watchlistButton.disabled = true;
+    if (!container) return;
 
-            chrome.runtime.sendMessage({ action: "addToWatchlist", data }, (response) => {
-                if (response && response.success) {
-                    watchlistButton.textContent = "Added to Watchlist ✓";
-                    watchlistButton.style.backgroundColor = "#10b981";
-                    watchlistButton.style.borderColor = "#059669";
-                } else {
-                    const msg = response?.error?.includes("duplicate") ? "Zaten Listede" : "Hata!";
-                    watchlistButton.textContent = msg;
-                    watchlistButton.style.backgroundColor = "#ef4444";
-                    watchlistButton.disabled = false;
-                }
-            });
+    const anisyncBtn = document.createElement("a");
+    anisyncBtn.href = "#";
+    anisyncBtn.className = "add-to-anisync-mal-btn";
+    anisyncBtn.textContent = "Add to AniSync Watchlist";
+    anisyncBtn.style.cssText = `
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: #4f74c8;
+        text-decoration: underline;
+        margin: 6px 0 8px 0;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    `;
+
+    anisyncBtn.addEventListener("mouseover", () => anisyncBtn.style.color = "#3c5aa6");
+    anisyncBtn.addEventListener("mouseout", () => {
+        if (!anisyncBtn.dataset.done) anisyncBtn.style.color = "#4f74c8";
+    });
+
+    anisyncBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const data = getMALAnimeData();
+        if (!data || !data.Name) return alert("Anime bilgileri okunamadı!");
+
+        anisyncBtn.textContent = "Adding to AniSync...";
+        anisyncBtn.style.color = "#6366f1";
+
+        chrome.runtime.sendMessage({ action: "addToWatchlist", data }, (response) => {
+            if (response && response.success) {
+                anisyncBtn.textContent = "Added to AniSync Watchlist ✓";
+                anisyncBtn.style.color = "#10b981";
+                anisyncBtn.style.textDecoration = "none";
+                anisyncBtn.dataset.done = "true";
+            } else {
+                const msg = response?.error?.includes("duplicate") ? "Already in Watchlist" : "Error!";
+                anisyncBtn.textContent = msg;
+                anisyncBtn.style.color = response?.error?.includes("duplicate") ? "#f59e0b" : "#ef4444";
+            }
         });
+    });
 
-        container.appendChild(watchlistButton);
+    if (refNode) {
+        container.insertBefore(anisyncBtn, refNode);
+    } else {
+        container.appendChild(anisyncBtn);
     }
 }
 
+// ------------------------------------------------------------
+// 2. Anizium (veya TrAnimeİzle) Anime Detay Sayfası (Görsel 3)
+// ------------------------------------------------------------
+function addAniziumDetailWatchlistButton() {
+    const url = window.location.href;
+    const isDetail = (url.includes("anizium.co/anime") || url.includes("anizium.com/anime") || url.includes("tranimeizle.top/anime")) && !url.includes("/watch");
+    if (!isDetail) return;
+    if (document.querySelector(".add-to-anisync-detail-btn")) return;
+
+    // Görsel 3'teki buton satırını bul: "Add to My List", "Unfollow", "Remove from Favorites"
+    const buttons = Array.from(document.querySelectorAll("button, a, .btn"));
+    const refBtn = buttons.find(b => {
+        const txt = b.textContent.trim().toLowerCase();
+        return txt.includes("add to my list") || 
+               txt.includes("unfollow") || 
+               txt.includes("follow") || 
+               txt.includes("remove from favorites") || 
+               txt.includes("add to favorites") ||
+               txt.includes("listeme ekle");
+    });
+
+    if (!refBtn || !refBtn.parentElement) return;
+
+    const btn = document.createElement("button");
+    btn.className = "btn add-to-anisync-detail-btn";
+    btn.textContent = "Add to AniSync Watchlist";
+    btn.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background-color: #4f46e5;
+        color: #ffffff;
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-right: 8px;
+        margin-bottom: 6px;
+        transition: all 0.2s ease;
+    `;
+
+    btn.addEventListener("mouseover", () => btn.style.backgroundColor = "#4338ca");
+    btn.addEventListener("mouseout", () => {
+        if (!btn.dataset.done) btn.style.backgroundColor = "#4f46e5";
+    });
+
+    btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const data = getAniziumDetailData();
+        if (!data || !data.Name) return alert("Anime bilgileri okunamadı!");
+
+        btn.textContent = "Adding...";
+        btn.style.backgroundColor = "#6366f1";
+
+        chrome.runtime.sendMessage({ action: "addToWatchlist", data }, (response) => {
+            if (response && response.success) {
+                btn.textContent = "Added to AniSync Watchlist ✓";
+                btn.style.backgroundColor = "#10b981";
+                btn.dataset.done = "true";
+            } else {
+                const isDup = response?.error?.includes("duplicate");
+                btn.textContent = isDup ? "Already in Watchlist" : "Error!";
+                btn.style.backgroundColor = isDup ? "#f59e0b" : "#ef4444";
+            }
+        });
+    });
+
+    // Satırın en başına veya ilgili butonun yanına yerleştir
+    refBtn.parentElement.insertBefore(btn, refBtn);
+}
+
+// ------------------------------------------------------------
+// 3. Anizium (veya TrAnimeİzle) Video İzleme Sayfası (Görsel 4)
+// ------------------------------------------------------------
 function addStreamingUpdateButton() {
     const url = window.location.href;
-    const isTargetSite = ["tranimeizle.top", "turkanime.co", "anizium.com"].some(d => url.includes(d));
-    if (!isTargetSite) return;
-
+    const isWatch = url.includes("anizium.co/watch") || url.includes("anizium.com/watch") || url.includes("tranimeizle.top") || url.includes("turkanime.co");
+    if (!isWatch) return;
     if (document.querySelector(".update-watch-status-btn")) return;
 
-    const button = document.createElement("a");
+    const button = document.createElement("button");
     button.className = "update-watch-status-btn";
-    button.textContent = "İzleme Durumunu Güncelle";
-    button.href = "#";
+    button.textContent = "AniSync: Bölümü Güncelle";
 
+    // 1. Anizium Watch Sayfası: Görsel 4'teki kontrol barına yerleştir
+    if (url.includes("anizium.co") || url.includes("anizium.com")) {
+        const buttons = Array.from(document.querySelectorAll("button, a, div, span"));
+        const reportBtn = buttons.find(b => {
+            const txt = b.textContent.trim().toLowerCase();
+            return txt.includes("report an issue") || txt.includes("sorun bildir");
+        });
+        const markWatched = buttons.find(b => {
+            const txt = b.textContent.trim().toLowerCase();
+            return txt.includes("mark as watched") || txt.includes("izlendi olarak");
+        });
+        const prevNextBtn = buttons.find(b => {
+            const txt = b.textContent.trim().toLowerCase();
+            return txt.includes("previous episode") || txt.includes("next episode") || txt.includes("önceki bölüm");
+        });
+
+        const targetAnchor = reportBtn || markWatched || prevNextBtn;
+        if (targetAnchor && targetAnchor.parentElement) {
+            button.style.cssText = `
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 14px;
+                background-color: #4f46e5;
+                color: #ffffff;
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 500;
+                cursor: pointer;
+                margin-left: 8px;
+                margin-top: 4px;
+                margin-bottom: 4px;
+                transition: all 0.2s;
+            `;
+            targetAnchor.parentElement.appendChild(button);
+            bindUpdateButtonEvent(button);
+            return;
+        }
+    }
+
+    // 2. Tranimeizle Playlist Title
     if (url.includes("tranimeizle.top")) {
         const playlistTitle = document.querySelector(".playlist-title");
         if (playlistTitle) {
@@ -369,16 +549,20 @@ function addStreamingUpdateButton() {
             button.style.cssText = `
                 display: inline-block; padding: 6px 14px; background-color: #4f46e5;
                 color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px;
-                font-weight: 500; cursor: pointer; transition: all 0.2s;
+                font-weight: 500; cursor: pointer; transition: all 0.2s; border: none;
             `;
             playlistTitle.appendChild(button);
-        } else {
-            attachFloatingButton(button);
+            bindUpdateButtonEvent(button);
+            return;
         }
-    } else {
-        attachFloatingButton(button);
     }
 
+    // 3. Fallback: Ekranın sol alt köşesinde sabit buton
+    attachFloatingButton(button);
+    bindUpdateButtonEvent(button);
+}
+
+function bindUpdateButtonEvent(button) {
     button.addEventListener("click", (e) => {
         e.preventDefault();
         const epData = getStreamingEpisodeData();
@@ -388,7 +572,7 @@ function addStreamingUpdateButton() {
             return;
         }
 
-        const originalText = button.textContent;
+        const originalText = "AniSync: Bölümü Güncelle";
         button.textContent = "Güncelleniyor...";
         button.style.backgroundColor = "#6366f1";
 
@@ -400,7 +584,8 @@ function addStreamingUpdateButton() {
             }
         }, (response) => {
             if (response && response.success) {
-                button.textContent = "Güncellendi ✓";
+                const epText = epData.currentEpisode > 0 ? `Bölüm ${epData.currentEpisode}` : "Durum";
+                button.textContent = `${epText} Güncellendi ✓`;
                 button.style.backgroundColor = "#10b981";
                 setTimeout(() => {
                     button.textContent = originalText;
@@ -419,7 +604,7 @@ function attachFloatingButton(button) {
         display: inline-block; padding: 8px 16px; background-color: #4f46e5;
         color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px;
         font-weight: 500; cursor: pointer; position: fixed; bottom: 20px; left: 20px;
-        z-index: 2147483646; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s;
+        border: none; z-index: 2147483646; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s;
     `;
     button.addEventListener("mouseover", () => button.style.backgroundColor = "#4338ca");
     button.addEventListener("mouseout", () => button.style.backgroundColor = "#4f46e5");
@@ -427,7 +612,7 @@ function attachFloatingButton(button) {
 }
 
 function removeSyncerButtons() {
-    document.querySelectorAll(".add-to-watchlist-btn, .update-watch-status-btn").forEach(el => el.remove());
+    document.querySelectorAll(".add-to-anisync-mal-btn, .add-to-anisync-detail-btn, .update-watch-status-btn").forEach(el => el.remove());
 }
 
 function initSyncerButtons() {
@@ -436,8 +621,22 @@ function initSyncerButtons() {
         return;
     }
     addMALWatchlistButton();
+    addAniziumDetailWatchlistButton();
     addStreamingUpdateButton();
 }
+
+// SPA Sayfa Değişiklikleri ve Dinamik Yüklemeler için MutationObserver
+let domChangeTimeout = null;
+const observer = new MutationObserver(() => {
+    if (domChangeTimeout) clearTimeout(domChangeTimeout);
+    domChangeTimeout = setTimeout(() => {
+        if (isTopFrame && extensionEnabled) {
+            initSyncerButtons();
+        }
+    }, 400);
+});
+observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+
 
 // ============================================================
 // PART 3: Popup Request Listeners (getAnimeInfo & getEpisodeInfo)
@@ -457,7 +656,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "getAnimeInfo") {
-        const info = getMALAnimeData();
+        const info = getMALAnimeData() || getAniziumDetailData();
         sendResponse({ animeInfo: info });
         return true;
     }
