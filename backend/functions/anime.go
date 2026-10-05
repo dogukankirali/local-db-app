@@ -95,8 +95,7 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		var animes []models.Anime
 		var result *gorm.DB
 		var animeFilter models.AnimeFilter
-		var counter []models.Anime
-		var response models.AnimeResponse
+				var response models.AnimeResponse
 		queryParams := r.URL.Query()
 		count, _ := strconv.Atoi(queryParams.Get("count"))
 		page, _ := strconv.Atoi(queryParams.Get("page"))
@@ -134,7 +133,12 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			case "AnimeStatus":
 				animeFilter.AnimeStatus = filter.Value.([]interface{})
 			case "WatchStatus":
-				animeFilter.WatchStatus = filter.Value.(string)
+				switch v := filter.Value.(type) {
+				case string:
+					animeFilter.WatchStatus = v
+				case float64:
+					animeFilter.WatchStatus = fmt.Sprintf("%d", int(v))
+				}
 			case "TotalNumberOfEpisodes":
 				if filter.Value != nil {
 					animeFilter.TotalNumberOfEpisodes = models.NumberFilter{
@@ -161,10 +165,11 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		}
 
 		if len(animeFilter.Name) != 0 {
+			safeName := strings.ReplaceAll(animeFilter.Name, "'", "''")
 			if len(whereString) != 0 {
-				whereString += fmt.Sprintf("and a.name ILIKE '%%%s%%' ", animeFilter.Name)
+				whereString += fmt.Sprintf("and a.name ILIKE '%%%s%%' ", safeName)
 			} else {
-				whereString += fmt.Sprintf("a.name ILIKE '%%%s%%' ", animeFilter.Name)
+				whereString += fmt.Sprintf("a.name ILIKE '%%%s%%' ", safeName)
 			}
 		}
 		if len(animeFilter.AnimeStatus) == 1 {
@@ -391,24 +396,28 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 		}
 
 		// Sayım için sorgu
-		counterD := db.Table("anime.animes a").
-			Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
+		var totalCount int64
+		// Fast count using DISTINCT to avoid pulling all data
+		countQuery := db.Table("anime.animes a").
 			Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
 			Joins("left join anime.genres g on ag.genre_id = g.id").
-			Joins("left join anime.anime_series s on a.series = s.id").
-			Where(whereString).
-			Group("a.id, a.*, s.name").
-			Scan(&counter)
+			Joins("left join anime.anime_series s on a.series = s.id")
+		
+		if len(whereString) > 0 {
+			countQuery = countQuery.Where(whereString)
+		}
+		
+		counterD := countQuery.Distinct("a.id").Count(&totalCount)
 		if counterD.Error != nil {
-			panic(result.Error)
+			panic(counterD.Error)
 		}
 
 		pagination := models.Pagination{
 			ItemCount:      len(animes),
 			CurrentPage:    page,
-			TotalItemCount: len(counter),
+			TotalItemCount: int(totalCount),
 			ItemsPerPage:   count,
-			TotalPageCount: rem(len(counter), count),
+			TotalPageCount: rem(int(totalCount), count),
 		}
 
 		if animes == nil {
