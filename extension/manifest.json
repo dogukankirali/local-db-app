@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "AniTracker Pro",
+  "version": "15.0",
+  "description": "Anime takip (skip sayacı, puan, istatistik) + AniSyncer: izleme sitelerinde otomatik bölüm ve watchlist takibi.",
+  "permissions": ["storage", "activeTab", "scripting", "webRequest"],
+  "host_permissions": [
+    "https://graphql.anilist.co/*",
+    "https://myanimelist.net/*",
+    "https://turkanime.co/*",
+    "https://www.turkanime.co/*",
+    "https://www.tranimeizle.top/*",
+    "https://tranimeizle.top/*",
+    "https://anizium.com/*",
+    "https://www.anizium.com/*",
+    "https://anizium.co/*",
+    "https://www.anizium.co/*",
+    "<all_urls>"
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon48.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "anitracker-pro@local-db-app",
+      "strict_min_version": "109.0"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "all_frames": true
+    }
+  ]
+}

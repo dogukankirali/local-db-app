@@ -62,7 +62,9 @@ func updateAnimeEpisode(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req UpdateEpisodeRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Geçersiz istek gövdesi: " + err.Error()})
 			return
 		}
 
@@ -98,7 +100,9 @@ func updateAnimeEpisode(db *gorm.DB) http.HandlerFunc {
 			// Tam eşleşme bulunamazsa, başlığın başlangıcını içeren anime'yi ara
 			result = db.Table("anime.animes").Where("LOWER(name) LIKE LOWER(?)", cleanTitle+"%").First(&anime)
 			if result.Error != nil {
-				http.Error(w, "Anime bulunamadı", http.StatusNotFound)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": fmt.Sprintf("'%s' başlıklı anime veritabanında bulunamadı. Lütfen önce Watchlist'e ekleyin.", cleanTitle)})
 				return
 			}
 		}
@@ -111,7 +115,9 @@ func updateAnimeEpisode(db *gorm.DB) http.HandlerFunc {
 		}
 
 		if err := db.Table("anime.animes").Save(&anime).Error; err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Veritabanı güncelleme hatası: " + err.Error()})
 			return
 		}
 
@@ -223,6 +229,7 @@ func main() {
 	router.HandleFunc("/deleteAnime", anime_functions.DeleteAnimeTableData(db))
 	router.HandleFunc("/createAnimeWithFile", anime_functions.CreateAnimeTableDataWithFile(db))
 	router.HandleFunc("/api/anime/update-episode", updateAnimeEpisode(db))
+	router.HandleFunc("/updateAnimeStatus", updateAnimeEpisode(db))
 	router.HandleFunc("/updateFinishedAnimeStatus", anime_functions.UpdateFinishedAnimeStatus(db))
 
 	// Senkronizasyon API ucu

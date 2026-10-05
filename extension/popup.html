@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="dark">
+    <!-- Navbar -->
+    <div class="navbar">
+        <div class="logo">
+            <img src="icon48.png" alt="logo" width="20" height="20" style="border-radius: 4px;">
+            <span>AniTracker Pro</span>
+        </div>
+        <button class="icon-btn" id="theme-toggle">🌙</button>
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tracker">🎯 Tracker</button>
+        <button class="tab-btn" data-tab="syncer">🔗 AniSyncer</button>
+        <button class="tab-btn" data-tab="configs">⚙️ Ayarlar</button>
+    </div>
+
+    <!-- TAB 1: TRACKER -->
+    <div class="tab-content tracker-tab active">
+        <!-- 1. ANA PANEL -->
+        <div id="panel-main" class="panel active">
+            <!-- Search -->
+            <div class="search-container">
+                <input type="text" id="search" class="mat-input" placeholder="Anime ara (Örn: Dandadan)..." autocomplete="off">
+                <div id="dropdown" class="dropdown mat-card"></div>
+            </div>
+            
+            <!-- Anime Card -->
+            <div id="anime-card" class="mat-card anime-card mb-3" style="display: none;">
+                <img id="anime-img" src="" alt="anime cover">
+                <div class="details">
+                    <strong id="anime-title"></strong>
+                    <span id="anime-genres"></span>
+                    <div class="season-wrapper" style="margin-top: 4px;">
+                        <span style="font-size: 11px;">Sezon:</span>
+                        <input type="number" id="season-input" min="1" value="1" class="mat-input" style="width: 45px; padding: 2px 4px; text-align: center; font-size: 11px; display: inline-block;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ayarlar -->
+            <div class="mat-card mb-3">
+                <div class="setting-row">
+                    <span>Detaylı Görünüm (Hover)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="overlay-mode-switch" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="divider"></div>
+                <div class="setting-row">
+                    <span>Tempo</span>
+                    <span id="tempo-val" class="highlight-text">5</span>
+                </div>
+                <input type="range" id="tempo" class="mat-slider" min="1" max="10" value="5">
+                <div class="slider-labels">
+                    <span>Yavaş</span><span>Orta</span><span>Hızlı</span>
+                </div>
+            </div>
+
+            <button id="toggle-track" class="mat-btn btn-primary w-100 mb-3">Takibi Başlat</button>
+
+            <!-- Editör Alanı -->
+            <div class="mat-card mb-3 d-flex align-center justify-between">
+                <span>Toplam Skip</span>
+                <div class="mat-button-group">
+                    <button id="skip-minus">-</button>
+                    <input type="number" id="skip-input" value="0">
+                    <button id="skip-plus">+</button>
+                </div>
+            </div>
+            
+            <button id="btn-show-score" class="mat-btn btn-surface w-100 mb-3" style="display: none;">Puanı Göster</button>
+            
+            <div id="score-container" class="mat-card mb-3 d-flex align-center justify-between" style="display: none;">
+                <span>Sezon Puanı</span>
+                <div class="score-input-wrapper">
+                    <input type="number" id="score-input" value="0.0" step="0.1" min="0" max="10" readonly>
+                    <span>/ 10</span>
+                </div>
+            </div>
+
+            <!-- 7 Aksiyon Butonu Grid -->
+            <div class="btn-grid mb-3">
+                <button id="btn-calc" class="mat-btn btn-outline">Puanı Hesapla</button>
+                <button id="btn-edit-score" class="mat-btn btn-outline">Puanı Düzenle</button>
+                
+                <button id="btn-save" class="mat-btn btn-secondary">Animeyi Kaydet</button>
+                <button id="btn-edit-anime" class="mat-btn btn-secondary">Animeyi Düzenle</button>
+                
+                <button id="btn-finish" class="mat-btn btn-success" style="grid-column: span 2;">Animeyi Bitir</button>
+                <button id="btn-delete" class="mat-btn btn-danger" style="grid-column: span 2;">Animeyi Sil</button>
+            </div>
+            
+            <div class="d-flex" style="gap: 8px;">
+                <button id="nav-table" class="mat-btn btn-surface w-100">Tablo Görünüm</button>
+                <button id="nav-stats" class="mat-btn btn-surface w-100">İstatistikler</button>
+            </div>
+        </div>
+
+        <!-- 2. TABLO PANELİ -->
+        <div id="panel-table" class="panel">
+            <button class="mat-btn btn-outline w-100 mb-3 btn-back">Ana Ekrana Dön</button>
+            <h4 class="mt-0 mb-3 text-center">İzleme Geçmişi</h4>
+            <div id="table-container" class="table-container"></div>
+        </div>
+
+        <!-- 3. İSTATİSTİK PANELİ -->
+        <div id="panel-stats" class="panel">
+            <button class="mat-btn btn-outline w-100 mb-3 btn-back">Ana Ekrana Dön</button>
+            <h4 class="mt-0 mb-3 text-center" id="stats-title">İstatistikler</h4>
+            <div id="stats-container" class="stats-container"></div>
+        </div>
+    </div>
+
+    <!-- TAB 2: SYNCER -->
+    <div class="tab-content syncer-tab">
+        <div id="syncer-status" class="syncer-status"></div>
+
+        <!-- Sayfa Aksiyonları (Dinamik) -->
+        <div class="mat-card mb-3" id="syncer-page-action" style="display:none;">
+            <div class="syncer-page-badge" id="syncer-page-label">Sayfa algılandı</div>
+            <button class="mat-btn btn-primary w-100" id="syncer-action-btn">İşlem Yap</button>
+        </div>
+
+        <!-- Genel Watchlist Butonları -->
+        <div class="mat-card mb-3">
+            <div class="syncer-section-label">Hızlı Eylemler</div>
+            <div class="d-flex" style="flex-direction:column; gap:8px;">
+                <button class="mat-btn btn-secondary w-100" id="syncer-quick-open-wl">
+                    📋 Web Watchlist Sayfasını Aç
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: CONFIGS -->
+    <div class="tab-content configs-tab">
+        <div id="configs-status" class="syncer-status"></div>
+
+        <!-- 1. Extension Toggle -->
+        <div class="mat-card mb-3">
+            <div class="setting-row">
+                <span>🔌 Extension Takip Durumu</span>
+                <label class="switch">
+                    <input type="checkbox" id="syncer-toggle" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 2. Service URL -->
+        <div class="mat-card mb-3" id="syncer-service-card">
+            <div class="syncer-section-label">🖥️ Backend Service URL</div>
+            <div id="syncer-url-display" style="display:none;">
+                <div class="syncer-url-text" id="syncer-service-url-text"></div>
+                <div class="syncer-url-actions">
+                    <button class="mat-btn btn-outline" id="syncer-change-service-btn" style="font-size:11px; padding:4px 8px;">Değiştir</button>
+                </div>
+            </div>
+            <div id="syncer-url-input-wrap">
+                <input type="text" id="syncer-service-input" class="mat-input" placeholder="https://localhost:8080" style="margin-bottom:6px;">
+                <button class="mat-btn btn-primary w-100" id="syncer-save-service-btn">Kaydet</button>
+            </div>
+        </div>
+
+        <!-- 3. Dashboard URL -->
+        <div class="mat-card mb-3" id="syncer-dashboard-card">
+            <div class="syncer-section-label">🌐 Dashboard URL</div>
+            <div id="syncer-dash-display" style="display:none;">
+                <div class="syncer-url-text" id="syncer-dashboard-url-text"></div>
+                <div class="syncer-url-actions">
+                    <button class="mat-btn btn-outline" id="syncer-change-dash-btn" style="font-size:11px; padding:4px 8px;">Değiştir</button>
+                </div>
+            </div>
+            <div id="syncer-dash-input-wrap">
+                <input type="text" id="syncer-dash-input" class="mat-input" placeholder="http://localhost:3000" style="margin-bottom:6px;">
+                <button class="mat-btn btn-primary w-100" id="syncer-save-dash-btn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
