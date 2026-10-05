@@ -568,48 +568,53 @@ func CreateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			Series:                reqBody.Series,
 			PlanToWatch:           reqBody.PlanToWatch,
 		}
-		err := db.Table("anime.animes").Create(&anime).Error
-		if err != nil {
-			errorMessage := fmt.Sprintf("Sunucu hatası oluştu: %v", err)
-			response := models.ErrorResponse{
-				Message: errorMessage,
+
+		var existingAnime models.Anime
+		var animeID uint
+
+		// Zaten var mı kontrol et
+		errFind := db.Table("anime.animes").Where("name = ?", reqBody.Name).First(&existingAnime).Error
+		if errFind == nil {
+			// Anime zaten var, güncelle (Upsert)
+			animeID = existingAnime.ID
+			errUpdate := db.Table("anime.animes").Where("id = ?", animeID).Updates(&anime).Error
+			if errUpdate != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(&models.ErrorResponse{Message: fmt.Sprintf("Güncelleme hatası: %v", errUpdate)})
+				return
 			}
-			w.WriteHeader(http.StatusInternalServerError)
-			err := json.NewEncoder(w).Encode(&response)
-			if err != nil {
-				// JSON kodlaması hatası
-				fmt.Println("JSON encode error:", err)
-			}
-			return
+			// Eski genre bağlantılarını temizle
+			db.Table("anime.animes_genres").Where("anime_id = ?", animeID).Delete(&models.AnimesGenres{})
 		} else {
-			var animesGenres []models.AnimesGenres
-			idArr := strings.Split(reqBody.Genre, ", ")
-			db.Table("anime.genres g").Select("id").Where("genre_name IN ?", idArr).Find(&genres)
-			for _, item := range genres {
-				genreId := int(item.ID)
-				animeId := int(anime.ID)
-				newItem := models.AnimesGenres{
-					AnimeID: animeId,
-					GenreID: genreId,
-				}
-				animesGenres = append(animesGenres, newItem)
-
+			// Yeni kayıt ekle
+			errCreate := db.Table("anime.animes").Create(&anime).Error
+			if errCreate != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(&models.ErrorResponse{Message: fmt.Sprintf("Sunucu hatası oluştu: %v", errCreate)})
+				return
 			}
-
-			if len(animesGenres) != 0 {
-				err2 := db.Table("anime.animes_genres").Create(&animesGenres).Error
-				if err2 != nil {
-					fmt.Println("Update error in genre:", err2)
-					return
-				}
-			}
-			message := "OK"
-			response := models.ErrorResponse{
-				Message: message,
-			}
-			json.NewEncoder(w).Encode(&response)
+			animeID = anime.ID
 		}
 
+		var animesGenres []models.AnimesGenres
+		idArr := strings.Split(reqBody.Genre, ", ")
+		db.Table("anime.genres g").Select("id").Where("genre_name IN ?", idArr).Find(&genres)
+		for _, item := range genres {
+			animesGenres = append(animesGenres, models.AnimesGenres{
+				AnimeID: int(animeID),
+				GenreID: int(item.ID),
+			})
+		}
+
+		if len(animesGenres) != 0 {
+			err2 := db.Table("anime.animes_genres").Create(&animesGenres).Error
+			if err2 != nil {
+				fmt.Println("Update error in genre:", err2)
+				return
+			}
+		}
+
+		json.NewEncoder(w).Encode(&models.ErrorResponse{Message: "OK"})
 	}
 }
 
