@@ -604,61 +604,88 @@ async function checkCurrentPageContext() {
     }
 }
 
-// MAL sayfasından animeyi doğrudan backend'e ekleme
+// Güvenli JSON Fetch İstemcisi
+async function safeFetchJson(url, options = {}) {
+    let res;
+    try {
+        res = await fetch(url, options);
+    } catch (networkErr) {
+        throw new Error(`Bağlantı kurulamadı (${networkErr.message}). Backend'in açık olduğunu ve Service URL'nin doğru olduğunu kontrol edin.`);
+    }
+
+    const text = await res.text();
+    let data = null;
+    try {
+        data = JSON.parse(text);
+    } catch (parseErr) {
+        if (text.includes("Client sent an HTTP request to an HTTPS server")) {
+            throw new Error("HTTP yerine HTTPS kullanmalısınız! Lütfen Service URL'yi 'https://...' olarak güncelleyin.");
+        }
+        if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+            throw new Error(`Sunucu (${res.status}) HTML sayfası döndürdü. Service URL'in port 3000 değil, backend portu (örn: https://localhost:8080) olduğundan emin olun.`);
+        }
+        if (res.status === 404) {
+            throw new Error(`Adres bulunamadı (404 Not Found): ${url}`);
+        }
+        throw new Error(text || `Sunucu hatası (${res.status})`);
+    }
+
+    if (!res.ok) {
+        const errorMsg = data?.error || data?.message || `Hata (${res.status})`;
+        throw new Error(errorMsg);
+    }
+
+    return data;
+}
+
+// MAL veya Anizium sayfasından animeyi doğrudan backend'e ekleme
 async function handleAddFromMAL(tabId) {
-    const serviceUrl = await getServiceUrl();
-    if (!serviceUrl) return showSyncerStatus('Lütfen önce Service URL ayarlayın!', true);
+    const rawUrl = await getServiceUrl();
+    const serviceUrl = (rawUrl || "https://localhost:8080").trim().replace(/\/+$/, "");
 
     try {
         const response = await chrome.tabs.sendMessage(tabId, { action: "getAnimeInfo" });
-        if (response && response.animeInfo) {
-            const res = await fetch(`${serviceUrl}/createAnime`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(response.animeInfo),
-                credentials: "omit",
-                mode: "cors"
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showSyncerStatus('✅ Anime Watchlist\'e başarıyla eklendi!');
-            } else {
-                const msg = data.message?.includes('duplicate key') ? '⚠️ Bu anime zaten Watchlist\'te var!' : (data.message || 'Hata oluştu');
-                showSyncerStatus(msg, true);
-            }
-        } else {
-            showSyncerStatus('Sayfadan anime bilgisi alınamadı.', true);
+        if (!response || !response.animeInfo || !response.animeInfo.Name) {
+            return showSyncerStatus('Sayfadan anime bilgisi alınamadı.', true);
         }
+
+        await safeFetchJson(`${serviceUrl}/createAnime`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(response.animeInfo),
+            credentials: "omit",
+            mode: "cors"
+        });
+
+        showSyncerStatus('✅ Anime Watchlist\'e başarıyla eklendi!');
     } catch (err) {
-        showSyncerStatus('İstek gönderilemedi: ' + err.message, true);
+        const isDup = err.message?.includes("duplicate") || err.message?.includes("zaten");
+        showSyncerStatus(isDup ? '⚠️ Bu anime zaten Watchlist\'te var!' : '❌ ' + err.message, true);
     }
 }
 
 // İzleme sitesinden bölüm güncelleme
 async function handleUpdateFromStreaming(tabId) {
-    const serviceUrl = await getServiceUrl();
-    if (!serviceUrl) return showSyncerStatus('Lütfen önce Service URL ayarlayın!', true);
+    const rawUrl = await getServiceUrl();
+    const serviceUrl = (rawUrl || "https://localhost:8080").trim().replace(/\/+$/, "");
 
     try {
         const response = await chrome.tabs.sendMessage(tabId, { action: "getEpisodeInfo" });
-        if (response && response.episodeInfo) {
-            // Backend api/anime/update-episode veya updateAnimeStatus
-            const res = await fetch(`${serviceUrl}/api/anime/update-episode`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(response.episodeInfo),
-                credentials: "omit",
-                mode: "cors"
-            });
-            if (res.ok) {
-                showSyncerStatus(`✅ ${response.episodeInfo.name} Bölüm ${response.episodeInfo.watchStatus} güncellendi!`);
-            } else {
-                showSyncerStatus('Bölüm güncellenemedi.', true);
-            }
-        } else {
-            showSyncerStatus('Bölüm veya anime başlığı bulunamadı.', true);
+        if (!response || !response.episodeInfo || !response.episodeInfo.name) {
+            return showSyncerStatus('Bölüm veya anime başlığı bulunamadı.', true);
         }
+
+        await safeFetchJson(`${serviceUrl}/api/anime/update-episode`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(response.episodeInfo),
+            credentials: "omit",
+            mode: "cors"
+        });
+
+        const ep = response.episodeInfo.watchStatus;
+        showSyncerStatus(`✅ ${response.episodeInfo.name} Bölüm ${ep > 0 ? ep : ''} güncellendi!`);
     } catch (err) {
-        showSyncerStatus('Hata: ' + err.message, true);
+        showSyncerStatus('❌ ' + err.message, true);
     }
 }

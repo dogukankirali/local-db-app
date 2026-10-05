@@ -143,36 +143,73 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // 3. AniSyncer Backend API Proxy
     if (request.action === "addToWatchlist") {
-        chrome.storage.local.get("service_url", (result) => {
-            const serviceUrl = result.service_url || "https://localhost:8080";
-            fetch(`${serviceUrl}/createAnime`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(request.data),
-                credentials: "omit",
-                mode: "cors"
-            })
-            .then(res => res.json())
-            .then(data => sendResponse({ success: true, data }))
-            .catch(err => sendResponse({ success: false, error: err.message }));
+        chrome.storage.local.get("service_url", async (result) => {
+            const raw = result.service_url || "https://localhost:8080";
+            const serviceUrl = raw.trim().replace(/\/+$/, "");
+            try {
+                const res = await fetch(`${serviceUrl}/createAnime`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(request.data),
+                    credentials: "omit",
+                    mode: "cors"
+                });
+                const text = await res.text();
+                let data = null;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (text.includes("Client sent an HTTP request to an HTTPS server")) {
+                        return sendResponse({ success: false, error: "HTTP yerine HTTPS kullanmalısınız (örn: https://localhost:8080)" });
+                    }
+                    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+                        return sendResponse({ success: false, error: "Service URL backend portu olmalı (HTML döndü)" });
+                    }
+                    return sendResponse({ success: false, error: text || `Hata (${res.status})` });
+                }
+                if (!res.ok) {
+                    return sendResponse({ success: false, error: data?.error || data?.message || `Hata (${res.status})` });
+                }
+                sendResponse({ success: true, data });
+            } catch (err) {
+                sendResponse({ success: false, error: err.message });
+            }
         });
         return true;
     }
 
     if (request.action === "updateAnimeStatus") {
-        chrome.storage.local.get("service_url", (result) => {
-            const serviceUrl = result.service_url || "https://localhost:8080";
-            // Backend'in updateAnimeEpisode fonksiyonu /api/anime/update-episode rotasındadır
-            fetch(`${serviceUrl}/api/anime/update-episode`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(request.data),
-                credentials: "omit",
-                mode: "cors"
-            })
-            .then(res => res.json())
-            .then(data => sendResponse({ success: true, data }))
-            .catch(err => sendResponse({ success: false, error: err.message }));
+        chrome.storage.local.get("service_url", async (result) => {
+            const raw = result.service_url || "https://localhost:8080";
+            const serviceUrl = raw.trim().replace(/\/+$/, "");
+            try {
+                const res = await fetch(`${serviceUrl}/api/anime/update-episode`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(request.data),
+                    credentials: "omit",
+                    mode: "cors"
+                });
+                const text = await res.text();
+                let data = null;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (text.includes("Client sent an HTTP request to an HTTPS server")) {
+                        return sendResponse({ success: false, error: "HTTP yerine HTTPS kullanmalısınız (örn: https://localhost:8080)" });
+                    }
+                    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+                        return sendResponse({ success: false, error: "Service URL backend portu olmalı (HTML döndü)" });
+                    }
+                    return sendResponse({ success: false, error: text || `Hata (${res.status})` });
+                }
+                if (!res.ok) {
+                    return sendResponse({ success: false, error: data?.error || data?.message || `Hata (${res.status})` });
+                }
+                sendResponse({ success: true, data });
+            } catch (err) {
+                sendResponse({ success: false, error: err.message });
+            }
         });
         return true;
     }
