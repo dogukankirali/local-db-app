@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Card, CardMedia, CardContent, Typography, Grid, Chip, Pagination } from "@mui/material";
-import { theme } from "../../theme/customTheme";
+import { theme } from "../theme/customTheme";
 import StarIcon from "@mui/icons-material/Star";
 
 interface AnimeGridProps {

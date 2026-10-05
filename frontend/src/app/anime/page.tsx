@@ -695,7 +695,8 @@ function AnimePageContent() {
               width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
             }}
             lastFetchParams={lastFetchParams.current}
-          />
+            />
+            )}
         </Box>
       </Box>
       <UpdateDeleteAnimeModal
