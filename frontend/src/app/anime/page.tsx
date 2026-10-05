@@ -69,6 +69,7 @@ function AnimePageContent() {
   }, []);
 
   const [dataLoading, setDataLoading] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
   );
