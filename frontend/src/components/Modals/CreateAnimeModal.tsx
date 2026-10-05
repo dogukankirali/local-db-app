@@ -386,7 +386,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
   }, [searchResults]); */
 
   // Erken return ifadesi Hook'lardan sonra olmalı
-  if (!props.createModalData.status || !props.genres) return null;
+  if (!props.createModalData.status) return null;
 
   const list = Constants({ type: "modalList" }).toSpliced(8, 0, {
     key: "Genre",

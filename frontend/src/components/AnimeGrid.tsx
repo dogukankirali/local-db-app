@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Card, CardMedia, CardContent, Typography, Grid, Chip, Pagination } from "@mui/material";
+import { Scrollbars } from "react-custom-scrollbars-2";
 import { theme } from "../theme/customTheme";
 import StarIcon from "@mui/icons-material/Star";
 
@@ -8,6 +9,7 @@ interface AnimeGridProps {
   pagination: TEAData.Pagination;
   onPageChange: (event: React.ChangeEvent<unknown>, value: number) => void;
   loading: boolean;
+  gridSize: number;
 }
 
 const getStatusLabel = (status: number) => {
@@ -24,7 +26,7 @@ const getStatusColor = (status: number) => {
   return theme.secondary; // Unknown
 };
 
-export default function AnimeGrid({ data, pagination, onPageChange, loading }: AnimeGridProps) {
+export default function AnimeGrid({ data, pagination, onPageChange, loading, gridSize }: AnimeGridProps) {
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 5, color: theme.primary_text }}>
@@ -42,10 +44,12 @@ export default function AnimeGrid({ data, pagination, onPageChange, loading }: A
   }
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, height: "100%", overflow: "hidden" }}>
+      <Scrollbars autoHide>
+        <Box sx={{ p: 1 }}>
       <Grid container spacing={3}>
         {data.map((anime, index) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} xl={2.4} key={anime.ID || index}>
+          <Grid item xs={12} sm={6} md={12/Math.max(1, gridSize-2)} lg={12/Math.max(1, gridSize-1)} xl={12/gridSize} key={anime.ID || index}>
             <Card
               sx={{
                 height: "100%",
@@ -181,6 +185,8 @@ export default function AnimeGrid({ data, pagination, onPageChange, loading }: A
           />
         </Box>
       )}
+    </Box>
+      </Scrollbars>
     </Box>
   );
 }

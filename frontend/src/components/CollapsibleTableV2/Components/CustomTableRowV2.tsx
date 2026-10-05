@@ -720,20 +720,17 @@ export default function CustomTableRowV2(
                   id={header.key}
                 >
                   <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: {
-                        xs: "repeat(3, 1fr)", // Mobil görünümde 3 sütun
-                        sm: "repeat(3, 1fr)", // Tablet görünümde 3 sütun
-                        md: "repeat(3, 1fr)", // Küçük masaüstü görünümde 3 sütun
-                        lg: "repeat(4, 1fr)", // Büyük masaüstü görünümde 4 sütun
-                      },
-                      gap: { xs: 1, sm: 1, md: 1.5, lg: 2 },
-                      width: "100%",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
+                      sx={{
+                        display: "flex",
+                        overflowX: "auto",
+                        gap: 1,
+                        maxWidth: "280px",
+                        pb: 1,
+                        alignItems: "center",
+                        "&::-webkit-scrollbar": { height: "4px" },
+                        "&::-webkit-scrollbar-thumb": { backgroundColor: "#555", borderRadius: "4px" },
+                      }}
+                    >
                     {props.singleData[header.key].length !== 0 &&
                       props.singleData[header.key]
                         .split(", ")

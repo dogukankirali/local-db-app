@@ -17,6 +17,7 @@ import AnimeGrid from "../../components/AnimeGrid";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import { Slider, Typography as MuiTypography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import {
   getFilledFilters,
@@ -70,6 +71,14 @@ function AnimePageContent() {
 
   const [dataLoading, setDataLoading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
+  const [gridSize, setGridSize] = useState<number>(5);
+  
+  useEffect(() => {
+    if (viewMode === "grid" && tableData.data.length === 0) {
+      getData(lastFetchParams.current || { page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" });
+    }
+  }, [viewMode]);
+
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
   );
@@ -639,6 +648,23 @@ function AnimePageContent() {
 
           
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, mr: 2 }}>
+              
+              {viewMode === 'grid' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mr: 3, width: '150px' }}>
+                  <MuiTypography variant="caption" sx={{ color: theme.secondary_text, mr: 2, whiteSpace: 'nowrap' }}>
+                    Sütun: {gridSize}
+                  </MuiTypography>
+                  <Slider
+                    value={gridSize}
+                    min={2}
+                    max={8}
+                    step={1}
+                    onChange={(e, val) => setGridSize(val as number)}
+                    size="small"
+                  />
+                </Box>
+              )}
+
               <ToggleButtonGroup
                 value={viewMode}
                 exclusive
@@ -661,42 +687,65 @@ function AnimePageContent() {
                 data={tableData.data}
                 pagination={tableData.pagination}
                 loading={dataLoading}
+                gridSize={gridSize}
                 onPageChange={(e, p) => {
                   const params = lastFetchParams.current || { page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" };
                   getData({ ...params, page: p });
                 }}
               />
             ) : (
-              <TableTemp
-            tableName="anime-table"
-            data={tableData}
-            setData={setTableData}
-            header={outerColumns}
-            sortHeader={setOuterColumns}
-            collapsible={{
-              isCollapsible: true,
-              size: "xl",
-              inner: {
-                type: "list",
-                list: innerColumns,
-                listType: "detail",
-              },
-            }}
-            tableRerender={tableRerender}
-            style={{
-              height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-              width: "100%",
-              maxWidth: "100vw",
-            }}
-            selectionFilters={filterState}
-            setSelectionFilters={tableFilterProps.setFilterState}
-            loading={dataLoading}
-            dimensions={{
-              height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-              width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
-            }}
-            lastFetchParams={lastFetchParams.current}
-            />
+              <Box sx={{
+                width: "100%",
+                height: "100%",
+                "& .MuiPaper-root": { backgroundColor: "transparent", boxShadow: "none", border: "none" },
+                "& .MuiTableHead-root": { 
+                   "& .MuiTableCell-root": { backgroundColor: theme.background_light, color: theme.primary, borderBottom: "2px solid #333", fontSize: "0.9rem", fontWeight: "bold" }
+                },
+                "& .MuiTableBody-root .MuiTableRow-root": {
+                   transition: "all 0.25s ease",
+                   backgroundColor: theme.table_row_light,
+                   display: "table-row",
+                   "&:hover": {
+                      transform: "scale(1.001)",
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+                      zIndex: 10,
+                      position: "relative",
+                      backgroundColor: "#2c2c30",
+                   },
+                   "& .MuiTableCell-root": { borderBottom: "1px solid rgba(255,255,255,0.05)" }
+                }
+              }}>
+                <TableTemp
+                  tableName="anime-table"
+                  data={tableData}
+                  setData={setTableData}
+                  header={outerColumns}
+                  sortHeader={setOuterColumns}
+                  collapsible={{
+                    isCollapsible: true,
+                    size: "xl",
+                    inner: {
+                      type: "list",
+                      list: innerColumns,
+                      listType: "detail",
+                    },
+                  }}
+                  tableRerender={tableRerender}
+                  style={{
+                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
+                    width: "100%",
+                    maxWidth: "100vw",
+                  }}
+                  selectionFilters={filterState}
+                  setSelectionFilters={tableFilterProps.setFilterState}
+                  loading={dataLoading}
+                  dimensions={{
+                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
+                    width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
+                  }}
+                  lastFetchParams={lastFetchParams.current}
+                />
+              </Box>
             )}
         </Box>
       </Box>
