@@ -12,28 +12,24 @@ import {
   MenuItem,
   Divider,
 } from "@mui/material";
-import TableTemp from "../../components/CollapsibleTableV2/TableTemp";
-import AnimeGrid from "../../components/AnimeGrid";
-import { ToggleButton, ToggleButtonGroup } from "@mui/material";
-import ViewListIcon from "@mui/icons-material/ViewList";
-import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import TableTemp from "../../../components/CollapsibleTableV2/TableTemp";
 import { useEffect, useRef, useState } from "react";
 import {
   getFilledFilters,
   useTableFilters,
-} from "../../components/CollapsibleTableV2/Components/TableFilters/TableFilters";
+} from "../../../components/CollapsibleTableV2/Components/TableFilters/TableFilters";
 import axios from "axios";
 import Toastify from "toastify-js";
 import "toastify-js/src/toastify.css";
-import { theme } from "../../theme/customTheme";
-import { useTableSettings } from "../../components/CollapsibleTableV2/Components/TableSettings";
-import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
-import "../../assets/custom.css";
-import CreateAnimeModal from "../../components/Modals/CreateAnimeModal";
-import Constants from "../../constants/Constants";
-import { AnimeService } from "../../Services/AnimeServices";
-import TableHeaders from "../../components/CollapsibleTableV2/Components/Headers/Headers";
-import UpdateDeleteAnimeModal from "../../components/Modals/UpdateDeleteAnimeModal";
+import { theme } from "../../../theme/customTheme";
+import { useTableSettings } from "../../../components/CollapsibleTableV2/Components/TableSettings";
+import { StyledTeaButton } from "../../../components/CollapsibleTableV2/Components/StyledComponents";
+import "../../../assets/custom.css";
+import CreateAnimeModal from "../../../components/Modals/CreateAnimeModal";
+import Constants from "../../../constants/Constants";
+import { AnimeService } from "../../../Services/AnimeServices";
+import TableHeaders from "../../../components/CollapsibleTableV2/Components/Headers/Headers";
+import UpdateDeleteAnimeModal from "../../../components/Modals/UpdateDeleteAnimeModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -636,37 +632,7 @@ function AnimePageContent() {
             user={user}
           />
 
-          
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, mr: 2 }}>
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                onChange={(e, newView) => { if (newView) setViewMode(newView); }}
-                aria-label="view toggle"
-                size="small"
-                sx={{ backgroundColor: theme.table_row_light }}
-              >
-                <ToggleButton value="table" aria-label="table view">
-                  <ViewListIcon sx={{ color: viewMode === 'table' ? theme.primary : theme.secondary_text }} />
-                </ToggleButton>
-                <ToggleButton value="grid" aria-label="grid view">
-                  <ViewModuleIcon sx={{ color: viewMode === 'grid' ? theme.primary : theme.secondary_text }} />
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-
-            {viewMode === "grid" ? (
-              <AnimeGrid
-                data={tableData.data}
-                pagination={tableData.pagination}
-                loading={dataLoading}
-                onPageChange={(e, p) => {
-                  const params = lastFetchParams.current || { page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" };
-                  getData({ ...params, page: p });
-                }}
-              />
-            ) : (
-              <TableTemp
+          <TableTemp
             tableName="anime-table"
             data={tableData}
             setData={setTableData}

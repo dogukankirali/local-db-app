@@ -72,10 +72,7 @@ export module AnimeService {
       return res.data;
     } catch (err) {
       console.error(err);
-      return {
-        data: [],
-        count: 0,
-      };
+      return { data: [], pagination: { currentPage: 1, itemCount: 0, totalItemCount: 0, itemsPerPage: 10, totalPageCount: 0 } };
     }
   }
 
