@@ -5,10 +5,12 @@ Kişisel anime, manga, kitap ve dizi izleme/okuma listelerini tek bir yerden yö
 ## Özellikler
 
 - **Anime/manga veritabanı**: Anime ve manga kayıtlarını (isim, tür, bölüm sayısı, puan, kapak görseli, seri bilgisi, izleme durumu vb.) filtreleyip sayfalanmış tablo halinde listeleme, ekleme, güncelleme ve silme.
-- **MyAnimeList senkronizasyonu**: [Jikan API](https://jikan.moe/) üzerinden MAL verilerini çekme ve veritabanına senkronize etme; senkronizasyon işlemini iptal edebilme.
+- **AniList & MAL entegrasyonu**: AniList GraphQL API üzerinden güvenilir anime/manga verisi çekme ve arama.
 - **Watchlist (izleme listesi)**: "Plan to Watch" listesine ekleme/çıkarma, sürükle-bırak ile sıralama ve MAL planından otomatik senkronizasyon.
 - **Kullanıcı hesapları**: JWT tabanlı kayıt/giriş, profil görüntüleme/güncelleme ve şifre sıfırlama (e-posta ile).
-- **Tarayıcı eklentileri (Chrome & Firefox)**: MyAnimeList, Anizium, TürkAnime ve TRAnimeIzle gibi sitelerde izlenen bölümü algılayıp backend'e otomatik olarak bildirir.
+- **Tarayıcı eklentisi (AniTracker Pro & AniSyncer - Chrome & Firefox)**:
+  - **Tracker Tabı**: AniList üzerinden anime seçimi, video oynarken sağ yön tuşu ile skip tespiti ve otomatik sezon puanlama algoritması, istatistikler ve izleme geçmişi.
+  - **AniSyncer Tabı**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sitelerinde bölüm ve watchlist durumunu algılayıp backend servisine senkronize eder.
 - **Seri (series) yönetimi**: Birden çok anime/manga kaydını bir seri altında gruplama.
 
 ## Proje Yapısı
@@ -18,7 +20,7 @@ local-db-app/
 ├── backend/              # Go (Gorilla Mux + GORM + PostgreSQL) REST API
 │   ├── auth/             # JWT, şifre hash'leme, şifre sıfırlama
 │   ├── email/             # E-posta gönderimi
-│   ├── functions/        # Anime, manga, kullanıcı, watchlist, MAL senkron iş mantığı
+│   ├── functions/        # Anime, manga, kullanıcı, watchlist, AniList entegrasyonu
 │   ├── handlers/         # HTTP handler'ları
 │   ├── middleware/       # Auth/Admin middleware
 │   ├── migrations/       # Basit Go tabanlı migration betikleri
@@ -30,8 +32,9 @@ local-db-app/
 │       ├── components/    # Tablo, modal, senkronizasyon ve ortak bileşenler
 │       ├── services/      # Backend API istemcileri (Axios)
 │       └── ...
-├── chrome-extension/     # Manifest V3 Chrome eklentisi
-├── firefox-extension/    # Manifest V2 Firefox eklentisi
+├── extension/            # AniTracker Pro + AniSyncer birleşik eklentisi (Chrome & Firefox - Manifest V3)
+├── chrome-extension/     # Eski Chrome eklentisi (arşiv)
+├── firefox-extension/    # Eski Firefox eklentisi (arşiv)
 └── docker-compose.yaml   # Backend + frontend için Docker Compose tanımı
 ```
 
@@ -41,7 +44,7 @@ local-db-app/
 
 - Go 1.21, [Gorilla Mux](https://github.com/gorilla/mux), [GORM](https://gorm.io/) + PostgreSQL
 - JWT tabanlı kimlik doğrulama ([golang-jwt](https://github.com/golang-jwt/jwt))
-- [jikan-go](https://github.com/darenliang/jikan-go) ile MyAnimeList (Jikan API) entegrasyonu
+- [AniList GraphQL API](https://graphql.anilist.co) entegrasyonu
 - TLS ile HTTPS servis (geliştirme sertifikaları `server.crt` / `server.key`)
 
 **Frontend**
@@ -51,10 +54,10 @@ local-db-app/
 - `@dnd-kit` ile sürükle-bırak sıralama
 - Axios ile API istekleri
 
-**Tarayıcı Eklentileri**
+**Tarayıcı Eklentisi**
 
-- Chrome (Manifest V3) ve Firefox (Manifest V2) için ayrı eklenti paketleri
-- MyAnimeList, Anizium, TürkAnime ve TRAnimeIzle içerik betikleri ile otomatik bölüm takibi
+- Chrome ve Firefox ile tam uyumlu Manifest V3 birleşik eklenti (`extension/`)
+- AniTracker (bölüm içi skip takibi, puanlama ve istatistik) + AniSyncer (siteler arası backend izleme durumu güncellemesi)
 
 ## Kurulum
 
