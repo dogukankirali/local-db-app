@@ -250,9 +250,43 @@ function extractEpisodeNumber(url) {
     return 0;
 }
 
+function cleanAnimeTitle(raw) {
+    if (!raw) return "";
+    let str = raw;
+    // Remove typical streaming site tags / noise words
+    str = str.replace(/\b(İzle|izle|Türkçe|Dublaj|Altyazı|Altyazılı|Full HD|4K|1080p|720p|Anizium|TrAnimeİzle|Türkanime|Turkanime|Anime)\b/gi, " ");
+    // Remove season / episode patterns like "1. Sezon", "Sezon 1", "1. Bölüm"
+    str = str.replace(/\b\d+\.\s*(Sezon|Bölüm)\b/gi, " ");
+    str = str.replace(/\b(Sezon|Bölüm)\s*\d+\b/gi, " ");
+    // Remove separators
+    str = str.replace(/[|\-_–—:[\]()]/g, " ");
+    // Normalize spaces
+    str = str.replace(/\s+/g, " ").trim();
+    return str;
+}
+
 function cleanTitle(title) {
-    if (!title) return '';
-    return title.replace(/[^\w\s-]/g, "").trim();
+    return cleanAnimeTitle(title);
+}
+
+function extractStreamingDetailTitle() {
+    const selectors = [
+        ".anime-details h1",
+        ".anime-info h1",
+        ".anime-title",
+        ".film-title",
+        ".film-name",
+        ".playlist-title h1",
+        "h1"
+    ];
+    for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el && el.textContent.trim()) {
+            const cleaned = cleanAnimeTitle(el.textContent.trim());
+            if (cleaned) return cleaned;
+        }
+    }
+    return cleanAnimeTitle(document.title);
 }
 
 function getMALAnimeData() {
@@ -283,8 +317,7 @@ function getMALAnimeData() {
 }
 
 function getAniziumDetailData() {
-    const titleEl = document.querySelector("h1, .anime-title, .anime-details h1, .film-title");
-    const title = titleEl ? cleanTitle(titleEl.textContent) : cleanTitle(document.title);
+    const title = extractStreamingDetailTitle();
     
     // Total episodes parsing from text like "You have watched 50 out of a total of 51 episodes!"
     let totalEps = 0;
@@ -319,15 +352,13 @@ function getStreamingEpisodeData() {
     let title = "";
     if (url.includes("tranimeizle.top")) {
         const titleEl = document.querySelector(".playlist-title h1") || document.querySelector("h1");
-        if (titleEl) title = cleanTitle(titleEl.textContent);
+        if (titleEl) title = cleanAnimeTitle(titleEl.textContent);
     } else {
         const h1 = document.querySelector("h1, .anime-title, .watch-title");
         if (h1 && h1.textContent.trim()) {
-            title = cleanTitle(h1.textContent);
+            title = cleanAnimeTitle(h1.textContent);
         } else {
-            let t = document.title || "";
-            t = t.replace(/(İzle|Türkçe Dublaj|4K|Anizium|Full HD|Sezon|Bölüm|\d+\.|\-|\|)/gi, " ");
-            title = cleanTitle(t);
+            title = extractStreamingDetailTitle();
         }
     }
 
@@ -387,7 +418,11 @@ function addMALWatchlistButton() {
     anisyncBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         const data = getMALAnimeData();
-        if (!data || !data.Name) return alert("Anime bilgileri okunamadı!");
+        if (!data || !data.Name) {
+            anisyncBtn.textContent = "Anime bilgileri okunamadı!";
+            anisyncBtn.style.color = "#ef4444";
+            return;
+        }
 
         anisyncBtn.textContent = "Adding to AniSync...";
         anisyncBtn.style.color = "#6366f1";
@@ -399,9 +434,10 @@ function addMALWatchlistButton() {
                 anisyncBtn.style.textDecoration = "none";
                 anisyncBtn.dataset.done = "true";
             } else {
-                const msg = response?.error?.includes("duplicate") ? "Already in Watchlist" : "Error!";
+                const isDup = response?.error?.toLowerCase().includes("duplicate") || response?.error?.toLowerCase().includes("zaten");
+                const msg = isDup ? "Already in Watchlist" : "Error!";
                 anisyncBtn.textContent = msg;
-                anisyncBtn.style.color = response?.error?.includes("duplicate") ? "#f59e0b" : "#ef4444";
+                anisyncBtn.style.color = isDup ? "#f59e0b" : "#ef4444";
             }
         });
     });
@@ -456,27 +492,40 @@ function addAniziumDetailWatchlistButton() {
         transition: all 0.2s ease;
     `;
 
-    btn.addEventListener("mouseover", () => btn.style.backgroundColor = "#4338ca");
+    btn.addEventListener("mouseover", () => {
+        if (!btn.dataset.done) btn.style.backgroundColor = "#4338ca";
+    });
     btn.addEventListener("mouseout", () => {
         if (!btn.dataset.done) btn.style.backgroundColor = "#4f46e5";
     });
 
     btn.addEventListener("click", (e) => {
         e.preventDefault();
-        const data = getAniziumDetailData();
-        if (!data || !data.Name) return alert("Anime bilgileri okunamadı!");
+        const title = extractStreamingDetailTitle();
+        if (!title) {
+            btn.textContent = "Anime adı okunamadı!";
+            btn.style.backgroundColor = "#ef4444";
+            return;
+        }
 
-        btn.textContent = "Adding...";
+        btn.textContent = "AniList'te aranıyor...";
         btn.style.backgroundColor = "#6366f1";
 
-        chrome.runtime.sendMessage({ action: "addToWatchlist", data }, (response) => {
+        chrome.runtime.sendMessage({
+            action: "addFromTitle",
+            title: title,
+            pageUrl: window.location.href,
+            currentEpisode: 0
+        }, (response) => {
             if (response && response.success) {
-                btn.textContent = "Added to AniSync Watchlist ✓";
+                const name = response.animeName || title;
+                const shortName = name.length > 20 ? name.substring(0, 18) + "..." : name;
+                btn.textContent = `Eklendi: ${shortName} ✓`;
                 btn.style.backgroundColor = "#10b981";
                 btn.dataset.done = "true";
             } else {
-                const isDup = response?.error?.includes("duplicate");
-                btn.textContent = isDup ? "Already in Watchlist" : "Error!";
+                const isDup = response?.error?.toLowerCase().includes("duplicate") || response?.error?.toLowerCase().includes("zaten");
+                btn.textContent = isDup ? "Zaten Listede" : (response?.error || "Hata!");
                 btn.style.backgroundColor = isDup ? "#f59e0b" : "#ef4444";
             }
         });
@@ -594,8 +643,32 @@ function bindUpdateButtonEvent(button) {
                     button.style.backgroundColor = "#4f46e5";
                 }, 2500);
             } else {
-                button.textContent = "Hata: " + (response?.error || "Kayıt başarısız");
-                button.style.backgroundColor = "#ef4444";
+                const isNotFound = response?.error?.toLowerCase().includes("not found");
+                if (isNotFound) {
+                    button.textContent = "Bulunamadı: Listeye Ekle?";
+                    button.style.backgroundColor = "#f59e0b";
+                    button.onclick = (ev) => {
+                        ev.preventDefault();
+                        button.textContent = "AniList'te aranıyor...";
+                        chrome.runtime.sendMessage({
+                            action: "addFromTitle",
+                            title: epData.name,
+                            pageUrl: window.location.href,
+                            currentEpisode: epData.currentEpisode
+                        }, (addRes) => {
+                            if (addRes && addRes.success) {
+                                button.textContent = `Eklendi (Bölüm ${epData.currentEpisode}) ✓`;
+                                button.style.backgroundColor = "#10b981";
+                            } else {
+                                button.textContent = "Hata: " + (addRes?.error || "Eklenemedi");
+                                button.style.backgroundColor = "#ef4444";
+                            }
+                        });
+                    };
+                } else {
+                    button.textContent = "Hata: " + (response?.error || "Kayıt başarısız");
+                    button.style.backgroundColor = "#ef4444";
+                }
             }
         });
     });
@@ -660,6 +733,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getAnimeInfo") {
         const info = getMALAnimeData() || getAniziumDetailData();
         sendResponse({ animeInfo: info });
+        return true;
+    }
+
+    if (request.action === "getAnimeTitle") {
+        sendResponse({ title: extractStreamingDetailTitle() });
         return true;
     }
 

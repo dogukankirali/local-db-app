@@ -640,24 +640,49 @@ async function safeFetchJson(url, options = {}) {
 
 // MAL veya Anizium sayfasından animeyi doğrudan backend'e ekleme
 async function handleAddFromMAL(tabId) {
-    const rawUrl = await getServiceUrl();
-    const serviceUrl = (rawUrl || "https://localhost:8080").trim().replace(/\/+$/, "");
-
     try {
-        const response = await chrome.tabs.sendMessage(tabId, { action: "getAnimeInfo" });
-        if (!response || !response.animeInfo || !response.animeInfo.Name) {
-            return showSyncerStatus('Sayfadan anime bilgisi alınamadı.', true);
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const isMal = tab?.url?.includes("myanimelist.net/anime/");
+        
+        if (isMal) {
+            const rawUrl = await getServiceUrl();
+            const serviceUrl = (rawUrl || "https://localhost:8080").trim().replace(/\/+$/, "");
+            const response = await chrome.tabs.sendMessage(tabId, { action: "getAnimeInfo" });
+            if (!response || !response.animeInfo || !response.animeInfo.Name) {
+                return showSyncerStatus('Sayfadan anime bilgisi alınamadı.', true);
+            }
+
+            await safeFetchJson(`${serviceUrl}/createAnime`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(response.animeInfo),
+                credentials: "omit",
+                mode: "cors"
+            });
+
+            showSyncerStatus('✅ Anime Watchlist\'e başarıyla eklendi!');
+        } else {
+            const response = await chrome.tabs.sendMessage(tabId, { action: "getAnimeTitle" });
+            const title = response?.title;
+            if (!title) {
+                return showSyncerStatus('Sayfadan anime adı okunamadı.', true);
+            }
+
+            showSyncerStatus('🔍 AniList\'te aranıyor ve ekleniyor...');
+            chrome.runtime.sendMessage({
+                action: "addFromTitle",
+                title: title,
+                pageUrl: tab.url || "",
+                currentEpisode: 0
+            }, (res) => {
+                if (res && res.success) {
+                    showSyncerStatus(`✅ Eklendi: ${res.animeName || title}`);
+                } else {
+                    const isDup = res?.error?.toLowerCase().includes("duplicate") || res?.error?.toLowerCase().includes("zaten");
+                    showSyncerStatus(isDup ? '⚠️ Bu anime zaten Watchlist\'te var!' : '❌ ' + (res?.error || "Kayıt başarısız"), true);
+                }
+            });
         }
-
-        await safeFetchJson(`${serviceUrl}/createAnime`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response.animeInfo),
-            credentials: "omit",
-            mode: "cors"
-        });
-
-        showSyncerStatus('✅ Anime Watchlist\'e başarıyla eklendi!');
     } catch (err) {
         const isDup = err.message?.includes("duplicate") || err.message?.includes("zaten");
         showSyncerStatus(isDup ? '⚠️ Bu anime zaten Watchlist\'te var!' : '❌ ' + err.message, true);

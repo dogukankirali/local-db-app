@@ -213,4 +213,119 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return true;
     }
+
+    if (request.action === "addFromTitle") {
+        const title = request.title;
+        const pageUrl = request.pageUrl || "";
+        chrome.storage.local.get("service_url", async (result) => {
+            const raw = result.service_url || "https://localhost:8080";
+            const serviceUrl = raw.trim().replace(/\/+$/, "");
+
+            try {
+                // 1. AniList'te ara ve zengin metadata al
+                let media = null;
+                try {
+                    const query = `query ($search: String) {
+                        Page(page: 1, perPage: 1) {
+                            media(search: $search, type: ANIME) {
+                                id
+                                idMal
+                                title {
+                                    romaji
+                                    english
+                                    native
+                                }
+                                episodes
+                                status
+                                coverImage {
+                                    large
+                                }
+                                genres
+                                format
+                            }
+                        }
+                    }`;
+                    const alRes = await fetch("https://graphql.anilist.co", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify({ query, variables: { search: title } })
+                    });
+                    const alJson = await alRes.json();
+                    media = alJson?.data?.Page?.media?.[0] || null;
+                } catch (alErr) {
+                    console.warn("AniList arama hatası, yerel başlık kullanılacak:", alErr);
+                }
+
+                let animeData;
+                if (media) {
+                    const canonicalTitle = media.title.english || media.title.romaji || title;
+                    animeData = {
+                        Name: canonicalTitle,
+                        AnimeStatus: media.status === "FINISHED" ? "Finished Airing" : (media.status === "RELEASING" ? "Currently Airing" : "Not yet aired"),
+                        WatchStatus: request.currentEpisode || 0,
+                        TotalNumberOfEpisodes: media.episodes || 0,
+                        IsMovie: media.format === "MOVIE",
+                        Score: -1,
+                        MALScore: 0,
+                        Notes: "",
+                        Genre: (media.genres || []).join(", "),
+                        MALAnimeLink: media.idMal ? `https://myanimelist.net/anime/${media.idMal}` : "",
+                        Cover: media.coverImage?.large || "",
+                        AnimeLink: pageUrl,
+                        Series: 0,
+                        PlanToWatch: true
+                    };
+                } else {
+                    animeData = {
+                        Name: title,
+                        AnimeStatus: "Currently Airing",
+                        WatchStatus: request.currentEpisode || 0,
+                        TotalNumberOfEpisodes: 0,
+                        IsMovie: false,
+                        Score: -1,
+                        MALScore: 0,
+                        Notes: "",
+                        Genre: "",
+                        MALAnimeLink: "",
+                        Cover: "",
+                        AnimeLink: pageUrl,
+                        Series: 0,
+                        PlanToWatch: true
+                    };
+                }
+
+                // 2. Backend'e kaydet
+                const res = await fetch(`${serviceUrl}/createAnime`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(animeData),
+                    credentials: "omit",
+                    mode: "cors"
+                });
+
+                const text = await res.text();
+                let data = null;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (text.includes("Client sent an HTTP request to an HTTPS server")) {
+                        return sendResponse({ success: false, error: "HTTP yerine HTTPS kullanmalısınız (örn: https://localhost:8080)" });
+                    }
+                    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+                        return sendResponse({ success: false, error: "Service URL backend portu olmalı (HTML döndü)" });
+                    }
+                    return sendResponse({ success: false, error: text || `Hata (${res.status})` });
+                }
+
+                if (!res.ok) {
+                    return sendResponse({ success: false, error: data?.error || data?.message || `Hata (${res.status})` });
+                }
+
+                sendResponse({ success: true, animeName: animeData.Name, data });
+            } catch (err) {
+                sendResponse({ success: false, error: err.message });
+            }
+        });
+        return true;
+    }
 });
