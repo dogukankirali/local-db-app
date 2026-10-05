@@ -183,6 +183,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const raw = result.service_url || "https://localhost:8080";
             const serviceUrl = raw.trim().replace(/\/+$/, "");
             try {
+                // 1. AniList'te ara ve resmi (temiz) ismi al
+                let canonicalTitle = request.data.name;
+                try {
+                    const query = `query ($search: String) {
+                        Page(page: 1, perPage: 1) {
+                            media(search: $search, type: ANIME) {
+                                title {
+                                    romaji
+                                    english
+                                }
+                            }
+                        }
+                    }`;
+                    const alRes = await fetch("https://graphql.anilist.co", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify({ query, variables: { search: request.data.name } })
+                    });
+                    const alJson = await alRes.json();
+                    const media = alJson?.data?.Page?.media?.[0];
+                    if (media) {
+                        canonicalTitle = media.title.romaji || media.title.english || request.data.name;
+                    }
+                } catch (e) {
+                    console.warn("AniList arama hatası:", e);
+                }
+
+                // 2. Temizlenen ismi backend'e gönder
+                request.data.name = canonicalTitle;
+
                 const res = await fetch(`${serviceUrl}/api/anime/update-episode`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -258,7 +288,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 let animeData;
                 if (media) {
-                    const canonicalTitle = media.title.english || media.title.romaji || title;
+                    const canonicalTitle = media.title.romaji || media.title.english || title;
                     animeData = {
                         Name: canonicalTitle,
                         AnimeStatus: media.status === "FINISHED" ? "Finished Airing" : (media.status === "RELEASING" ? "Currently Airing" : "Not yet aired"),
@@ -329,3 +359,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 });
+
+// Anizium otomatik izlendi API yakalayici
+chrome.webRequest.onCompleted.addListener(
+    function(details) {
+        if (details.url.includes('api.anizium.co/anime/watched')) {
+            console.log('Anizium watched API called!', details);
+            if (details.tabId >= 0) {
+                chrome.tabs.sendMessage(details.tabId, { action: 'aniziumWatchedTriggered' }).catch(() => {});
+            }
+        }
+    },
+    { urls: ['*://api.anizium.co/anime/watched*'] }
+);

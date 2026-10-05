@@ -19,6 +19,7 @@
     <div class="tab-bar">
         <button class="tab-btn active" data-tab="tracker">🎯 Tracker</button>
         <button class="tab-btn" data-tab="syncer">🔗 AniSyncer</button>
+        <button class="tab-btn" data-tab="configs">⚙️ Ayarlar</button>
     </div>
 
     <!-- TAB 1: TRACKER -->
@@ -123,6 +124,27 @@
     <div class="tab-content syncer-tab">
         <div id="syncer-status" class="syncer-status"></div>
 
+        <!-- Sayfa Aksiyonları (Dinamik) -->
+        <div class="mat-card mb-3" id="syncer-page-action" style="display:none;">
+            <div class="syncer-page-badge" id="syncer-page-label">Sayfa algılandı</div>
+            <button class="mat-btn btn-primary w-100" id="syncer-action-btn">İşlem Yap</button>
+        </div>
+
+        <!-- Genel Watchlist Butonları -->
+        <div class="mat-card mb-3">
+            <div class="syncer-section-label">Hızlı Eylemler</div>
+            <div class="d-flex" style="flex-direction:column; gap:8px;">
+                <button class="mat-btn btn-secondary w-100" id="syncer-quick-open-wl">
+                    📋 Web Watchlist Sayfasını Aç
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: CONFIGS -->
+    <div class="tab-content configs-tab">
+        <div id="configs-status" class="syncer-status"></div>
+
         <!-- 1. Extension Toggle -->
         <div class="mat-card mb-3">
             <div class="setting-row">
@@ -156,28 +178,11 @@
                 <div class="syncer-url-text" id="syncer-dashboard-url-text"></div>
                 <div class="syncer-url-actions">
                     <button class="mat-btn btn-outline" id="syncer-change-dash-btn" style="font-size:11px; padding:4px 8px;">Değiştir</button>
-                    <button class="mat-btn btn-secondary" id="syncer-open-dashboard-btn" style="font-size:11px; padding:4px 8px;">Watchlist Aç 🔗</button>
                 </div>
             </div>
             <div id="syncer-dash-input-wrap">
                 <input type="text" id="syncer-dash-input" class="mat-input" placeholder="http://localhost:3000" style="margin-bottom:6px;">
                 <button class="mat-btn btn-primary w-100" id="syncer-save-dash-btn">Kaydet</button>
-            </div>
-        </div>
-
-        <!-- 4. Sayfa Aksiyonları (Dinamik) -->
-        <div class="mat-card mb-3" id="syncer-page-action" style="display:none;">
-            <div class="syncer-page-badge" id="syncer-page-label">Sayfa algılandı</div>
-            <button class="mat-btn btn-primary w-100" id="syncer-action-btn">İşlem Yap</button>
-        </div>
-
-        <!-- Genel Watchlist Butonları -->
-        <div class="mat-card mb-3">
-            <div class="syncer-section-label">Hızlı Eylemler</div>
-            <div class="d-flex" style="flex-direction:column; gap:8px;">
-                <button class="mat-btn btn-secondary w-100" id="syncer-quick-open-wl">
-                    📋 Web Watchlist Sayfasını Aç
-                </button>
             </div>
         </div>
     </div>

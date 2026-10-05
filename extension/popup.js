@@ -437,12 +437,24 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ============================================================
 
 function showSyncerStatus(message, isError = false) {
-    const el = document.getElementById('syncer-status');
-    el.textContent = message;
-    el.className = `syncer-status ${isError ? 'error' : 'success'}`;
+    const el1 = document.getElementById('syncer-status');
+    const el2 = document.getElementById('configs-status');
+    const className = `syncer-status ${isError ? 'error' : 'success'}`;
+    
+    if (el1) {
+        el1.textContent = message;
+        el1.className = className;
+        el1.style.display = 'block';
+    }
+    if (el2) {
+        el2.textContent = message;
+        el2.className = className;
+        el2.style.display = 'block';
+    }
+
     setTimeout(() => {
-        el.className = 'syncer-status';
-        el.style.display = 'none';
+        if (el1) { el1.className = 'syncer-status'; el1.style.display = 'none'; }
+        if (el2) { el2.className = 'syncer-status'; el2.style.display = 'none'; }
     }, 3500);
 }
 
@@ -544,15 +556,6 @@ document.getElementById('syncer-change-dash-btn').addEventListener('click', () =
     chrome.storage.local.get('dashboard_url', res => {
         document.getElementById('syncer-dash-input').value = res.dashboard_url || '';
     });
-});
-
-document.getElementById('syncer-open-dashboard-btn').addEventListener('click', async () => {
-    const dashboardUrl = await getDashboardUrl();
-    if (dashboardUrl) {
-        chrome.tabs.create({ url: `${dashboardUrl}/watchlist` });
-    } else {
-        showSyncerStatus('Önce Dashboard URL kaydedin.', true);
-    }
 });
 
 document.getElementById('syncer-quick-open-wl').addEventListener('click', async () => {

@@ -254,10 +254,12 @@ function cleanAnimeTitle(raw) {
     if (!raw) return "";
     let str = raw;
     // Remove typical streaming site tags / noise words
-    str = str.replace(/\b(İzle|izle|Türkçe|Dublaj|Altyazı|Altyazılı|Full HD|4K|1080p|720p|Anizium|TrAnimeİzle|Türkanime|Turkanime|Anime)\b/gi, " ");
-    // Remove season / episode patterns like "1. Sezon", "Sezon 1", "1. Bölüm"
-    str = str.replace(/\b\d+\.\s*(Sezon|Bölüm)\b/gi, " ");
-    str = str.replace(/\b(Sezon|Bölüm)\s*\d+\b/gi, " ");
+    str = str.replace(/\b(İzle|izle|Türkçe|Dublaj|Altyazı|Altyazılı|Full HD|4K|1080p|720p|Anizium|TrAnimeİzle|Türkanime|Turkanime|Anime|Watch)\b/gi, " ");
+    // Remove season / episode patterns
+    str = str.replace(/\b\d+\.\s*(Sezon|Bölüm|Season|Episode)\b/gi, " ");
+    str = str.replace(/\b(Sezon|Bölüm|Season|Episode)\s*\d+\b/gi, " ");
+    // Remove short codes like S1, B1, E12
+    str = str.replace(/\b[SBEsbe]\d+\b/g, " ");
     // Remove separators
     str = str.replace(/[|\-_–—:[\]()]/g, " ");
     // Normalize spaces
@@ -454,7 +456,7 @@ function addMALWatchlistButton() {
 // ------------------------------------------------------------
 function addAniziumDetailWatchlistButton() {
     const url = window.location.href;
-    const isDetail = (url.includes("anizium.co/anime") || url.includes("anizium.com/anime") || url.includes("tranimeizle.top/anime")) && !url.includes("/watch");
+    const isDetail = (url.includes("anizium.co/anime/") || url.includes("anizium.com/anime/") || url.includes("tranimeizle.top/anime/")) && !url.includes("/watch");
     if (!isDetail) return;
     if (document.querySelector(".add-to-anisync-detail-btn")) return;
 
@@ -540,29 +542,43 @@ function addAniziumDetailWatchlistButton() {
 // ------------------------------------------------------------
 function addStreamingUpdateButton() {
     const url = window.location.href;
-    const isWatch = url.includes("anizium.co/watch") || url.includes("anizium.com/watch") || url.includes("tranimeizle.top") || url.includes("turkanime.co");
-    if (!isWatch) return;
-    if (document.querySelector(".update-watch-status-btn")) return;
+    const isWatch = url.includes("anizium.co/watch") || url.includes("anizium.com/watch") || url.includes("tranimeizle.top/izle") || url.includes("turkanime.co/video");
+    const hasEpisode = extractEpisodeNumber(url) > 0;
+    const isInvalidPage = url.includes("/animes") || (!isWatch && !hasEpisode);
+
+    let existingBtn = document.querySelector(".update-watch-status-btn");
+
+    if (isInvalidPage) {
+        if (existingBtn) existingBtn.remove();
+        return;
+    }
+    
+    // Eğer buton zaten doğru yerdeyse (body'de uçmuyorsa) devam et. Uçuyorsa silip tekrar yapalım.
+    if (existingBtn) {
+        if (existingBtn.parentElement !== document.body) return;
+        existingBtn.remove(); // Body'deyse sil, tekrar deneyeceğiz
+    }
 
     const button = document.createElement("button");
     button.className = "update-watch-status-btn";
-    button.textContent = "AniSync: Bölümü Güncelle";
+    button.textContent = "AniSync: İzlendi İşaretle";
 
     // 1. Anizium Watch Sayfası: Görsel 4'teki kontrol barına yerleştir
     if (url.includes("anizium.co") || url.includes("anizium.com")) {
-        const buttons = Array.from(document.querySelectorAll("button, a, div, span"));
-        const reportBtn = buttons.find(b => {
-            const txt = b.textContent.trim().toLowerCase();
-            return txt.includes("report an issue") || txt.includes("sorun bildir");
-        });
-        const markWatched = buttons.find(b => {
-            const txt = b.textContent.trim().toLowerCase();
-            return txt.includes("mark as watched") || txt.includes("izlendi olarak");
-        });
-        const prevNextBtn = buttons.find(b => {
-            const txt = b.textContent.trim().toLowerCase();
-            return txt.includes("previous episode") || txt.includes("next episode") || txt.includes("önceki bölüm");
-        });
+        const allElements = Array.from(document.querySelectorAll("*"));
+        // En derindeki elementi bulmak için diziyi sondan başa taramak veya filter yapıp sonuncuyu almak mantıklıdır.
+        const findDeepest = (texts) => {
+            const matches = allElements.filter(el => {
+                if (el.children.length > 2) return false; // Çok fazla çocuğu olanları atla
+                const txt = el.textContent.trim().toLowerCase();
+                return texts.some(t => txt === t || txt.includes(t));
+            });
+            return matches.length > 0 ? matches[matches.length - 1] : null;
+        };
+
+        const reportBtn = findDeepest(["report an issue", "sorun bildir"]);
+        const markWatched = findDeepest(["mark as watched", "izlendi olarak işaretle"]);
+        const prevNextBtn = findDeepest(["previous episode", "next episode"]);
 
         const targetAnchor = reportBtn || markWatched || prevNextBtn;
         if (targetAnchor && targetAnchor.parentElement) {
@@ -575,12 +591,10 @@ function addStreamingUpdateButton() {
                 color: #ffffff;
                 border: 1px solid rgba(255,255,255,0.2);
                 border-radius: 4px;
-                font-size: 12px;
+                font-size: 13px;
                 font-weight: 500;
                 cursor: pointer;
-                margin-left: 8px;
-                margin-top: 4px;
-                margin-bottom: 4px;
+                margin-left: 12px;
                 transition: all 0.2s;
             `;
             targetAnchor.parentElement.appendChild(button);
@@ -623,7 +637,7 @@ function bindUpdateButtonEvent(button) {
             return;
         }
 
-        const originalText = "AniSync: Bölümü Güncelle";
+        const originalText = "AniSync: İzlendi İşaretle";
         button.textContent = "Güncelleniyor...";
         button.style.backgroundColor = "#6366f1";
 
@@ -643,7 +657,7 @@ function bindUpdateButtonEvent(button) {
                     button.style.backgroundColor = "#4f46e5";
                 }, 2500);
             } else {
-                const isNotFound = response?.error?.toLowerCase().includes("not found");
+                const isNotFound = response?.error?.toLowerCase().includes("not found") || response?.error?.toLowerCase().includes("bulunamadı");
                 if (isNotFound) {
                     button.textContent = "Bulunamadı: Listeye Ekle?";
                     button.style.backgroundColor = "#f59e0b";
@@ -750,5 +764,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             } : null
         });
         return true;
+    }
+});
+
+// Arka plandan gelen otomatik 'izlendi' tetikleyicisi
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'aniziumWatchedTriggered') {
+        const epData = getStreamingEpisodeData();
+        if (epData && epData.name) {
+            console.log('AniSync: Anizium otomatik izlendi istegi yakalandi. Guncelleniyor...', epData);
+            chrome.runtime.sendMessage({
+                action: 'updateAnimeStatus',
+                data: { name: epData.name, watchStatus: epData.currentEpisode }
+            }, (res) => {
+                const btn = document.querySelector('.update-watch-status-btn');
+                if (btn) {
+                    if (res && res.success) {
+                        btn.textContent = 'Otomatik Guncellendi \u2713';
+                        btn.style.backgroundColor = '#10b981';
+                    }
+                }
+            });
+        }
     }
 });
