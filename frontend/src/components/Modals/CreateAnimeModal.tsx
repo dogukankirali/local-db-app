@@ -43,15 +43,29 @@ const modalStyle = {
   width: "90%",
   maxWidth: "800px",
   maxHeight: "90vh",
-  bgcolor: "#202022",
-  boxShadow: "0 16px 64px rgba(0, 0, 0, 0.8)",
-  p: 4,
-  borderRadius: "20px",
+  bgcolor: "#1a1a1c",
+  boxShadow: "0 24px 64px rgba(0, 0, 0, 0.6)",
+  p: 0,
+  borderRadius: "24px",
   outline: "none",
   overflow: "hidden",
-  border: "1px solid rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.08)",
   display: "flex",
-  flexDirection: "column"
+  flexDirection: "column",
+  "& .MuiOutlinedInput-root": {
+     backgroundColor: "rgba(255,255,255,0.03)",
+     borderRadius: "12px",
+     transition: "all 0.2s",
+     "&:hover": { backgroundColor: "rgba(255,255,255,0.06)" },
+     "&.Mui-focused": { backgroundColor: "rgba(255,255,255,0.09)", boxShadow: "0 0 0 2px rgba(0,176,240,0.3)" },
+     "& fieldset": { border: "none" }
+  },
+  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" },
+  "& .MuiInputLabel-root.Mui-focused": { color: "#00B0F0" },
+  "& .MuiTab-root": { textTransform: "none", fontWeight: "bold", fontSize: "1rem" },
+  "& .MuiTypography-h6": { fontWeight: "bold", fontSize: "1.2rem" },
+  "& .MuiSelect-select": { padding: "12px 16px" },
+  "& .MuiInputBase-input": { padding: "12px 16px" }
 };
 
 const LoadingFallback = () => (
@@ -406,7 +420,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
 
   return (
     <Modal
-      open={true}
+      open={props.createModalData.status}
       onClose={() => props.setCreateModalData({ status: false })}
       aria-labelledby="modal-title"
       aria-describedby="modal-description"

@@ -45,11 +45,12 @@ export default function AnimeGrid({ data, pagination, onPageChange, loading, gri
   }
 
   return (
-    <Box sx={{ p: 2, height: "100%", overflow: "hidden" }}>
+    <Box sx={{ p: 2, flex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <Scrollbars 
         autoHide 
+        style={{ flex: 1 }}
         onScrollFrame={(values) => {
-          if (values.top >= 0.99 && !loading) {
+          if (values.top >= 0.90 && !loading) {
             onLoadMore();
           }
         }}

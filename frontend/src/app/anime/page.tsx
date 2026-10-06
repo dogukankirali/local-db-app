@@ -85,10 +85,14 @@ function AnimePageContent() {
   const [gridSize, setGridSize] = useState<number>(5);
   
   useEffect(() => {
-    if (viewMode === "grid" && tableData.data.length === 0) {
-      getData(lastFetchParams.current || { page: 1, count: 10, filters: [], order: "asc", orderBy: "Name" });
+    if (viewMode === "grid") {
+      const neededCount = gridSize * 2;
+      const currentCount = lastFetchParams.current?.count || 0;
+      if (tableData.data.length === 0 || currentCount !== neededCount) {
+        getData({ ...(lastFetchParams.current || { page: 1, filters: [], order: "asc", orderBy: "Name" }), count: neededCount, page: 1 });
+      }
     }
-  }, [viewMode]);
+  }, [viewMode, gridSize]);
 
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
@@ -706,8 +710,8 @@ function AnimePageContent() {
                     const nextPage = tableData.pagination.currentPage + 1;
                     if (nextPage <= tableData.pagination.totalPageCount) {
                       isAppending.current = true;
-                      const params = lastFetchParams.current || { page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" };
-                      getData({ ...params, page: nextPage });
+                      const params = lastFetchParams.current || { page: 1, count: gridSize * 2, filters: [], order: "asc", orderBy: "Name" };
+                      getData({ ...params, page: nextPage, count: gridSize * 2 });
                     }
                   }
                 }}
