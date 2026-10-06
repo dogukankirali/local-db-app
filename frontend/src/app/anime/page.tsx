@@ -40,6 +40,8 @@ import PersonIcon from "@mui/icons-material/Person";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 function AnimePageContent() {
   const [windowSize, setWindowSize] = useState({
@@ -159,92 +161,57 @@ function AnimePageContent() {
   const searchParams = useSearchParams();
 
   function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
-    // Admin control securely
     let isAdmin = false;
-
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       try {
-        const userStr = localStorage.getItem("user");
+        const userStr = localStorage.getItem('user');
         if (userStr) {
           const userData = JSON.parse(userStr);
           isAdmin = userData?.isAdmin || false;
         }
       } catch (error) {
-        console.error("User information parsing failed:", error);
+        console.error('User information parsing failed:', error);
       }
     }
 
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
-          gap: 1,
-        }}
-      >
-        <Tooltip
-          title={
-            data?.PlanToWatch ? "Already in Watchlist" : "Add to Watchlist"
-          }
-        >
-          <StyledTeaButton
-            onClick={() => {
-              addToWatchlist(data);
-            }}
-            sx={{
-              backgroundColor: theme.success_alt,
-              color: "white",
-              "&:hover": {
-                backgroundColor: theme.success,
-              },
-              fontFamily: "inherit",
-              opacity: data?.PlanToWatch ? 0.5 : 1,
-              cursor: data?.PlanToWatch ? "not-allowed" : "pointer",
-              minHeight: "38px",
-            }}
-            size="small"
-            disabled={!isAdmin || data?.PlanToWatch}
-          >
-            <PlaylistAddIcon fontSize="small" />
-          </StyledTeaButton>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}>
+        <Tooltip title={data?.PlanToWatch ? 'Already in Watchlist' : 'Add to Watchlist'}>
+          <span>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); addToWatchlist(data); }}
+              sx={{ color: theme.success_alt, backgroundColor: 'rgba(16, 185, 129, 0.1)', '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.2)' }, opacity: data?.PlanToWatch ? 0.5 : 1 }}
+              size='small'
+              disabled={!isAdmin || data?.PlanToWatch}
+            >
+              <PlaylistAddIcon fontSize='small' />
+            </IconButton>
+          </span>
         </Tooltip>
-        <StyledTeaButton
-          onClick={() => {
-            setModalData({
-              status: true,
-              type: "update",
-              data: data,
-            });
-          }}
-          disabled={!isAdmin}
-          sx={{
-            fontFamily: "inherit",
-            opacity: !isAdmin ? 0.5 : 1,
-            cursor: !isAdmin ? "not-allowed" : "pointer",
-          }}
-          color="primary"
-        >
-          <Typography variant="button">Update</Typography>
-        </StyledTeaButton>
-        <StyledTeaButton
-          onClick={() => {
-            setModalData({
-              status: true,
-              type: "delete",
-              data: data,
-            });
-          }}
-          disabled={!isAdmin}
-          sx={{
-            backgroundColor: theme.danger,
-            fontFamily: "inherit",
-            opacity: !isAdmin ? 0.5 : 1,
-            cursor: !isAdmin ? "not-allowed" : "pointer",
-          }}
-        >
-          <Typography variant="button">Delete</Typography>
-        </StyledTeaButton>
+        <Tooltip title='Update Anime'>
+          <span>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); setModalData({ status: true, type: 'update', data: data }); }}
+              disabled={!isAdmin}
+              sx={{ color: theme.primary, backgroundColor: 'rgba(0, 176, 240, 0.1)', '&:hover': { backgroundColor: 'rgba(0, 176, 240, 0.2)' } }}
+              size='small'
+            >
+              <EditIcon fontSize='small' />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title='Delete Anime'>
+          <span>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); setModalData({ status: true, type: 'delete', data: data }); }}
+              disabled={!isAdmin}
+              sx={{ color: theme.danger, backgroundColor: 'rgba(255, 0, 0, 0.1)', '&:hover': { backgroundColor: 'rgba(255, 0, 0, 0.2)' } }}
+              size='small'
+            >
+              <DeleteIcon fontSize='small' />
+            </IconButton>
+          </span>
+        </Tooltip>
       </Box>
     );
   }
