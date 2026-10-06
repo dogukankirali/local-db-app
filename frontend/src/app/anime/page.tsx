@@ -83,16 +83,48 @@ function AnimePageContent() {
     localStorage.setItem("viewMode", newView);
   };
   const [gridSize, setGridSize] = useState<number>(5);
-  
+  // Grid-specific cache: accumulates all loaded anime so column changes don't cause refetch
+  const [gridCache, setGridCache] = useState<TEATable.IAnime[]>([]);
+  const gridCachePage = useRef<number>(0); // last fetched page for grid
+  const gridTotalPages = useRef<number>(Infinity);
+  const [gridLoadingMore, setGridLoadingMore] = useState<boolean>(false);
+  const GRID_PRE_FETCH = 64; // pre-fetch 64 at once (max 8 cols * 8 rows)
+
+  // Initial grid load & when viewMode switches to grid
   useEffect(() => {
-    if (viewMode === "grid") {
-      const neededCount = gridSize * 2;
-      const currentCount = lastFetchParams.current?.count || 0;
-      if (tableData.data.length === 0 || currentCount !== neededCount) {
-        getData({ ...(lastFetchParams.current || { page: 1, filters: [], order: "asc", orderBy: "Name" }), count: neededCount, page: 1 });
-      }
+    if (viewMode === "grid" && gridCache.length === 0) {
+      // Fetch the big initial batch
+      fetchGridPage(1, GRID_PRE_FETCH, true);
     }
-  }, [viewMode, gridSize]);
+  }, [viewMode]);
+
+  // gridSize change → no refetch, just re-layout (cache already has the data)
+
+  const fetchGridPage = async (page: number, count: number, reset: boolean) => {
+    if (reset) {
+      setGridLoadingMore(false);
+      setDataLoading(true);
+    } else {
+      setGridLoadingMore(true);
+    }
+    const filters = getFilledFilters(lastFetchParams.current?.filters ?? []);
+    try {
+      const res = await AnimeService.getAnimes({ page, count, filters, order: lastFetchParams.current?.order || "asc", orderBy: lastFetchParams.current?.orderBy || "Name" });
+      gridCachePage.current = page;
+      gridTotalPages.current = res?.pagination?.totalPageCount || Infinity;
+      if (reset) {
+        setGridCache(res?.data || []);
+        setTableData(res); // keep tableData in sync for table view
+      } else {
+        setGridCache(prev => [...prev, ...(res?.data || [])]);
+      }
+    } catch (err) {
+      console.error("Grid fetch error:", err);
+    } finally {
+      setDataLoading(false);
+      setGridLoadingMore(false);
+    }
+  };
 
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
@@ -239,7 +271,7 @@ function AnimePageContent() {
     }
   };
 
-  const isAppending = useRef<boolean>(false);
+
   const lastFetchParams = useRef<TEATable.FetchDataParams | undefined>(
     undefined
   );
@@ -700,18 +732,18 @@ function AnimePageContent() {
 
             {viewMode === "grid" ? (
               <AnimeGrid
-                data={tableData.data}
+                data={gridCache}
+                allData={gridCache}
                 pagination={tableData.pagination}
                 loading={dataLoading}
+                loadingMore={gridLoadingMore}
                 gridSize={gridSize}
                 onPageChange={() => {}}
                 onLoadMore={() => {
-                  if (tableData?.pagination && !dataLoading) {
-                    const nextPage = tableData.pagination.currentPage + 1;
-                    if (nextPage <= tableData.pagination.totalPageCount) {
-                      isAppending.current = true;
-                      const params = lastFetchParams.current || { page: 1, count: gridSize * 2, filters: [], order: "asc", orderBy: "Name" };
-                      getData({ ...params, page: nextPage, count: gridSize * 2 });
+                  if (!gridLoadingMore && !dataLoading) {
+                    const nextPage = gridCachePage.current + 1;
+                    if (nextPage <= gridTotalPages.current) {
+                      fetchGridPage(nextPage, GRID_PRE_FETCH, false);
                     }
                   }
                 }}
