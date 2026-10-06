@@ -65,5 +65,6 @@ Tek Cloudflare Worker: `frontend/out` altındaki statik siteyi sunar, `/api/*` i
 
 - **Şifreler** PBKDF2-SHA256 ile saklanır (`pbkdf2$sha256$<iterasyon>$<tuz>$<özet>`). İterasyon sayısı `PASSWORD_ITERATIONS` ile değişir; eski hash'ler kendi iterasyonlarıyla doğrulanmaya devam eder.
 - **Yetki**: anime güncelleme/silme, CSV yükleme, watchlist değişiklikleri ve sync admin JWT'si ister. `/createAnime` ve `/api/anime/update-episode` eklenti için açık kalır ([#26](https://github.com/dogukankirali/local-db-app/issues/26)).
-- **Sync**, AniList'e her grup için tek istek atar (8 anime). İstemci gruplar arasında 2 sn bekler, AniList hız sınırı dönerse belirtilen süre kadar bekleyip devam eder.
+- **Sync**: AniList, Workers'ın çıkış IP'lerini engellediği için arama tarayıcıda yapılır (her grup 8 anime, tek istek). Worker `/api/sync/batch` ile gelen sonuçlardan en iyi eşleşmeyi seçip eksik alanları yazar. İstemci gruplar arasında 2 sn bekler, AniList hız sınırında belirtilen süre kadar bekler.
+- **Otomatik deploy**: Cloudflare Workers Builds, `main`'e her push'ta `worker/` içinden build alıp deploy eder (ayarlar dashboard'da: kiroku → Settings → Builds).
 - **Watchlist**, `plan_to_watch` alanına bağlı D1 trigger'larıyla kendiliğinden güncel kalır.

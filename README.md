@@ -42,6 +42,8 @@ local-db-app/
 
 **Teknolojiler**: Cloudflare Workers, D1, Hono, TypeScript · Next.js 15, React 19, MUI 6, dnd-kit · AniList GraphQL · Resend (e-posta).
 
+AniList, Cloudflare Workers'tan gelen istekleri engellediği için anime araması ve sync'teki AniList sorguları doğrudan tarayıcıdan yapılır.
+
 ## Hızlı başlangıç
 
 ### Lokal geliştirme
@@ -111,8 +113,7 @@ Tüm uçlar `/api` altındadır. 🔒 işaretliler admin girişi (JWT) ister.
 | DELETE 🔒           | `/deleteAnime?id`                               | Anime silme                                        |
 | POST                | `/anime/update-episode`                         | Eklentiden bölüm ilerlemesi                        |
 | GET/POST            | `/getGenres`, `/getSeries`                      | Tür ve seri listeleri                              |
-| GET 🔒 / POST 🔒    | `/sync/pending`, `/sync/batch`                  | AniList ile eksik bilgileri doldurma (gruplar halinde) |
-| GET                 | `/getAnime`, `/getManga`                        | AniList üzerinden arama                            |
+| GET 🔒 / POST 🔒    | `/sync/pending`, `/sync/batch`                  | Eksik bilgileri doldurma: tarayıcı AniList'te arar, Worker sonuçları yazar |
 | GET, POST/PUT/DELETE 🔒 | `/watchlist`, `/watchlist/order`            | Watchlist (PTW ile otomatik senkron)               |
 | POST                | `/auth/register`, `/auth/login`                 | Kayıt ve giriş                                     |
 | POST                | `/auth/forgot-password`, `/auth/reset-password` | Şifre sıfırlama                                    |

@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { API_BASE } from "./http";
+import * as AniList from "./anilist";
 
 const path = API_BASE;
 
@@ -105,13 +106,12 @@ export module AnimeService {
     }
   }
 
-  export async function searchAnime(query: string, page: number = 1) {
+  export async function searchAnime(query: string, page: number = 1): Promise<any> {
     try {
-      const res = await axios.get(`${path}/getAnime?q=${query}&page=${page}`);
-      return res.data;
+      return await AniList.searchAnime(query, page);
     } catch (err) {
       console.error(err);
-      return [];
+      return { success: false, data: null };
     }
   }
 
@@ -140,7 +140,8 @@ export module AnimeService {
   }
 
   // Sync, Worker'ın ücretsiz plan sınırlarına sığması için küçük gruplar halinde yürütülür:
-  // eksik bilgili animelerin listesi alınır, her grup için /sync/batch çağrılır (AniList'e tek istek).
+  // eksik bilgili animelerin listesi alınır, her grup tarayıcıdan AniList'te aranır (tek istek)
+  // ve sonuçlar /sync/batch ile Worker'a yazdırılır.
   // Geri çağrılar eski SSE akışıyla aynı biçimde veri alır.
   const SYNC_DELAY_MS = 2000;
 
@@ -176,38 +177,42 @@ export module AnimeService {
       const state: SyncState = { success: false, message: "", updated: 0, failed: 0, errors: [], progress: 0, totalWork: 0, completed: 0 };
       try {
         const pending = await axios.get(`${path}/sync/pending`, { signal });
-        const ids: number[] = pending.data.ids ?? [];
+        const items: { id: number; name: string }[] = pending.data.items ?? [];
         const batchSize: number = pending.data.batchSize ?? 8;
-        state.totalWork = ids.length;
+        state.totalWork = items.length;
         onStart({ ...state });
-        if (!ids.length) {
+        if (!items.length) {
           onComplete({ ...state, success: true, progress: 100, message: "Güncellenecek anime yok" });
           return;
         }
-        for (let i = 0; i < ids.length; ) {
-          const batch = ids.slice(i, i + batchSize);
-          let res;
+        for (let i = 0; i < items.length; ) {
+          const batch = items.slice(i, i + batchSize);
+          let media: unknown[][];
           try {
-            res = await axios.post(`${path}/sync/batch`, { ids: batch }, { signal });
+            media = await AniList.searchForSync(batch.map((b) => b.name), signal);
           } catch (err: any) {
             // AniList hız sınırı: söylenen süre kadar bekleyip aynı grubu tekrar dene
-            if (err?.response?.status === 429) {
-              const seconds = Number(err.response.data?.retryAfter) || 60;
-              onProgress({ ...state, message: `AniList hız sınırı, ${seconds} sn bekleniyor...` });
-              await wait(seconds * 1000);
+            if (err instanceof AniList.AniListRateLimit) {
+              onProgress({ ...state, message: `AniList hız sınırı, ${err.retryAfter} sn bekleniyor...` });
+              await wait(err.retryAfter * 1000);
               continue;
             }
             throw err;
           }
+          const res = await axios.post(
+            `${path}/sync/batch`,
+            { items: batch.map((b, j) => ({ id: b.id, media: media[j] })) },
+            { signal }
+          );
           i += batch.length;
           state.updated += res.data.updated ?? 0;
           state.failed += res.data.failed ?? 0;
           state.errors.push(...(res.data.errors ?? []));
-          state.completed = Math.min(i, ids.length);
-          state.progress = (state.completed / ids.length) * 100;
-          state.message = (res.data.messages ?? []).slice(-1)[0] ?? `${state.completed}/${ids.length} işlendi`;
+          state.completed = Math.min(i, items.length);
+          state.progress = (state.completed / items.length) * 100;
+          state.message = (res.data.messages ?? []).slice(-1)[0] ?? `${state.completed}/${items.length} işlendi`;
           onProgress({ ...state });
-          if (i < ids.length) await wait(SYNC_DELAY_MS);
+          if (i < items.length) await wait(SYNC_DELAY_MS);
         }
         onComplete({ ...state, success: true, progress: 100, message: "Senkronizasyon tamamlandı" });
       } catch (err: any) {

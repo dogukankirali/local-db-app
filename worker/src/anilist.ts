@@ -2,63 +2,11 @@ import { Hono } from "hono";
 import { requireAdmin } from "./auth";
 import { field, int, readJson, type AppEnv } from "./util";
 
-// AniList GraphQL: arama proxy'si (/getAnime, /getManga) ve eksik bilgileri dolduran sync.
-// Go sürümündeki Jikan + SSE akışı yerine sync, istemcinin küçük gruplar halinde çağırdığı
-// bir uç oldu: her grup tek AniList isteği, Workers ücretsiz planın süre/istek sınırlarına sığıyor.
-
-const ANILIST = "https://graphql.anilist.co";
-
-async function anilist<T>(query: string, variables: Record<string, unknown>): Promise<T> {
-  const res = await fetch(ANILIST, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ query, variables }),
-  });
-  const text = await res.text();
-  if (res.status === 429) {
-    const err = new Error("AniList istek sınırı aşıldı") as Error & { retryAfter?: number };
-    err.retryAfter = int(res.headers.get("Retry-After"), 60);
-    throw err;
-  }
-  if (!res.ok) throw new Error(`AniList API HTTP hatası (${res.status}): ${text.slice(0, 300)}`);
-  const json = JSON.parse(text) as { data?: T; errors?: unknown };
-  if (!json.data) throw new Error(`AniList yanıtı beklenmedik: ${text.slice(0, 300)}`);
-  return json.data;
-}
-
-const SEARCH_QUERY = `
-  query ($search: String, $id: Int, $page: Int, $perPage: Int, $type: MediaType) {
-    Page(page: $page, perPage: $perPage) {
-      pageInfo { total currentPage lastPage hasNextPage perPage }
-      media(search: $search, id: $id, type: $type) {
-        id idMal title { romaji english native } episodes chapters volumes status description
-        averageScore meanScore coverImage { large medium } bannerImage genres seasonYear format
-      }
-    }
-  }`;
+// AniList sync'i. AniList, Cloudflare Workers'ın çıkış IP'lerini engellediği için arama
+// tarayıcıda yapılır (frontend/src/Services/anilist.ts); bu uç yalnızca gelen sonuçlardan
+// en iyi eşleşmeyi seçip eksik alanları DB'ye yazar.
 
 export const anilistRoutes = new Hono<AppEnv>();
-
-for (const [path, type] of [
-  ["/getAnime", "ANIME"],
-  ["/getManga", "MANGA"],
-] as const) {
-  anilistRoutes.get(path, async (c) => {
-    const q = c.req.query();
-    const variables: Record<string, unknown> = {
-      type,
-      page: Math.max(int(q.page) || 1, 1),
-      perPage: Math.min(Math.max(int(q.limit) || 10, 1), 50),
-    };
-    if (int(q.id) > 0) variables.id = int(q.id);
-    if (q.q) variables.search = q.q;
-    try {
-      return c.json({ success: true, data: await anilist(SEARCH_QUERY, variables) });
-    } catch (err) {
-      return c.json({ success: false, data: null, error: `AniList API hatası: ${(err as Error).message}` }, 502);
-    }
-  });
-}
 
 // --- Sync ---
 
@@ -87,14 +35,21 @@ type SyncRow = {
   genre_count: number;
 };
 
-const MEDIA_FIELDS = `id idMal title { romaji english } episodes status format averageScore genres coverImage { large }
-  relations { edges { relationType node { type title { romaji english } } } }`;
-
-// Bir gruptaki tüm animeler tek GraphQL isteğinde, alias'larla aranır
-function batchQuery(n: number) {
-  const vars = Array.from({ length: n }, (_, i) => `$s${i}: String`).join(", ");
-  const parts = Array.from({ length: n }, (_, i) => `a${i}: Page(perPage: 5) { media(search: $s${i}, type: ANIME) { ${MEDIA_FIELDS} } }`);
-  return `query (${vars}) { ${parts.join("\n")} }`;
+// İstemciden gelen veri: yalnızca beklenen biçimdeki kayıtlar kullanılır
+function isMedia(v: unknown): v is Media {
+  const m = v as Media;
+  return (
+    !!m &&
+    typeof m === "object" &&
+    typeof m.title === "object" &&
+    m.title !== null &&
+    Array.isArray(m.genres) &&
+    m.genres.every((g) => typeof g === "string") &&
+    (m.idMal == null || Number.isInteger(m.idMal)) &&
+    (m.episodes == null || Number.isInteger(m.episodes)) &&
+    (m.averageScore == null || typeof m.averageScore === "number") &&
+    (m.coverImage?.large == null || /^https:\/\//.test(m.coverImage.large))
+  );
 }
 
 const lower = (s: string | null | undefined) => (s ?? "").toLowerCase();
@@ -127,13 +82,23 @@ const PENDING_WHERE = "a.series = 0 OR a.series IS NULL";
 
 // Sync'e girecek animelerin listesi (Go'daki gibi serisi atanmamış olanlar)
 anilistRoutes.get("/sync/pending", requireAdmin, async (c) => {
-  const { results } = await c.env.DB.prepare(`SELECT a.id FROM animes a WHERE ${PENDING_WHERE} ORDER BY a.id`).all<{ id: number }>();
-  return c.json({ ids: results.map((r) => r.id), batchSize: SYNC_BATCH });
+  const { results } = await c.env.DB.prepare(`SELECT a.id, a.name FROM animes a WHERE ${PENDING_WHERE} ORDER BY a.id`).all<{
+    id: number;
+    name: string;
+  }>();
+  return c.json({ items: results, batchSize: SYNC_BATCH });
 });
 
+// Gövde: { items: [{ id, media: [AniList Media, ...] }] } (tarayıcının AniList'ten aldığı arama sonuçları)
 anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
-  const ids = ((field(await readJson(c), "ids") as unknown[]) ?? []).map((x) => int(x, -1)).filter((x) => x >= 0).slice(0, SYNC_BATCH);
-  if (!ids.length) return c.json({ updated: 0, failed: 0, skipped: 0, errors: [], messages: [] });
+  const raw = field(await readJson(c), "items");
+  const media = new Map<number, Media[]>();
+  for (const it of (Array.isArray(raw) ? raw : []).slice(0, SYNC_BATCH) as Record<string, unknown>[]) {
+    const id = int(it?.id, -1);
+    if (id >= 0) media.set(id, (Array.isArray(it.media) ? it.media : []).filter(isMedia));
+  }
+  if (!media.size) return c.json({ updated: 0, failed: 0, errors: [], messages: [] });
+  const ids = [...media.keys()];
   const db = c.env.DB;
 
   const { results: rows } = await db
@@ -145,14 +110,6 @@ anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
     )
     .bind(...ids)
     .all<SyncRow>();
-
-  let data: Record<string, { media: Media[] }>;
-  try {
-    data = await anilist(batchQuery(rows.length), Object.fromEntries(rows.map((r, i) => [`s${i}`, r.name])));
-  } catch (err) {
-    const retryAfter = (err as { retryAfter?: number }).retryAfter;
-    return c.json({ error: (err as Error).message, retryAfter }, retryAfter ? 429 : 502);
-  }
 
   const genres = new Map(
     (await db.prepare("SELECT id, genre_name FROM genres").all<{ id: number; genre_name: string }>()).results.map((g) => [
@@ -166,8 +123,8 @@ anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
   const errors: string[] = [];
   const messages: string[] = [];
 
-  for (const [i, anime] of rows.entries()) {
-    const m = bestMatch(anime.name, data[`a${i}`]?.media ?? []);
+  for (const anime of rows) {
+    const m = bestMatch(anime.name, media.get(anime.id) ?? []);
     if (!m) {
       failed++;
       errors.push(`Anime bulunamadı: ${anime.name}`);
