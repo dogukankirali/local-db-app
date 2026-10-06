@@ -32,7 +32,8 @@ function getStatusInfo(anime: TEATable.IAnime) {
   if (anime.PlanToWatch)
     return { label: "Plan to Watch", color: "#F59E0B", bg: "rgba(245,158,11,0.15)" };
   const w = anime.WatchStatus;
-  if (w > 0 && anime.TotalNumberOfEpisodes > 0 && w >= anime.TotalNumberOfEpisodes)
+  const totalEp = parseInt(String(anime.TotalNumberOfEpisodes)) || 0;
+  if (w > 0 && totalEp > 0 && w >= totalEp)
     return { label: "Completed", color: "#10B981", bg: "rgba(16,185,129,0.15)" };
   if (w > 0)
     return { label: `Ep ${w}`, color: "#3B82F6", bg: "rgba(59,130,246,0.15)" };
@@ -53,9 +54,10 @@ function AnimeDetailModal({
       ? anime.Cover
       : `data:image/jpeg;base64,${anime.Cover}`
     : null;
+  const totalEpModal = parseInt(String(anime.TotalNumberOfEpisodes)) || 0;
   const progress =
-    anime.TotalNumberOfEpisodes > 0 && anime.WatchStatus > 0
-      ? Math.min(100, (anime.WatchStatus / anime.TotalNumberOfEpisodes) * 100)
+    totalEpModal > 0 && anime.WatchStatus > 0
+      ? Math.min(100, (anime.WatchStatus / totalEpModal) * 100)
       : 0;
 
   return (
@@ -173,14 +175,14 @@ function AnimeDetailModal({
       {/* Content */}
       <DialogContent sx={{ p: 3, pt: 2 }}>
         {/* Progress */}
-        {anime.TotalNumberOfEpisodes > 0 && (
+        {totalEpModal > 0 && (
           <Box sx={{ mb: 2.5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
               <Typography sx={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>
                 Progress
               </Typography>
               <Typography sx={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>
-                {anime.WatchStatus > 0 ? anime.WatchStatus : 0} / {anime.TotalNumberOfEpisodes} ep
+                {anime.WatchStatus > 0 ? anime.WatchStatus : 0} / {totalEpModal} ep
               </Typography>
             </Box>
             <LinearProgress
