@@ -23,7 +23,8 @@ interface SidebarProps {
 
 export function Brand({ collapsed }: { collapsed: boolean }) {
   return (
-    <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+    // Satır içi style, tarayıcı eklentilerinin değiştirdiği bir özellik olduğu için hydration uyuşmazlığı veriyordu; sx sınıf üretir
+    <Box component={Link} href="/" sx={{ display: "block", textDecoration: "none", color: "inherit" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: collapsed ? 0 : 0.5, justifyContent: collapsed ? "center" : "flex-start" }}>
         <Box
           sx={{
@@ -49,7 +50,7 @@ export function Brand({ collapsed }: { collapsed: boolean }) {
           </Box>
         )}
       </Box>
-    </Link>
+    </Box>
   );
 }
 
