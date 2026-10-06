@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Box, Drawer } from "@mui/material";
 import Navbar from "./Navbar";
 import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "./Sidebar";
+import CommandPalette from "../CommandPalette";
 
 const COLLAPSED_KEY = "sidebarCollapsed";
 
@@ -73,6 +74,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </Box>
       </Box>
+      <CommandPalette />
     </Box>
   );
 }
