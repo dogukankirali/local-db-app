@@ -1,23 +1,32 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Link as MuiLink,
-  Alert,
-  InputAdornment,
-  IconButton,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Alert, Box, Button, CircularProgress, IconButton } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import Link from "next/link";
-import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import AuthShell, { authLinkSx } from "../../components/auth/AuthShell";
+import { Field, TextInput } from "../../components/ui/FormControls";
+import { palette } from "../../theme/customTheme";
+
+// 0-4 arası kaba şifre gücü: uzunluk, harf/rakam karışımı ve sembol
+function passwordStrength(pw: string): number {
+  if (!pw) return 0;
+  let s = 0;
+  if (pw.length >= 6) s++;
+  if (pw.length >= 10) s++;
+  if (/[a-zçğıöşü]/i.test(pw) && /\d/.test(pw)) s++;
+  if (/[^a-z0-9çğıöşü]/i.test(pw)) s++;
+  return s;
+}
+const STRENGTH = [
+  { label: "", color: palette.textFaint },
+  { label: "Zayıf", color: palette.danger },
+  { label: "Orta", color: palette.warning },
+  { label: "İyi", color: "#60A5FA" },
+  { label: "Güçlü", color: palette.success },
+];
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -26,191 +35,137 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const { register, isAuthenticated } = useAuth();
   const router = useRouter();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const strength = passwordStrength(password);
 
   // Kullanıcı zaten giriş yapmışsa ana sayfaya yönlendir
   React.useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/");
-    }
+    if (isAuthenticated) router.push("/");
   }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    // Form doğrulama
-    if (!username.trim()) {
-      setError("Kullanıcı adı gereklidir");
-      return;
-    }
-
-    if (!email.trim()) {
-      setError("E-posta adresi gereklidir");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Geçerli bir e-posta adresi giriniz");
-      return;
-    }
-
-    if (!password) {
-      setError("Şifre gereklidir");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalıdır");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Şifreler eşleşmiyor");
-      return;
-    }
-
+    if (!username.trim()) return setError("Kullanıcı adı gerekli");
+    if (!email.trim()) return setError("E-posta adresi gerekli");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Geçerli bir e-posta adresi gir");
+    if (!password) return setError("Şifre gerekli");
+    if (password.length < 6) return setError("Şifre en az 6 karakter olmalı");
+    if (password !== confirmPassword) return setError("Şifreler eşleşmiyor");
+    setBusy(true);
     try {
       await register({ username, email, password });
       // Başarılı kayıt - yönlendirme AuthContext içinde yapılıyor
     } catch (error: any) {
       setError(error.response?.data?.message || "Kayıt işlemi başarısız oldu");
+    } finally {
+      setBusy(false);
     }
   };
 
+  const toggle = (
+    <IconButton size="small" aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"} onClick={() => setShowPassword((s) => !s)}>
+      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+    </IconButton>
+  );
+
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        p: 2,
-        backgroundColor: "background.default",
-      }}
+    <AuthShell
+      title="Hesap oluştur"
+      subtitle="Birkaç saniyede kendi arşivini başlat."
+      footer={
+        <>
+          Zaten hesabın var mı?{" "}
+          <Box component={Link} href="/login" sx={authLinkSx}>
+            Giriş yap
+          </Box>
+        </>
+      }
     >
-      <Paper
-        elevation={3}
-        sx={{
-          p: isMobile ? 3 : 4,
-          width: "100%",
-          maxWidth: "450px",
-          borderRadius: 2,
-        }}
-      >
-        <Typography
-          variant="h4"
-          component="h1"
-          align="center"
-          gutterBottom
-          sx={{ fontWeight: 600, mb: 3 }}
-        >
-          Kayıt Ol
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
+      {error && (
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: "8px" }}>
+          {error}
+        </Alert>
+      )}
+      <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: "grid", gap: 2 }}>
+        <Field label="Kullanıcı adı">
+          <TextInput
             id="username"
-            label="Kullanıcı Adı"
+            inputProps={{ "aria-label": "Kullanıcı adı" }}
             name="username"
             autoComplete="username"
             autoFocus
+            fullWidth
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            sx={{ mb: 2 }}
           />
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
+        </Field>
+        <Field label="E-posta">
+          <TextInput
             id="email"
-            label="E-posta Adresi"
+            inputProps={{ "aria-label": "E-posta" }}
             name="email"
-            autoComplete="email"
             type="email"
+            autoComplete="email"
+            fullWidth
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            sx={{ mb: 2 }}
           />
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Şifre"
-            type={showPassword ? "text" : "password"}
+        </Field>
+        <Field label="Şifre" hint={password ? <Box component="span" sx={{ color: STRENGTH[strength].color, fontWeight: 600 }}>{STRENGTH[strength].label}</Box> : "En az 6 karakter"}>
+          <TextInput
             id="password"
+            inputProps={{ "aria-label": "Şifre" }}
+            name="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
+            fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{ mb: 2 }}
+            endAdornmentNode={toggle}
           />
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="confirmPassword"
-            label="Şifreyi Onayla"
-            type={showPassword ? "text" : "password"}
+          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0.5, mt: 0.75 }}>
+            {[1, 2, 3, 4].map((i) => (
+              <Box
+                key={i}
+                sx={{
+                  height: 3,
+                  borderRadius: 2,
+                  backgroundColor: i <= strength ? STRENGTH[strength].color : "rgba(255,255,255,0.08)",
+                  transition: "background-color .2s ease",
+                }}
+              />
+            ))}
+          </Box>
+        </Field>
+        <Field
+          label="Şifre tekrar"
+          hint={confirmPassword && confirmPassword !== password ? <Box component="span" sx={{ color: palette.danger }}>Eşleşmiyor</Box> : undefined}
+        >
+          <TextInput
             id="confirmPassword"
+            inputProps={{ "aria-label": "Şifre tekrar" }}
+            name="confirmPassword"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
+            fullWidth
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            sx={{ mb: 3 }}
           />
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ mb: 3, py: 1.5 }}
-          >
-            Kayıt Ol
-          </Button>
-
-          <Box sx={{ textAlign: "center" }}>
-            <Typography variant="body2" color="text.secondary">
-              Zaten bir hesabınız var mı?{" "}
-              <Link href="/login" passHref>
-                <MuiLink component="span" underline="hover">
-                  Giriş Yap
-                </MuiLink>
-              </Link>
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-    </Box>
+        </Field>
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          disabled={busy}
+          startIcon={busy ? <CircularProgress size={16} color="inherit" /> : undefined}
+          sx={{ mt: 1, py: 1.25, borderRadius: "8px", fontWeight: 700 }}
+        >
+          Kayıt ol
+        </Button>
+      </Box>
+    </AuthShell>
   );
 }
