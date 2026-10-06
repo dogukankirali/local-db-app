@@ -13,6 +13,8 @@
     // Statik dosyalardan önce Worker'a gidecek yollar. /createAnime tarayıcı eklentisi için.
     "run_worker_first": ["/api/*", "/createAnime"]
   },
+  // Site app.dogukankirali.com'da yayınlanır (Cloudflare custom domain)
+  "routes": [{ "pattern": "app.dogukankirali.com", "custom_domain": true }],
   "d1_databases": [
     {
       "binding": "DB",
