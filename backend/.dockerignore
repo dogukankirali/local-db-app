@@ -1,6 +1,6 @@
-.git
-.gitignore
-README.md
-Dockerfile
 .env
-*.log 
+server.crt
+server.key
+*.log
+Dockerfile
+.dockerignore

@@ -1,95 +1,75 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, useMediaQuery, useTheme } from "@mui/material";
+import { usePathname } from "next/navigation";
+import { Box, Drawer } from "@mui/material";
 import Navbar from "./Navbar";
-import Sidebar from "./Sidebar";
+import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "./Sidebar";
 
-const drawerWidth = 240;
-const closedDrawerWidth = 64;
+const COLLAPSED_KEY = "sidebarCollapsed";
 
+// Masaüstünde sabit (daraltılabilir) sidebar, md altında açılır menü (drawer).
+// Boyutlar JS yerine CSS breakpoint'leri ile yönetilir; ilk render'da kayma olmaz.
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(true);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
-
-  const [windowSize, setWindowSize] = useState({
-    width: 0,
-    height: 0,
-  });
-
-  const handleDrawerToggle = () => {
-    setOpen(!open);
-  };
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    // İlk render'da window boyutlarını ayarla
-    const width = window.innerWidth;
-    setWindowSize({
-      width: width,
-      height: window.innerHeight,
-    });
-
-    // Mobil görünümde sidebar'ı kapalı ayarla
-    if (width <= 768) {
-      setOpen(false);
-    }
-
-    const handleResize = () => {
-      const newWidth = window.innerWidth;
-      setWindowSize({
-        width: newWidth,
-        height: window.innerHeight,
-      });
-
-      // Ekran boyutu değiştiğinde mobil görünüme geçerse sidebar'ı kapat
-      if (newWidth <= 768) {
-        setOpen(false);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1");
+    } catch {}
   }, []);
 
+  // Sayfa değişince mobil menüyü kapat
+  useEffect(() => setMobileOpen(false), [pathname]);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, prev ? "0" : "1");
+      } catch {}
+      return !prev;
+    });
+  };
+
+  const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+
   return (
-    <Box>
-      <Navbar onMenuClick={handleDrawerToggle} />
-      <Sidebar open={open} onClose={handleDrawerToggle} />
+    <Box sx={{ minHeight: "100vh", backgroundColor: "background.default" }}>
       <Box
-        component="main"
         sx={{
-          minHeight: "100vh",
-          pt: isMobile ? "56px" : "64px", // Navbar height - mobilde daha küçük
-          pl: isMobile
-            ? 0
-            : open
-            ? `${drawerWidth}px`
-            : `${closedDrawerWidth}px`,
-          transition: theme.transitions.create(["margin", "padding"], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+          display: { xs: "none", md: "block" },
+          position: "fixed",
+          inset: "0 auto 0 0",
+          width: sidebarWidth,
+          zIndex: (t) => t.zIndex.drawer,
+          transition: "width .2s ease",
         }}
       >
-        <Box
-          sx={{
-            width: "100%",
-            maxWidth: isMobile
-              ? "100%"
-              : isTablet
-              ? "100%"
-              : open
-              ? `calc(100% - 40px)`
-              : `calc(100% - 80px)`,
-            mx: "auto",
-            p: isMobile ? 1 : isTablet ? 2 : 3,
-          }}
-        >
+        <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+      </Box>
+
+      <Drawer
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{ display: { md: "none" }, "& .MuiDrawer-paper": { width: SIDEBAR_WIDTH, border: 0 } }}
+      >
+        <Sidebar collapsed={false} onNavigate={() => setMobileOpen(false)} />
+      </Drawer>
+
+      <Box
+        sx={{
+          pl: { xs: 0, md: `${sidebarWidth}px` },
+          transition: "padding-left .2s ease",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Navbar onMenuClick={() => setMobileOpen(true)} />
+        <Box component="main" sx={{ flex: 1, minWidth: 0, p: { xs: 1.5, sm: 2, md: 3 } }}>
           {children}
         </Box>
       </Box>

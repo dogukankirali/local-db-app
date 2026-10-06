@@ -1,7 +1,10 @@
 import axios from "axios";
 
-const path = process.env.NEXT_PUBLIC_API_URL || "https://localhost:8080";
-console.log(path);
+import { API_BASE } from "./http";
+import * as AniList from "./anilist";
+
+const path = API_BASE;
+
 
 /* router.HandleFunc("/getAnimeTable", allfunctions.GetAnimeTableData(db));
 router.HandleFunc("/getGenres", allfunctions.GetGenres(db));
@@ -72,10 +75,7 @@ export module AnimeService {
       return res.data;
     } catch (err) {
       console.error(err);
-      return {
-        data: [],
-        count: 0,
-      };
+      return { data: [], pagination: { currentPage: 1, itemCount: 0, totalItemCount: 0, itemsPerPage: 10, totalPageCount: 0 } };
     }
   }
 
@@ -106,13 +106,12 @@ export module AnimeService {
     }
   }
 
-  export async function searchAnime(query: string, page: number = 1) {
+  export async function searchAnime(query: string, page: number = 1): Promise<any> {
     try {
-      const res = await axios.get(`${path}/getAnime?q=${query}&page=${page}`);
-      return res.data;
+      return await AniList.searchAnime(query, page);
     } catch (err) {
       console.error(err);
-      return [];
+      return { success: false, data: null };
     }
   }
 
@@ -140,68 +139,89 @@ export module AnimeService {
     }
   }
 
-  export async function syncAnimeData(signal?: AbortSignal): Promise<any> {
-    try {
-      const res = await axios.get(`${path}/syncAnimeData`, { signal });
-      return res;
-    } catch (err) {
-      console.error(err);
-      return Promise.reject(err);
-    }
-  }
+  // Sync, Worker'ın ücretsiz plan sınırlarına sığması için küçük gruplar halinde yürütülür:
+  // eksik bilgili animelerin listesi alınır, her grup tarayıcıdan AniList'te aranır (tek istek)
+  // ve sonuçlar /sync/batch ile Worker'a yazdırılır.
+  // Geri çağrılar eski SSE akışıyla aynı biçimde veri alır.
+  const SYNC_DELAY_MS = 2000;
 
-  export async function cancelSync(): Promise<any> {
-    try {
-      const res = await axios.get(`${path}/cancelSync`);
-      return res;
-    } catch (err) {
-      console.error(err);
-      return Promise.reject(err);
-    }
+  export interface SyncState {
+    success: boolean;
+    message: string;
+    updated: number;
+    failed: number;
+    errors: string[];
+    progress: number;
+    totalWork: number;
+    completed: number;
   }
 
   export function syncAnimeDataStream(
-    onStart: (data: any) => void,
-    onProgress: (data: any) => void,
-    onComplete: (data: any) => void,
+    onStart: (data: SyncState) => void,
+    onProgress: (data: SyncState) => void,
+    onComplete: (data: SyncState) => void,
     onError: (error: any) => void
-  ): { eventSource: EventSource; close: () => void } {
-    const eventSource = new EventSource(`${path}/syncAnimeData`);
+  ): { close: () => void } {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const wait = (ms: number) =>
+      new Promise<void>((resolve, reject) => {
+        const t = setTimeout(resolve, ms);
+        signal.addEventListener("abort", () => {
+          clearTimeout(t);
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      });
 
-    eventSource.addEventListener("start", (event) => {
-      const data = JSON.parse((event as MessageEvent).data);
-      onStart(data);
-    });
+    (async () => {
+      const state: SyncState = { success: false, message: "", updated: 0, failed: 0, errors: [], progress: 0, totalWork: 0, completed: 0 };
+      try {
+        const pending = await axios.get(`${path}/sync/pending`, { signal });
+        const items: { id: number; name: string }[] = pending.data.items ?? [];
+        const batchSize: number = pending.data.batchSize ?? 8;
+        state.totalWork = items.length;
+        onStart({ ...state });
+        if (!items.length) {
+          onComplete({ ...state, success: true, progress: 100, message: "Güncellenecek anime yok" });
+          return;
+        }
+        for (let i = 0; i < items.length; ) {
+          const batch = items.slice(i, i + batchSize);
+          let media: unknown[][];
+          try {
+            media = await AniList.searchForSync(batch.map((b) => b.name), signal);
+          } catch (err: any) {
+            // AniList hız sınırı: söylenen süre kadar bekleyip aynı grubu tekrar dene
+            if (err instanceof AniList.AniListRateLimit) {
+              onProgress({ ...state, message: `AniList hız sınırı, ${err.retryAfter} sn bekleniyor...` });
+              await wait(err.retryAfter * 1000);
+              continue;
+            }
+            throw err;
+          }
+          const res = await axios.post(
+            `${path}/sync/batch`,
+            { items: batch.map((b, j) => ({ id: b.id, media: media[j] })) },
+            { signal }
+          );
+          i += batch.length;
+          state.updated += res.data.updated ?? 0;
+          state.failed += res.data.failed ?? 0;
+          state.errors.push(...(res.data.errors ?? []));
+          state.completed = Math.min(i, items.length);
+          state.progress = (state.completed / items.length) * 100;
+          state.message = (res.data.messages ?? []).slice(-1)[0] ?? `${state.completed}/${items.length} işlendi`;
+          onProgress({ ...state });
+          if (i < items.length) await wait(SYNC_DELAY_MS);
+        }
+        onComplete({ ...state, success: true, progress: 100, message: "Senkronizasyon tamamlandı" });
+      } catch (err: any) {
+        // Kullanıcı durdurduysa çağıran taraf zaten bildirim gösteriyor
+        if (err?.name === "AbortError" || err?.name === "CanceledError") return;
+        onError({ ...state, message: err?.response?.data?.error ?? err?.message ?? "Bağlantı hatası" });
+      }
+    })();
 
-    eventSource.addEventListener("progress", (event) => {
-      const data = JSON.parse((event as MessageEvent).data);
-      onProgress(data);
-    });
-
-    eventSource.addEventListener("complete", (event) => {
-      const data = JSON.parse((event as MessageEvent).data);
-      onComplete(data);
-      eventSource.close();
-    });
-
-    eventSource.addEventListener("error", (event) => {
-      const data = (event as MessageEvent).data
-        ? JSON.parse((event as MessageEvent).data)
-        : { message: "Bağlantı hatası" };
-      onError(data);
-      eventSource.close();
-    });
-
-    eventSource.onerror = (error) => {
-      onError(error);
-      eventSource.close();
-    };
-
-    return {
-      eventSource,
-      close: () => {
-        eventSource.close();
-      },
-    };
+    return { close: () => controller.abort() };
   }
 }

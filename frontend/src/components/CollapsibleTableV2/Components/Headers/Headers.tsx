@@ -1,5 +1,6 @@
-import { Box, Typography } from "@mui/material";
-import TableFilters from "../TableFilters/TableFilters";
+import { Badge, Box, Tooltip } from "@mui/material";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import TableFilters, { getFilledFilters } from "../TableFilters/TableFilters";
 import TableSettings from "../TableSettings";
 import { StyledMUIFilterButton, StyledTeaButton } from "../StyledComponents";
 import { useRouter } from "next/navigation";
@@ -9,12 +10,11 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import SyncIcon from "@mui/icons-material/Sync";
 import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
 import Constants from "../../../../constants/Constants";
-import FileUpload from "../../../Common/FileUpload";
 import { AnimeService } from "../../../../Services/AnimeServices";
 import Toastify from "toastify-js";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import SyncProgressIndicator from "../../../Sync/SyncProgressIndicator";
-import axios from "axios";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 export default function TableHeaders(props: {
   genres: any;
@@ -26,9 +26,12 @@ export default function TableHeaders(props: {
   setCreateModalData: any;
   handleClickFilters: any;
   handleClickSettings: any;
-  windowSize: any;
+  windowSize?: any;
   tableRerender?: TEATable.FetchData;
   user: any;
+  // Toolbar'ın solunda (başlık/sayaç) ve aksiyonlardan önce (görünüm kontrolleri) gösterilecek içerik
+  leading?: React.ReactNode;
+  trailing?: React.ReactNode;
 }) {
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -43,30 +46,11 @@ export default function TableHeaders(props: {
   const [syncMessage, setSyncMessage] = useState("");
   const [showProgressIndicator, setShowProgressIndicator] = useState(false);
   const syncControllerRef = useRef<AbortController | null>(null);
-  const eventSourceRef = useRef<{
-    eventSource: EventSource;
-    close: () => void;
-  } | null>(null);
+  const eventSourceRef = useRef<{ close: () => void } | null>(null);
 
-  // isAdmin kontrolü ekleyelim
-  let isAdmin = false;
-
-  // Props'tan gelen user bilgisini kullan
-  if (props.user) {
-    isAdmin = props.user.isAdmin || false;
-  }
-  // Eğer props'tan gelen user bilgisi yoksa localStorage'dan kontrol et
-  else if (typeof window !== "undefined") {
-    try {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const userData = JSON.parse(userStr);
-        isAdmin = userData?.isAdmin || false;
-      }
-    } catch (error) {
-      console.error("User information could not be parsed:", error);
-    }
-  }
+  // Render sırasında localStorage okumak hydration hatası veriyordu; auth context mount sonrası doluyor
+  const { isAdmin } = useAuth();
+  const activeFilterCount = getFilledFilters(props.filterState ?? []).length;
 
   // Synchronize all anime
   const handleSyncAllAnime = async () => {
@@ -212,18 +196,6 @@ export default function TableHeaders(props: {
         eventSourceRef.current = null;
       }
 
-      // Send cancel request to backend
-      AnimeService.cancelSync()
-        .then(() => {
-          console.log("Backend synchronization cancel request sent");
-        })
-        .catch((err) => {
-          console.error(
-            "Error sending backend synchronization cancel request:",
-            err
-          );
-        });
-
       setIsSyncing(false);
       setSyncMessage("Synchronization stopped");
 
@@ -266,127 +238,64 @@ export default function TableHeaders(props: {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "flex-end",
           alignItems: "center",
-          gap: props.windowSize.width < 768 ? 1 : 2,
-          mb: 2,
-          flexWrap: props.windowSize.width < 768 ? "wrap" : "nowrap",
+          gap: 1.5,
+          mb: 2.5,
+          flexWrap: "wrap",
         }}
       >
+        <Box sx={{ flex: "1 0 auto", whiteSpace: "nowrap" }}>{props.leading}</Box>
+        {props.trailing}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Tooltip title="Filtreler">
+            <StyledMUIFilterButton
+              onClick={props.handleClickFilters}
+              aria-label="Filtreler"
+              sx={activeFilterCount > 0 ? { color: "primary.main", borderColor: "rgba(124,92,255,0.5)" } : undefined}
+            >
+              <Badge badgeContent={activeFilterCount} color="primary" sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", height: 16, minWidth: 16, top: -4, right: -4 } }}>
+                <FilterAltIcon sx={{ fontSize: 20 }} />
+              </Badge>
+            </StyledMUIFilterButton>
+          </Tooltip>
+          <Tooltip title="Tablo ayarları">
+            <StyledMUIFilterButton onClick={props.handleClickSettings} aria-label="Tablo ayarları">
+              <SettingsIcon sx={{ fontSize: 20 }} />
+            </StyledMUIFilterButton>
+          </Tooltip>
+          {isAdmin &&
+            (!isSyncing ? (
+              <Tooltip title="Tüm animeleri MAL ile senkronize et">
+                <StyledMUIFilterButton onClick={handleSyncAllAnime} aria-label="Senkronize et">
+                  <SyncIcon sx={{ fontSize: 20 }} />
+                </StyledMUIFilterButton>
+              </Tooltip>
+            ) : (
+              <Tooltip title="Senkronizasyonu durdur">
+                <StyledMUIFilterButton onClick={handleStopSync} aria-label="Senkronizasyonu durdur" sx={{ color: "error.main" }}>
+                  <SyncIcon sx={{ fontSize: 20, animation: "spin 2s linear infinite", "@keyframes spin": { to: { transform: "rotate(360deg)" } } }} />
+                </StyledMUIFilterButton>
+              </Tooltip>
+            ))}
+        </Box>
         <StyledTeaButton
           onClick={() => router.push("/watchlist")}
+          variant="outlined"
           sx={{
-            fontFamily: "inherit",
-            fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
-            padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
+            backgroundColor: "transparent",
+            color: "text.primary",
+            border: "1px solid rgba(255,255,255,0.1)",
+            "&:hover": { backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.16)" },
           }}
-          color="primary"
+          startIcon={<PlaylistAddCheckIcon />}
         >
-          <PlaylistAddCheckIcon
-            sx={{
-              mr: 1,
-              fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem",
-            }}
-          />
-          <Typography
-            variant={props.windowSize.width < 768 ? "caption" : "button"}
-          >
-            {props.windowSize.width < 768 ? "Watch" : "Watch List"}
-          </Typography>
+          Watchlist
         </StyledTeaButton>
-        <StyledTeaButton
-          onClick={() => {
-            props.setCreateModalData({ status: true });
-          }}
-          disabled={!isAdmin}
-          sx={{
-            fontFamily: "inherit",
-            fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
-            padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
-            opacity: !isAdmin ? 0.5 : 1,
-            cursor: !isAdmin ? "not-allowed" : "pointer",
-          }}
-          color="primary"
-        >
-          <Typography
-            variant={props.windowSize.width < 768 ? "caption" : "button"}
-          >
-            Create
-          </Typography>
-        </StyledTeaButton>
-        {!isSyncing ? (
-          <StyledTeaButton
-            onClick={handleSyncAllAnime}
-            disabled={isSyncing || !isAdmin}
-            sx={{
-              fontFamily: "inherit",
-              fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
-              padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
-              opacity: !isAdmin ? 0.5 : 1,
-              cursor: !isAdmin ? "not-allowed" : "pointer",
-            }}
-            color="primary"
-          >
-            <SyncIcon
-              sx={{
-                mr: 1,
-                fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem",
-              }}
-            />
-            <Typography
-              variant={props.windowSize.width < 768 ? "caption" : "button"}
-            >
-              {props.windowSize.width < 768 ? "Sync" : "Sync All"}
-            </Typography>
-          </StyledTeaButton>
-        ) : (
-          <StyledTeaButton
-            onClick={handleStopSync}
-            sx={{
-              fontFamily: "inherit",
-              fontSize: props.windowSize.width < 768 ? "0.75rem" : "inherit",
-              padding: props.windowSize.width < 768 ? "6px 10px" : "8px 16px",
-            }}
-            color="error"
-          >
-            <SyncIcon
-              sx={{
-                mr: 1,
-                animation: "spin 2s linear infinite",
-                fontSize: props.windowSize.width < 768 ? "0.875rem" : "1.25rem",
-              }}
-            />
-            <Typography
-              variant={props.windowSize.width < 768 ? "caption" : "button"}
-            >
-              {props.windowSize.width < 768 ? "Stop" : "Stop Sync"}
-            </Typography>
+        {isAdmin && (
+          <StyledTeaButton onClick={() => props.setCreateModalData({ status: true })} startIcon={<AddRoundedIcon />}>
+            Yeni anime
           </StyledTeaButton>
         )}
-        <StyledMUIFilterButton
-          onClick={props.handleClickFilters}
-          sx={{
-            padding: props.windowSize.width < 768 ? "6px" : "8px",
-          }}
-        >
-          <FilterAltIcon
-            sx={{
-              fontSize: props.windowSize.width < 768 ? "1.25rem" : "1.5rem",
-            }}
-          />
-        </StyledMUIFilterButton>
-        <StyledMUIFilterButton
-          onClick={props.handleClickSettings}
-          sx={{
-            padding: props.windowSize.width < 768 ? "6px" : "8px",
-          }}
-        >
-          <SettingsIcon
-            sx={{
-              fontSize: props.windowSize.width < 768 ? "1.25rem" : "1.5rem",
-            }}
-          />
-        </StyledMUIFilterButton>
       </Box>
 
       {/* Sync Progress Indicator */}

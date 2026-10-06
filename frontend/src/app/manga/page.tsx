@@ -1,12 +1,9 @@
-import { Typography, Container } from "@mui/material";
+import type { Metadata } from "next";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import ComingSoon from "../../components/Common/ComingSoon";
+
+export const metadata: Metadata = { title: "Manga" };
 
 export default function MangaPage() {
-  return (
-    <Container>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Manga Listesi
-      </Typography>
-      {/* Tablo yapısı daha sonra eklenecek */}
-    </Container>
-  );
+  return <ComingSoon title="Manga" description="Manga takibi yakında burada. Okuduğun serileri, bölüm ilerlemesini ve puanlarını tek yerden yönetebileceksin." icon={<MenuBookOutlinedIcon />} />;
 }

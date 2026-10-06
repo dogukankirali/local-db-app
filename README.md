@@ -1,150 +1,124 @@
-# Local DB App — Anime/Manga Takip Uygulaması
+# Kiroku (記録)
 
-Kişisel anime, manga, kitap ve dizi izleme/okuma listelerini tek bir yerden yönetmek için geliştirilmiş full-stack bir uygulama. MyAnimeList (Jikan API) ile senkronize olabilir, izleme listeni (watchlist) sürükle-bırak ile sıralayabilir ve Chrome/Firefox eklentileri sayesinde izlediğin bölümü takip ettiğin sitelerden otomatik olarak işaretleyebilirsin.
+**Kişisel medya arşivin.** Kiroku; izlediğin ve izleyeceğin animeleri (ve yakında manga, kitap, dizileri) tek yerde tutan, puanlayan ve takip eden bir web uygulaması ile ona eşlik eden bir tarayıcı eklentisinden oluşur. *Kiroku* Japoncada "kayıt, arşiv" demektir.
+
+- **Web uygulaması**: arşivi kart ya da tablo görünümünde gez, filtrele, puanla; watchlist'ini sürükle-bırak ile sırala.
+- **Kiroku Tracker & Kiroku Sync** (Chrome/Firefox eklentisi): izleme sitelerinde kaldığın bölümü işaretler, bir animeyi tek tıkla watchlist'e ekler.
 
 ## Özellikler
 
-- **Anime/manga veritabanı**: Anime ve manga kayıtlarını (isim, tür, bölüm sayısı, puan, kapak görseli, seri bilgisi, izleme durumu vb.) filtreleyip sayfalanmış tablo halinde listeleme, ekleme, güncelleme ve silme.
-- **AniList & MAL entegrasyonu**: AniList GraphQL API üzerinden güvenilir anime/manga verisi çekme ve arama.
-- **Watchlist (izleme listesi)**: "Plan to Watch" listesine ekleme/çıkarma, sürükle-bırak ile sıralama ve MAL planından otomatik senkronizasyon.
-- **Kullanıcı hesapları**: JWT tabanlı kayıt/giriş, profil görüntüleme/güncelleme ve şifre sıfırlama (e-posta ile).
-- **Tarayıcı eklentisi (AniTracker Pro & AniSyncer - Chrome & Firefox)**:
-  - **Tracker Tabı**: AniList üzerinden anime seçimi, video oynarken sağ yön tuşu ile skip tespiti ve otomatik sezon puanlama algoritması, istatistikler ve izleme geçmişi.
-  - **AniSyncer Tabı**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sitelerinde bölüm ve watchlist durumunu algılayıp backend servisine senkronize eder.
-- **Seri (series) yönetimi**: Birden çok anime/manga kaydını bir seri altında gruplama.
+- **Anime arşivi**: Kart (grid) ve tablo görünümü, sonsuz kaydırma, isim araması (`Ctrl K`), tür/format/durum/puan/bölüm/seri filtreleri, sütun sıralama ve düzenleme.
+- **Watchlist**: "Plan to Watch" işaretli her anime otomatik olarak listeye girer. Web arayüzü, eklenti ya da senkronizasyon fark etmez; DB trigger'ı listeyi her zaman güncel tutar. Sürükle-bırak ile sıralama.
+- **Profil**: İstatistikler (arşiv, tamamlanan, ortalama puan), en yüksek puanlı 10 anime, profil ve şifre düzenleme. Kişiye özel öneriler yolda ([#39](https://github.com/dogukankirali/local-db-app/issues/39)).
+- **Hesaplar**: JWT ile kayıt/giriş, e-posta ile şifre sıfırlama (tek kullanımlık, 1 saat geçerli bağlantı).
+- **AniList senkronizasyonu**: Arşivdeki animelerin eksik bilgilerini, puanlarını ve seri ilişkilerini toplu doldurur.
+- **Tarayıcı eklentisi** (`extension/`, Manifest V3, Chrome & Firefox):
+  - **Kiroku Tracker**: AniList'ten anime seçimi, oynatıcıda ileri sarma (skip) sayacı, sezon puanlama, istatistik ve geçmiş.
+  - **Kiroku Sync**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sayfalarında bölüm ilerlemesini Kiroku'ya yazar, "Add to Kiroku Watchlist" butonu ekler.
 
-## Proje Yapısı
+## Mimari
+
+Tüm uygulama **tek bir Cloudflare Worker** üzerinde çalışır ve ücretsiz plana sığar: Next.js'in statik çıktısı Worker'ın assets'i olarak sunulur, `/api/*` istekleri Worker koduna (Hono) düşer, veriler **D1**'de (SQLite) tutulur. Tek komutla deploy edilir.
 
 ```
 local-db-app/
-├── backend/              # Go (Gorilla Mux + GORM + PostgreSQL) REST API
-│   ├── auth/             # JWT, şifre hash'leme, şifre sıfırlama
-│   ├── email/             # E-posta gönderimi
-│   ├── functions/        # Anime, manga, kullanıcı, watchlist, AniList entegrasyonu
-│   ├── handlers/         # HTTP handler'ları
-│   ├── middleware/       # Auth/Admin middleware
-│   ├── migrations/       # Basit Go tabanlı migration betikleri
-│   ├── models/           # GORM modelleri
-│   └── main.go           # Uygulama giriş noktası, route tanımları
-├── frontend/             # Next.js 15 (React 19, MUI, Tailwind) arayüzü
+├── worker/               # Cloudflare Worker: API (Hono, TypeScript) + D1 + statik site
+│   ├── src/              # anime, watchlist, kullanıcı/şifre sıfırlama, AniList sync uçları
+│   ├── migrations/       # D1 şeması (watchlist trigger'ları dahil)
+│   ├── scripts/          # pg_dump → D1 aktarımı, şifre belirleme
+│   └── wrangler.jsonc    # Worker, D1 ve assets ayarları
+├── frontend/             # Next.js 15 (App Router, React 19, MUI 6), statik export
 │   └── src/
-│       ├── app/           # anime, manga, book, series, watchlist, login, register, profile sayfaları
-│       ├── components/    # Tablo, modal, senkronizasyon ve ortak bileşenler
-│       ├── services/      # Backend API istemcileri (Axios)
-│       └── ...
-├── extension/            # AniTracker Pro + AniSyncer birleşik eklentisi (Chrome & Firefox - Manifest V3)
-├── chrome-extension/     # Eski Chrome eklentisi (arşiv)
-├── firefox-extension/    # Eski Firefox eklentisi (arşiv)
-└── docker-compose.yaml   # Backend + frontend için Docker Compose tanımı
+│       ├── app/          # /, /anime, /watchlist, /profile, /login, /register, /forgot-password, /reset-password, ...
+│       ├── components/   # Uygulama kabuğu (sidebar/topbar), anime grid, tablo, filtreler, modallar
+│       ├── config/       # Navigasyon tanımları
+│       ├── theme/        # Renk token'ları (customTheme.ts) ve MUI teması
+│       └── Services/     # API istemcileri (axios)
+├── extension/            # Kiroku Tracker + Kiroku Sync eklentisi
+├── scripts/dev.ps1       # Windows'ta API + frontend'i tek komutla başlatır
+├── backend/              # Eski Go API (PostgreSQL); Cloudflare'e geçiş tamamlanınca kaldırılacak
+└── docker-compose.yaml   # Eski Go + PostgreSQL yığını için
 ```
 
-## Teknolojiler
+**Teknolojiler**: Cloudflare Workers, D1, Hono, TypeScript · Next.js 15, React 19, MUI 6, dnd-kit · AniList GraphQL · Resend (e-posta).
 
-**Backend**
+AniList, Cloudflare Workers'tan gelen istekleri engellediği için anime araması ve sync'teki AniList sorguları doğrudan tarayıcıdan yapılır.
 
-- Go 1.21, [Gorilla Mux](https://github.com/gorilla/mux), [GORM](https://gorm.io/) + PostgreSQL
-- JWT tabanlı kimlik doğrulama ([golang-jwt](https://github.com/golang-jwt/jwt))
-- [AniList GraphQL API](https://graphql.anilist.co) entegrasyonu
-- TLS ile HTTPS servis (geliştirme sertifikaları `server.crt` / `server.key`)
+## Hızlı başlangıç
 
-**Frontend**
+### Lokal geliştirme
 
-- Next.js 15, React 19, TypeScript
-- Material UI (MUI) ve Tailwind CSS
-- `@dnd-kit` ile sürükle-bırak sıralama
-- Axios ile API istekleri
+Gereksinim: Node.js 20+.
 
-**Tarayıcı Eklentisi**
+```powershell
+./scripts/dev.ps1                         # API (:8787, lokal D1) + frontend (:3000)
+./scripts/dev.ps1 -Import <dump.sql>      # önce lokal D1'i bir pg_dump çıktısıyla doldurur
+```
 
-- Chrome ve Firefox ile tam uyumlu Manifest V3 birleşik eklenti (`extension/`)
-- AniTracker (bölüm içi skip takibi, puanlama ve istatistik) + AniSyncer (siteler arası backend izleme durumu güncellemesi)
-
-## Kurulum
-
-### Gereksinimler
-
-- Go 1.21+
-- Node.js 18+ ve npm
-- PostgreSQL veritabanı
-
-### Backend
+Elle:
 
 ```bash
-cd backend
-cp .env.example .env   # veya .env dosyasını elle oluşturup aşağıdaki değişkenleri doldurun
-go mod download
-go run main.go
-```
-
-`.env` dosyasında beklenen değişkenler:
-
-```
-PORT=8080
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=local_db_app
-ENV=development
-REACT_APP_PATH=
-JWT_SECRET_KEY=your-secret-key
-```
-
-`ENV=development` iken uygulama `backend/server.crt` ve `backend/server.key` sertifikalarını kullanarak HTTPS üzerinden ayağa kalkar (üretimde `/etc/ssl/certs/` altındaki sertifikalar kullanılır).
-
-### Frontend
-
-```bash
-cd frontend
+cd worker
 npm install
-npm run dev
+cp .dev.vars.example .dev.vars
+npm run db:migrate:local
+npx wrangler dev                           # http://localhost:8787/api
+
+cd ../frontend
+npm install
+npm run dev                                # http://localhost:3000, /api isteklerini :8787'ye yönlendirir
 ```
 
-`frontend/.env` içinde backend adresini gösteren değişken bulunmalı:
+`frontend/.env.development.local` içinde eski `NEXT_PUBLIC_API_URL=http://localhost:8080` satırı kaldıysa silin; frontend artık varsayılan olarak aynı origin'deki `/api`'yi kullanır.
 
-```
-NEXT_PUBLIC_API_URL=https://localhost:8080
-```
+### Cloudflare'e deploy
 
-Uygulama varsayılan olarak [http://localhost:3000](http://localhost:3000) adresinde çalışır.
-
-### Docker ile çalıştırma
+Adımlar ve veri taşıma için [worker/README.md](worker/README.md). Kısaca:
 
 ```bash
-docker compose up --build
+cd worker
+npx wrangler login
+npx wrangler d1 create kiroku              # çıkan database_id'yi wrangler.jsonc'ye yaz
+npm run db:migrate:remote
+npx wrangler secret put JWT_SECRET_KEY
+npm run deploy                             # frontend'i derler ve Worker'ı yayınlar
 ```
 
-`docker-compose.yaml`, backend'i `8080` ve frontend'i `3000` portunda ayağa kaldırır. (Docker ile çalıştırmadan önce PostgreSQL'e ayrıca erişim sağlanmalıdır.)
+## Şifre sıfırlama ve e-posta
 
-### Tarayıcı eklentisini yükleme
+- `POST /api/auth/forgot-password` (`{ "email" }`) 1 saat geçerli, tek kullanımlık bir bağlantı gönderir (`<site>/reset-password?token=...`); DB'de token'ın yalnızca SHA-256 özeti tutulur. `POST /api/auth/reset-password` (`{ "token", "password" }`) yeni şifreyi kaydeder.
+- Mail, [Resend](https://resend.com) HTTP API'siyle gönderilir (Workers SMTP açamıyor). `npx wrangler secret put RESEND_API_KEY` ile anahtar, `wrangler.jsonc`'deki `MAIL_FROM` ile gönderen tanımlanır. Lokal geliştirmede anahtar yoksa bağlantı `wrangler dev` loguna yazılır.
+- Mail olmadan şifre belirlemek için: `cd worker && npm run set-password -- <kullanıcı-adı>` (Cloudflare'deki DB için sonuna `--remote`).
 
-**Chrome**
+## Tarayıcı eklentisi
 
-1. `chrome://extensions` sayfasını açın ve "Geliştirici modu"nu etkinleştirin.
-2. "Paketlenmemiş öğe yükle" ile `chrome-extension/` klasörünü seçin.
+**Chrome**: `chrome://extensions` → "Geliştirici modu" → "Paketlenmemiş öğe yükle" → `extension/` klasörü.
 
-**Firefox**
+**Firefox**: `about:debugging#/runtime/this-firefox` → "Geçici Eklenti Yükle" → `extension/manifest.json`.
 
-1. `about:debugging#/runtime/this-firefox` sayfasını açın.
-2. "Geçici Eklenti Yükle" ile `firefox-extension/manifest.json` dosyasını seçin.
+Eklenti sunucu adresini popup'taki ayarlardan alır; buraya sitenin adresini yazın (ör. `https://kiroku.<hesap>.workers.dev`).
 
-## API Uç Noktaları (özet)
+## API (özet)
 
-| Yöntem              | Yol                                       | Açıklama                                        |
-| ------------------- | ----------------------------------------- | ----------------------------------------------- |
-| GET                 | `/getAnimeTable`                          | Filtrelenmiş/sayfalanmış anime listesi          |
-| POST                | `/createAnime`, `/createAnimeWithFile`    | Yeni anime kaydı ekleme                         |
-| POST                | `/updateAnimeTable`                       | Anime kaydını güncelleme                        |
-| DELETE              | `/deleteAnime`                            | Anime kaydını silme                             |
-| GET                 | `/getGenres`, `/getSeries`                | Tür ve seri listeleri                           |
-| POST                | `/syncAnimeData`                          | MyAnimeList ile senkronizasyon başlatma         |
-| POST                | `/cancelSync`, `/resetSyncState`          | Senkronizasyonu iptal etme / sıfırlama          |
-| GET                 | `/getAnime`, `/getManga`, `/getAnimeById` | MAL üzerinden anime/manga arama                 |
-| POST                | `/auth/register`, `/auth/login`           | Kullanıcı kaydı ve girişi                       |
-| GET/PUT             | `/auth/profile`                           | Kullanıcı profili (JWT korumalı)                |
-| GET/POST/PUT/DELETE | `/watchlist`                              | İzleme listesi işlemleri                        |
-| POST                | `/watchlist/sync`                         | MAL "Plan to Watch" listesiyle otomatik senkron |
-| GET                 | `/healthcheck`                            | Servis durum kontrolü                           |
+Tüm uçlar `/api` altındadır. 🔒 işaretliler admin girişi (JWT) ister.
+
+| Yöntem              | Yol                                             | Açıklama                                           |
+| ------------------- | ----------------------------------------------- | -------------------------------------------------- |
+| POST                | `/getAnimeTable?page&count&orderBy&order`       | Filtrelenmiş ve sayfalanmış anime listesi          |
+| GET                 | `/getAnimeById?id`                              | Tek anime                                          |
+| GET                 | `/animeCover?id`                                | DB'de base64 saklanan kapağı cache'lenebilir döner |
+| POST                | `/createAnime`                                  | Anime ekleme (aynı isim varsa günceller); eklenti `/createAnime` adresini de kullanabilir |
+| POST 🔒             | `/createAnimeWithFile`                          | CSV ile toplu ekleme                               |
+| POST 🔒             | `/updateAnimeTable`                             | Anime güncelleme                                   |
+| DELETE 🔒           | `/deleteAnime?id`                               | Anime silme                                        |
+| POST                | `/anime/update-episode`                         | Eklentiden bölüm ilerlemesi                        |
+| GET/POST            | `/getGenres`, `/getSeries`                      | Tür ve seri listeleri                              |
+| GET 🔒 / POST 🔒    | `/sync/pending`, `/sync/batch`                  | Eksik bilgileri doldurma: tarayıcı AniList'te arar, Worker sonuçları yazar |
+| GET, POST/PUT/DELETE 🔒 | `/watchlist`, `/watchlist/order`            | Watchlist (PTW ile otomatik senkron)               |
+| POST                | `/auth/register`, `/auth/login`                 | Kayıt ve giriş                                     |
+| POST                | `/auth/forgot-password`, `/auth/reset-password` | Şifre sıfırlama                                    |
+| GET/PUT             | `/auth/profile`                                 | Profil (JWT); şifre değişikliği mevcut şifre ister |
+| GET                 | `/healthcheck`                                  | Durum kontrolü                                     |
 
 ## Lisans
 

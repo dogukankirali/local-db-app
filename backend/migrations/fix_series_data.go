@@ -418,7 +418,7 @@ func CleanupAndMergeSeriesData(db *gorm.DB) error {
 		cleanedSeriesNames[series.ID] = cleanedName
 		fmt.Printf("Seri ID: %d, Orijinal İsim: '%s', Temizlenmiş İsim: '%s'\n", series.ID, series.Name, cleanedName)
 	}
-	fmt.Println("--- Seri İsimlerini Temizleme Tamamlandı ---\n")
+	fmt.Println("--- Seri İsimlerini Temizleme Tamamlandı ---")
 
 	// Önce mevcut tüm seri isimlerini bir haritada topla
 	existingSeriesNames := make(map[string]uint)
@@ -520,7 +520,7 @@ func CleanupAndMergeSeriesData(db *gorm.DB) error {
 			}
 		}
 	}
-	fmt.Println("--- Seri Birleştirme İşlemi Tamamlandı ---\n")
+	fmt.Println("--- Seri Birleştirme İşlemi Tamamlandı ---")
 
 	// Tek bir seri olan ama ismi temizlenmesi gereken serileri güncelle
 	fmt.Println("\n--- Tek Serileri Güncelleme ---")
@@ -537,7 +537,7 @@ func CleanupAndMergeSeriesData(db *gorm.DB) error {
 			}
 		}
 	}
-	fmt.Println("--- Tek Serileri Güncelleme Tamamlandı ---\n")
+	fmt.Println("--- Tek Serileri Güncelleme Tamamlandı ---")
 
 	fmt.Println("Seri verilerini temizleme ve birleştirme işlemi tamamlandı")
 	return nil

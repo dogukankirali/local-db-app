@@ -40,14 +40,32 @@ const modalStyle = {
   top: "50%",
   left: "50%",
   transform: "translate(-50%, -50%)",
-  width: "80%",
+  width: "90%",
+  maxWidth: "800px",
   maxHeight: "90vh",
-  bgcolor: theme.background,
-  boxShadow: 24,
-  p: 4,
-  borderRadius: 2,
+  bgcolor: "#1a1a1c",
+  boxShadow: "0 24px 64px rgba(0, 0, 0, 0.6)",
+  p: 0,
+  borderRadius: "24px",
   outline: "none",
   overflow: "hidden",
+  border: "1px solid rgba(255,255,255,0.08)",
+  display: "flex",
+  flexDirection: "column",
+  "& .MuiOutlinedInput-root": {
+     backgroundColor: "rgba(255,255,255,0.03)",
+     borderRadius: "12px",
+     transition: "all 0.2s",
+     "&:hover": { backgroundColor: "rgba(255,255,255,0.06)" },
+     "&.Mui-focused": { backgroundColor: "rgba(255,255,255,0.09)", boxShadow: "0 0 0 2px rgba(0,176,240,0.3)" },
+     "& fieldset": { border: "none" }
+  },
+  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" },
+  "& .MuiInputLabel-root.Mui-focused": { color: "#00B0F0" },
+  "& .MuiTab-root": { textTransform: "none", fontWeight: "bold", fontSize: "1rem" },
+  "& .MuiTypography-h6": { fontWeight: "bold", fontSize: "1.2rem" },
+  "& .MuiSelect-select": { padding: "12px 16px" },
+  "& .MuiInputBase-input": { padding: "12px 16px" }
 };
 
 const LoadingFallback = () => (
@@ -386,7 +404,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
   }, [searchResults]); */
 
   // Erken return ifadesi Hook'lardan sonra olmalı
-  if (!props.createModalData.status || !props.genres) return null;
+  
 
   const list = Constants({ type: "modalList" }).toSpliced(8, 0, {
     key: "Genre",
@@ -402,7 +420,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
 
   return (
     <Modal
-      open={true}
+      open={props.createModalData.status}
       onClose={() => props.setCreateModalData({ status: false })}
       aria-labelledby="modal-title"
       aria-describedby="modal-description"
@@ -482,7 +500,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                       ),
                     }}
                     sx={{
-                      "& .MuiOutlinedInput-root": {
+                      "& .MuiOutlinedInput-root, & .MuiFilledInput-root": {
                         "& fieldset": {
                           borderColor: theme.input_border,
                         },

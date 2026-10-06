@@ -1,18 +1,13 @@
 "use client";
 
-import React, { JSX, Suspense } from "react";
-import {
-  Box,
-  Container,
-  Typography,
-  IconButton,
-  Avatar,
-  Tooltip,
-  Menu,
-  MenuItem,
-  Divider,
-} from "@mui/material";
-import TableTemp from "../../components/CollapsibleTableV2/TableTemp";
+import React, { JSX, Suspense, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { Box, IconButton, Tooltip } from "@mui/material";
+import AnimeGrid from "../../components/AnimeGrid";
+import { ToggleButton, ToggleButtonGroup } from "@mui/material";
+import ViewListIcon from "@mui/icons-material/ViewList";
+import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import { Slider, Typography as MuiTypography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import {
   getFilledFilters,
@@ -24,17 +19,21 @@ import "toastify-js/src/toastify.css";
 import { theme } from "../../theme/customTheme";
 import { useTableSettings } from "../../components/CollapsibleTableV2/Components/TableSettings";
 import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
-import "../../assets/custom.css";
-import CreateAnimeModal from "../../components/Modals/CreateAnimeModal";
 import Constants from "../../constants/Constants";
 import { AnimeService } from "../../Services/AnimeServices";
 import TableHeaders from "../../components/CollapsibleTableV2/Components/Headers/Headers";
-import UpdateDeleteAnimeModal from "../../components/Modals/UpdateDeleteAnimeModal";
 import { useRouter, useSearchParams } from "next/navigation";
-import PersonIcon from "@mui/icons-material/Person";
-import SettingsIcon from "@mui/icons-material/Settings";
-import LogoutIcon from "@mui/icons-material/Logout";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+
+// Grid varsayılan görünüm: tablo (moment-timezone vb. ağır bağımlılıklarıyla) ve
+// modallar yalnızca gerektiğinde yüklenir, ilk açılış paketine girmez.
+const TableTemp = dynamic(() => import("../../components/CollapsibleTableV2/TableTemp"), {
+  ssr: false,
+}) as typeof import("../../components/CollapsibleTableV2/TableTemp").default;
+const CreateAnimeModal = dynamic(() => import("../../components/Modals/CreateAnimeModal"), { ssr: false });
+const UpdateDeleteAnimeModal = dynamic(() => import("../../components/Modals/UpdateDeleteAnimeModal"), { ssr: false });
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 function AnimePageContent() {
   const [windowSize, setWindowSize] = useState({
@@ -64,7 +63,113 @@ function AnimePageContent() {
     }
   }, []);
 
-  const [dataLoading, setDataLoading] = useState<boolean>(false);
+  // İlk veri gelene kadar "No anime found" yerine yükleniyor durumu gösterilsin
+  const [dataLoading, setDataLoading] = useState<boolean>(true);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  // Grid isteklerinde kullanılan güncel filtreler (useTableFilters aşağıda tanımlı)
+  const filterStateRef = useRef<TEATable.IFilterType[]>([]);
+  const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
+  // Kayıtlı görünüm okunana kadar hiçbir görünümü render etmiyoruz; aksi halde
+  // tablo kayıtlıyken önce grid isteği de atılıyordu (çift istek).
+  const [viewModeReady, setViewModeReady] = useState<boolean>(false);
+  useEffect(() => {
+    const saved = localStorage.getItem("viewMode");
+    if (saved === "table" || saved === "grid") {
+      setViewMode(saved);
+    }
+    setViewModeReady(true);
+  }, []);
+  
+  const handleViewModeChange = (newView: "table" | "grid") => {
+    setViewMode(newView);
+    localStorage.setItem("viewMode", newView);
+  };
+  const [gridSize, setGridSize] = useState<number>(5);
+  // Grid-specific cache: accumulates all loaded anime so column changes don't cause refetch
+  const [gridCache, setGridCache] = useState<TEATable.IAnime[]>([]);
+  const gridCachePage = useRef<number>(0); // last fetched page for grid
+  const gridTotalPages = useRef<number>(Infinity);
+  const [gridLoadingMore, setGridLoadingMore] = useState<boolean>(false);
+  const gridFetchInFlight = useRef<boolean>(false);
+  const GRID_PRE_FETCH = 24; // initial batch & page size for infinite scroll
+
+  // Initial grid load & when viewMode switches to grid
+  useEffect(() => {
+    if (viewModeReady && viewMode === "grid" && gridCache.length === 0) {
+      fetchGridPage(1, GRID_PRE_FETCH, true);
+    }
+  }, [viewMode, viewModeReady]);
+
+  // gridSize change → no refetch, just re-layout (cache already has the data)
+
+  const fetchGridPage = async (page: number, count: number, reset: boolean) => {
+    if (gridFetchInFlight.current && !reset) return;
+    gridFetchInFlight.current = true;
+    if (reset) {
+      setGridLoadingMore(false);
+      setDataLoading(true);
+    } else {
+      setGridLoadingMore(true);
+    }
+    const filters = getFilledFilters(filterStateRef.current);
+    try {
+      const res = await AnimeService.getAnimes({ page, count, filters, order: lastFetchParams.current?.order || "asc", orderBy: lastFetchParams.current?.orderBy || "Name" });
+      gridCachePage.current = page;
+      gridTotalPages.current = res?.pagination?.totalPageCount || Infinity;
+      setTotalCount(res?.pagination?.totalItemCount ?? null);
+      if (reset) {
+        setGridCache(res?.data || []);
+        setTableData(res); // keep tableData in sync for table view
+      } else {
+        setGridCache(prev => [...prev, ...(res?.data || [])]);
+      }
+    } catch (err) {
+      console.error("Grid fetch error:", err);
+    } finally {
+      gridFetchInFlight.current = false;
+      setDataLoading(false);
+      setGridLoadingMore(false);
+    }
+  };
+
+  // Stable reference so AnimeGrid's IntersectionObserver isn't rebuilt on every render
+  const fetchGridPageRef = useRef(fetchGridPage);
+  fetchGridPageRef.current = fetchGridPage;
+  const handleGridLoadMore = useCallback(() => {
+    if (gridFetchInFlight.current) return;
+    const nextPage = gridCachePage.current + 1;
+    if (nextPage <= gridTotalPages.current) {
+      fetchGridPageRef.current(nextPage, GRID_PRE_FETCH, false);
+    }
+  }, []);
+
+  // After a create/update/delete: keep gridCache in sync without refetching
+  // everything, and only hit the table endpoint when the table is visible.
+  const refreshAfterMutation = (
+    kind: "create" | "update" | "delete",
+    anime?: TEATable.IAnime
+  ) => {
+    if (kind === "create") {
+      setGridCache([]);
+      gridCachePage.current = 0;
+      gridTotalPages.current = Infinity;
+      if (viewMode === "grid") fetchGridPage(1, GRID_PRE_FETCH, true);
+    } else if (anime) {
+      setGridCache((prev) =>
+        kind === "delete"
+          ? prev.filter((a) => a.ID !== anime.ID)
+          : prev.map((a) => (a.ID === anime.ID ? { ...a, ...anime } : a))
+      );
+    }
+    if (viewMode === "table") {
+      if (lastFetchParams.current) {
+        getData(lastFetchParams.current);
+      } else {
+        getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" });
+      }
+    }
+  };
+
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
   );
@@ -98,110 +203,93 @@ function AnimePageContent() {
   const searchParams = useSearchParams();
 
   function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
-    // Admin control securely
     let isAdmin = false;
-
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       try {
-        const userStr = localStorage.getItem("user");
+        const userStr = localStorage.getItem('user');
         if (userStr) {
           const userData = JSON.parse(userStr);
           isAdmin = userData?.isAdmin || false;
         }
       } catch (error) {
-        console.error("User information parsing failed:", error);
+        console.error('User information parsing failed:', error);
       }
     }
 
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
-          gap: 1,
-        }}
-      >
-        <Tooltip
-          title={
-            data?.PlanToWatch ? "Already in Watchlist" : "Add to Watchlist"
-          }
-        >
-          <StyledTeaButton
-            onClick={() => {
-              addToWatchlist(data);
-            }}
-            sx={{
-              backgroundColor: theme.success_alt,
-              color: "white",
-              "&:hover": {
-                backgroundColor: theme.success,
-              },
-              fontFamily: "inherit",
-              opacity: data?.PlanToWatch ? 0.5 : 1,
-              cursor: data?.PlanToWatch ? "not-allowed" : "pointer",
-              minHeight: "38px",
-            }}
-            size="small"
-            disabled={!isAdmin || data?.PlanToWatch}
-          >
-            <PlaylistAddIcon fontSize="small" />
-          </StyledTeaButton>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}>
+        <Tooltip title={data?.PlanToWatch ? 'Already in Watchlist' : 'Add to Watchlist'}>
+          <span>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); addToWatchlist(data); }}
+              sx={{ color: theme.success_alt, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.15)' }, opacity: data?.PlanToWatch ? 0.5 : 1 }}
+              size='small'
+              disabled={!isAdmin || data?.PlanToWatch}
+            >
+              <PlaylistAddIcon fontSize='small' />
+            </IconButton>
+          </span>
         </Tooltip>
-        <StyledTeaButton
-          onClick={() => {
-            setModalData({
-              status: true,
-              type: "update",
-              data: data,
-            });
-          }}
-          disabled={!isAdmin}
-          sx={{
-            fontFamily: "inherit",
-            opacity: !isAdmin ? 0.5 : 1,
-            cursor: !isAdmin ? "not-allowed" : "pointer",
-          }}
-          color="primary"
-        >
-          <Typography variant="button">Update</Typography>
-        </StyledTeaButton>
-        <StyledTeaButton
-          onClick={() => {
-            setModalData({
-              status: true,
-              type: "delete",
-              data: data,
-            });
-          }}
-          disabled={!isAdmin}
-          sx={{
-            backgroundColor: theme.danger,
-            fontFamily: "inherit",
-            opacity: !isAdmin ? 0.5 : 1,
-            cursor: !isAdmin ? "not-allowed" : "pointer",
-          }}
-        >
-          <Typography variant="button">Delete</Typography>
-        </StyledTeaButton>
+        <Tooltip title='Update Anime'>
+          <span>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); setModalData({ status: true, type: 'update', data: data }); }}
+              disabled={!isAdmin}
+              sx={{ color: theme.primary, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(0, 176, 240, 0.15)' } }}
+              size='small'
+            >
+              <EditIcon fontSize='small' />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title='Delete Anime'>
+          <span>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); setModalData({ status: true, type: 'delete', data: data }); }}
+              disabled={!isAdmin}
+              sx={{ color: theme.danger, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 0, 0, 0.15)' } }}
+              size='small'
+            >
+              <DeleteIcon fontSize='small' />
+            </IconButton>
+          </span>
+        </Tooltip>
       </Box>
     );
   }
 
+  // Same IconButton actions for grid cards; stable identity keeps memoized cards from re-rendering
+  const settingsButtonsRef = useRef(SettingsButtons);
+  settingsButtonsRef.current = SettingsButtons;
+  const renderGridActions = useCallback(
+    (anime: TEATable.IAnime) =>
+      settingsButtonsRef.current(String(anime.ID), 0, anime),
+    []
+  );
+
   const { filterState, handleClickFilters, ...tableFilterProps } =
-    useTableFilters(
-      Constants({ type: "tableFilters", additionalData: { genres, series } })!,
-      () => {
-        if (lastFetchParams.current) {
-          const updatedParams = {
-            ...lastFetchParams.current,
-            page: 1,
-          };
-          getData(updatedParams);
-        }
-      }
-    );
+    useTableFilters(Constants({ type: "tableFilters", additionalData: { genres, series } })!, () => {});
   const { handleClickSettings, ...settingsProps } = useTableSettings();
+  filterStateRef.current = filterState;
+
+  // Grid görünümünde filtre değişince listeyi baştan yükle (tablo kendi isteğini atıyor)
+  const filtersKey = JSON.stringify(getFilledFilters(filterState));
+  const lastGridFiltersKey = useRef(filtersKey);
+  useEffect(() => {
+    if (!viewModeReady || viewMode !== "grid" || lastGridFiltersKey.current === filtersKey) return;
+    lastGridFiltersKey.current = filtersKey;
+    gridCachePage.current = 0;
+    gridTotalPages.current = Infinity;
+    fetchGridPage(1, GRID_PRE_FETCH, true);
+  }, [filtersKey, viewMode, viewModeReady]);
+
+  // Üst bardaki arama (?q=) isim filtresine yansır
+  const searchQuery = searchParams.get("q") ?? "";
+  useEffect(() => {
+    tableFilterProps.setFilterState((prev) =>
+      prev.map((f): TEATable.IFilterType => (f.key === "Name" && f.value !== searchQuery ? ({ ...f, value: searchQuery } as TEATable.IFilterType) : f))
+    );
+  }, [searchQuery]);
 
   const getGenres = async () => {
     try {
@@ -221,6 +309,7 @@ function AnimePageContent() {
     }
   };
 
+
   const lastFetchParams = useRef<TEATable.FetchDataParams | undefined>(
     undefined
   );
@@ -236,6 +325,7 @@ function AnimePageContent() {
 
       if (!aborted) {
         setTableData(res);
+        setTotalCount(res?.pagination?.totalItemCount ?? null);
       }
     } catch (err) {
       if (axios.isCancel(err)) {
@@ -304,15 +394,7 @@ function AnimePageContent() {
           stopOnFocus: true,
         }).showToast();
         setModalData({ status: false });
-
-        // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error updating anime:", err);
@@ -342,15 +424,7 @@ function AnimePageContent() {
           stopOnFocus: true,
         }).showToast();
         setModalData({ status: false });
-
-        // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        refreshAfterMutation("delete", modalData.data);
       }
     } catch (err) {
       console.error(err);
@@ -380,15 +454,7 @@ function AnimePageContent() {
           stopOnFocus: true,
         }).showToast();
         setCreateModalData({ status: false });
-
-        // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        refreshAfterMutation("create");
       }
     } catch (err) {
       console.error(err);
@@ -412,12 +478,12 @@ function AnimePageContent() {
     getGenres();
     getSeries();
     setOuterColumns((prev) => {
-      if (!prev.some((column) => column.value === "Settings")) {
+      if (!prev.some((column) => column.type === "button")) {
         return [
           ...prev,
           {
             key: SettingsButtons,
-            value: "Settings",
+            value: "İşlemler",
             width: "5%",
             type: "button",
           },
@@ -596,15 +662,7 @@ function AnimePageContent() {
           backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
           stopOnFocus: true,
         }).showToast();
-
-        // Reset order parameters to get new data
-        getData({
-          page: 1,
-          count: 10,
-          filters: [],
-          order: "asc", // Specify default sorting direction
-          orderBy: "Name", // Specify default sorting field
-        });
+        refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error adding anime to watchlist:", err);
@@ -626,33 +684,58 @@ function AnimePageContent() {
         sx={{
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
+          // Topbar (64px) + main padding çıkınca kalan alan; grid/tablo kendi içinde kayar
+          height: { xs: "calc(100dvh - 64px - 24px)", md: "calc(100dvh - 64px - 48px)" },
           width: "100%",
           overflow: "hidden",
-          "@media (max-width: 768px)": {
-            width: "100%",
-            position: "absolute",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            height: "100%",
-            padding: "10px",
-            left: "0px",
-            top: "50px",
-          },
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            height: "100%",
-            width: "100%",
-            padding: windowSize.width < 768 ? "10px" : "20px",
-            overflow: "hidden",
-          }}
-        >
           <TableHeaders
+            leading={
+              <Box>
+                <MuiTypography sx={{ fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.015em", lineHeight: 1.2 }}>
+                  Anime arşivi
+                </MuiTypography>
+                <MuiTypography sx={{ fontSize: "0.8rem", color: theme.secondary_text }}>
+                  {totalCount === null ? "Yükleniyor…" : `${totalCount} anime${searchQuery ? ` · “${searchQuery}” araması` : ""}`}
+                </MuiTypography>
+              </Box>
+            }
+            trailing={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                {viewMode === "grid" && (
+                  <Box sx={{ display: { xs: "none", lg: "flex" }, alignItems: "center", gap: 1.5, width: 150 }}>
+                    <MuiTypography variant="caption" sx={{ color: theme.secondary_text, whiteSpace: "nowrap" }}>
+                      Sütun {gridSize}
+                    </MuiTypography>
+                    <Slider value={gridSize} min={2} max={8} step={1} onChange={(e, val) => setGridSize(val as number)} size="small" />
+                  </Box>
+                )}
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  onChange={(e, newView) => { if (newView) handleViewModeChange(newView as "table" | "grid"); }}
+                  aria-label="Görünüm"
+                  size="small"
+                  sx={{
+                    height: 38,
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: "10px",
+                    p: "3px",
+                    "& .MuiToggleButton-root": { border: 0, borderRadius: "7px !important", px: 1, color: theme.secondary_text },
+                    "& .Mui-selected": { backgroundColor: "rgba(124,92,255,0.18) !important", color: `${theme.primary} !important` },
+                  }}
+                >
+                  <ToggleButton value="table" aria-label="Tablo görünümü">
+                    <ViewListIcon fontSize="small" />
+                  </ToggleButton>
+                  <ToggleButton value="grid" aria-label="Kart görünümü">
+                    <ViewModuleIcon fontSize="small" />
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            }
             genres={genres}
             filterState={filterState}
             tableFilterProps={tableFilterProps}
@@ -667,51 +750,89 @@ function AnimePageContent() {
             user={user}
           />
 
-          <TableTemp
-            tableName="anime-table"
-            data={tableData}
-            setData={setTableData}
-            header={outerColumns}
-            sortHeader={setOuterColumns}
-            collapsible={{
-              isCollapsible: true,
-              size: "xl",
-              inner: {
-                type: "list",
-                list: innerColumns,
-                listType: "detail",
-              },
-            }}
-            tableRerender={tableRerender}
-            style={{
-              height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-              width: "100%",
-              maxWidth: "100vw",
-            }}
-            selectionFilters={filterState}
-            setSelectionFilters={tableFilterProps.setFilterState}
-            loading={dataLoading}
-            dimensions={{
-              height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-              width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
-            }}
-            lastFetchParams={lastFetchParams.current}
-          />
-        </Box>
+            {!viewModeReady ? null : viewMode === "grid" ? (
+              <Box sx={{ flex: 1, minHeight: 0 }}>
+                <AnimeGrid
+                  allData={gridCache}
+                  loading={dataLoading}
+                  loadingMore={gridLoadingMore}
+                  gridSize={gridSize}
+                  onLoadMore={handleGridLoadMore}
+                  renderActions={renderGridActions}
+                />
+              </Box>
+            ) : (
+              <Box sx={{
+                width: "100%",
+                height: "100%",
+                "& .MuiPaper-root": { backgroundColor: "transparent", boxShadow: "none", border: "none" },
+                "& .MuiTableHead-root": { 
+                   "& .MuiTableCell-root": { backgroundColor: "transparent", color: theme.primary, borderBottom: "2px solid rgba(255,255,255,0.05)", fontSize: "0.85rem", fontWeight: "bold", padding: "8px 12px" }
+                },
+                "& .MuiTableBody-root .MuiTableRow-root": {
+                   transition: "background-color 0.2s ease",
+                   backgroundColor: "transparent",
+                   display: "table-row",
+                   "&:hover": {
+                      backgroundColor: "rgba(255,255,255,0.03)",
+                   },
+                   "& .MuiTableCell-root": { 
+                      borderBottom: "1px solid rgba(255,255,255,0.03)", 
+                      backgroundColor: "transparent !important", // Fix crazy column colors
+                      padding: "8px 12px" // More compact
+                   }
+                }
+              }}>
+                <TableTemp
+                  tableName="anime-table"
+                  data={tableData}
+                  setData={setTableData}
+                  header={outerColumns}
+                  sortHeader={setOuterColumns}
+                  collapsible={{
+                    isCollapsible: true,
+                    size: "xl",
+                    inner: {
+                      type: "list",
+                      list: innerColumns,
+                      listType: "detail",
+                    },
+                  }}
+                  tableRerender={tableRerender}
+                  style={{
+                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
+                    width: "100%",
+                    maxWidth: "100vw",
+                  }}
+                  selectionFilters={filterState}
+                  setSelectionFilters={tableFilterProps.setFilterState}
+                  loading={dataLoading}
+                  dimensions={{
+                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
+                    width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
+                  }}
+                  lastFetchParams={lastFetchParams.current}
+                />
+              </Box>
+            )}
       </Box>
-      <UpdateDeleteAnimeModal
-        modalData={modalData}
-        setModalData={setModalData}
-        updateAnime={updateAnime}
-        deleteAnime={deleteAnime}
-        genres={genres}
-      />
-      <CreateAnimeModal
-        genres={genres}
-        createModalData={createModalData}
-        setCreateModalData={setCreateModalData}
-        handleCreate={createAnime}
-      />
+      {modalData.status && (
+        <UpdateDeleteAnimeModal
+          modalData={modalData}
+          setModalData={setModalData}
+          updateAnime={updateAnime}
+          deleteAnime={deleteAnime}
+          genres={genres}
+        />
+      )}
+      {createModalData.status && (
+        <CreateAnimeModal
+          genres={genres}
+          createModalData={createModalData}
+          setCreateModalData={setCreateModalData}
+          handleCreate={createAnime}
+        />
+      )}
     </div>
   );
 }

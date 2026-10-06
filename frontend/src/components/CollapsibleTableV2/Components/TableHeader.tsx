@@ -70,10 +70,17 @@ export function HeaderItem({
     transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
-    border: "1px solid  gray",
-    ...(!dragOverlay && { borderTop: "none" }),
+    border: "none",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    padding: "10px 12px",
     backgroundColor: theme.table_header,
-    color: theme.primary_text,
+    color: theme.secondary_text,
+    fontSize: "0.72rem",
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase" as const,
+    whiteSpace: "nowrap" as const,
+    lineHeight: 1.2,
     width: width,
     ...(dragOverlay && elementWidth && { width: elementWidth }),
     ...(dragOverlay && { cursor: "grabbing" }),
@@ -282,14 +289,17 @@ export default function TableHeader({
         {isCollapsible && (
           <TableCell
             sx={{
-              width: "66px",
+              width: "56px",
+              padding: "10px 12px",
               backgroundColor: theme.table_header,
-              borderColor: "gray",
-              borderRight: "1px solid gray",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
             }}
           />
         )}
         <DndContext
+          // dnd-kit ekran okuyucu metnini <div> olarak basıyor; <tr> içinde kalınca
+          // geçersiz DOM / hydration hatası veriyordu, bu yüzden body'ye taşınıyor
+          accessibility={{ container: typeof document !== "undefined" ? document.body : undefined }}
           sensors={sensors}
           collisionDetection={closestCenter}
           autoScroll={false}
@@ -338,13 +348,13 @@ export default function TableHeader({
                 <TableSortLabel
                   active={orderBy === headers[index].key}
                   direction={orderBy === headers[index].key ? order : "asc"}
-                  style={{
-                    color: theme.primary_text,
-                  }}
                   sx={{
+                    color: "inherit !important",
+                    whiteSpace: "nowrap",
+                    "&.Mui-active": { color: `${theme.primary_text} !important` },
                     "& .MuiTableSortLabel-icon": {
                       color: `${theme.primary} !important`,
-                      fontSize: "1.5rem",
+                      fontSize: "1rem",
                     },
                   }}
                   onClick={() => {
@@ -362,7 +372,7 @@ export default function TableHeader({
                     }
                   }}
                 >
-                  {truncateString(headers[index].value, 10)}
+                  {headers[index].value}
                 </TableSortLabel>
                 {index !== headers.length - 1 && setHeaders && (
                   <div

@@ -1,12 +1,9 @@
-import { Typography, Container } from "@mui/material";
+import type { Metadata } from "next";
+import LiveTvOutlinedIcon from "@mui/icons-material/LiveTvOutlined";
+import ComingSoon from "../../components/Common/ComingSoon";
+
+export const metadata: Metadata = { title: "Diziler" };
 
 export default function SeriesPage() {
-  return (
-    <Container>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Dizi Listesi
-      </Typography>
-      {/* Tablo yapısı daha sonra eklenecek */}
-    </Container>
-  );
+  return <ComingSoon title="Diziler" description="Dizi takibi yakında burada. Sezon ve bölüm ilerlemeni buradan izleyebileceksin." icon={<LiveTvOutlinedIcon />} />;
 }
