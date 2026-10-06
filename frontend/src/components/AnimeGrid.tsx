@@ -1,21 +1,43 @@
 "use client";
 
-import React, { useState, useRef, useEffect, memo } from "react";
-import {
-  Box,
-  Typography,
-  Chip,
-  Dialog,
-  DialogContent,
-  IconButton,
-  LinearProgress,
-} from "@mui/material";
-import { theme } from "../theme/customTheme";
+import React, { useState, useRef, useEffect, useCallback, memo } from "react";
+import { flushSync } from "react-dom";
+import { Box, Typography, Chip, Skeleton } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import StarIcon from "@mui/icons-material/Star";
-import CloseIcon from "@mui/icons-material/Close";
-import TvIcon from "@mui/icons-material/Tv";
-import LocalMoviesIcon from "@mui/icons-material/LocalMovies";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
+import AnimeDetailModal, { COVER_TRANSITION_NAME, getCoverSrc, getStatusInfo } from "./anime/AnimeDetailModal";
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Tarayıcı destekliyorsa durum değişikliğini View Transition içinde yapar */
+function withViewTransition(update: () => void) {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } };
+  if (!doc.startViewTransition || prefersReducedMotion()) {
+    update();
+    return null;
+  }
+  return doc.startViewTransition(() => flushSync(update));
+}
+
+// Kartın 3B eğimi: React state yerine CSS değişkenleri, her harekette yeniden render olmasın
+function handleTilt(e: React.PointerEvent<HTMLDivElement>) {
+  if (e.pointerType !== "mouse") return;
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width;
+  const y = (e.clientY - r.top) / r.height;
+  el.style.setProperty("--rx", `${(0.5 - y) * 10}deg`);
+  el.style.setProperty("--ry", `${(x - 0.5) * 12}deg`);
+  el.style.setProperty("--gx", `${x * 100}%`);
+  el.style.setProperty("--gy", `${y * 100}%`);
+}
+function resetTilt(e: React.PointerEvent<HTMLDivElement>) {
+  const el = e.currentTarget;
+  el.style.setProperty("--rx", "0deg");
+  el.style.setProperty("--ry", "0deg");
+}
 
 interface AnimeGridProps {
   allData: TEATable.IAnime[]; // gridCache
@@ -27,341 +49,6 @@ interface AnimeGridProps {
   renderActions?: (anime: TEATable.IAnime) => React.ReactNode;
 }
 
-// Cover can be a full http(s) URL, a data URI or a raw base64 string
-function getCoverSrc(cover?: string): string | null {
-  if (!cover) return null;
-  if (cover.startsWith("http") || cover.startsWith("data:")) return cover;
-  return `data:image/jpeg;base64,${cover}`;
-}
-
-function getStatusInfo(anime: TEATable.IAnime) {
-  if (anime.PlanToWatch)
-    return {
-      label: "Plan to Watch",
-      color: "#F59E0B",
-      bg: "rgba(245,158,11,0.15)",
-    };
-  const w = anime.WatchStatus;
-  const totalEp = parseInt(String(anime.TotalNumberOfEpisodes)) || 0;
-  if (w > 0 && totalEp > 0 && w >= totalEp)
-    return {
-      label: "Completed",
-      color: "#10B981",
-      bg: "rgba(16,185,129,0.15)",
-    };
-  if (w > 0)
-    return { label: `Ep ${w}`, color: "#3B82F6", bg: "rgba(59,130,246,0.15)" };
-  return { label: "Unknown", color: "#6B7280", bg: "rgba(107,114,128,0.15)" };
-}
-
-function AnimeDetailModal({
-  anime,
-  onClose,
-  renderActions,
-}: {
-  anime: TEATable.IAnime | null;
-  onClose: () => void;
-  renderActions?: (anime: TEATable.IAnime) => React.ReactNode;
-}) {
-  if (!anime) return null;
-  const status = getStatusInfo(anime);
-  const imgSrc = getCoverSrc(anime.Cover);
-  const totalEpModal = parseInt(String(anime.TotalNumberOfEpisodes)) || 0;
-  const progress =
-    totalEpModal > 0 && anime.WatchStatus > 0
-      ? Math.min(100, (anime.WatchStatus / totalEpModal) * 100)
-      : 0;
-
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{
-        sx: {
-          backgroundColor: "#18181b",
-          borderRadius: "20px",
-          border: "1px solid rgba(255,255,255,0.08)",
-          overflow: "hidden",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.8)",
-        },
-      }}
-    >
-      {/* Header with cover */}
-      <Box
-        sx={{
-          position: "relative",
-          width: "100%",
-          height: 220,
-          overflow: "hidden",
-        }}
-      >
-        {imgSrc ? (
-          <img
-            src={imgSrc}
-            alt={anime.Name}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "brightness(0.5) blur(2px)",
-              transform: "scale(1.05)",
-            }}
-          />
-        ) : (
-          <Box
-            sx={{ width: "100%", height: "100%", backgroundColor: "#27272a" }}
-          />
-        )}
-        {/* Gradient overlay */}
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(to bottom, rgba(24,24,27,0) 0%, rgba(24,24,27,0.9) 100%)",
-          }}
-        />
-        {/* Poster + title row */}
-        <Box
-          sx={{
-            position: "absolute",
-            bottom: 16,
-            left: 16,
-            right: 16,
-            display: "flex",
-            alignItems: "flex-end",
-            gap: 2,
-          }}
-        >
-          {imgSrc && (
-            <img
-              src={imgSrc}
-              alt={anime.Name}
-              style={{
-                width: 80,
-                height: 112,
-                objectFit: "cover",
-                borderRadius: 12,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <Box>
-            <Typography
-              sx={{
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: "1.2rem",
-                lineHeight: 1.2,
-                mb: 0.5,
-              }}
-            >
-              {anime.Name}
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Chip
-                label={status.label}
-                size="small"
-                sx={{
-                  backgroundColor: status.bg,
-                  color: status.color,
-                  fontWeight: "bold",
-                  height: 22,
-                  fontSize: "0.7rem",
-                }}
-              />
-              {anime.IsMovie ? (
-                <Chip
-                  icon={<LocalMoviesIcon style={{ fontSize: 12 }} />}
-                  label="Movie"
-                  size="small"
-                  sx={{
-                    backgroundColor: "rgba(76,175,80,0.15)",
-                    color: "#4CAF50",
-                    height: 22,
-                    fontSize: "0.7rem",
-                  }}
-                />
-              ) : (
-                <Chip
-                  icon={<TvIcon style={{ fontSize: 12 }} />}
-                  label="TV"
-                  size="small"
-                  sx={{
-                    backgroundColor: "rgba(244,67,54,0.15)",
-                    color: "#F44336",
-                    height: 22,
-                    fontSize: "0.7rem",
-                  }}
-                />
-              )}
-              {anime.Score && parseFloat(anime.Score) > 0 && (
-                <Chip
-                  icon={<StarIcon style={{ fontSize: 12, color: "#FFD700" }} />}
-                  label={anime.Score}
-                  size="small"
-                  sx={{
-                    backgroundColor: "rgba(255,215,0,0.1)",
-                    color: "#FFD700",
-                    height: 22,
-                    fontSize: "0.7rem",
-                  }}
-                />
-              )}
-            </Box>
-          </Box>
-        </Box>
-        <IconButton
-          onClick={onClose}
-          sx={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            backdropFilter: "blur(4px)",
-            color: "#fff",
-            "&:hover": { backgroundColor: "rgba(0,0,0,0.8)" },
-          }}
-          size="small"
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Box>
-
-      {/* Content */}
-      <DialogContent sx={{ p: 3, pt: 2 }}>
-        {renderActions && (
-          // Close the detail view so the edit/delete modal isn't stacked on top of it
-          <Box
-            sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}
-            onClickCapture={onClose}
-          >
-            {renderActions(anime)}
-          </Box>
-        )}
-        {/* Progress */}
-        {totalEpModal > 0 && (
-          <Box sx={{ mb: 2.5 }}>
-            <Box
-              sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}
-            >
-              <Typography
-                sx={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}
-              >
-                Progress
-              </Typography>
-              <Typography
-                sx={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}
-              >
-                {anime.WatchStatus > 0 ? anime.WatchStatus : 0} / {totalEpModal}{" "}
-                ep
-              </Typography>
-            </Box>
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: "rgba(255,255,255,0.08)",
-                "& .MuiLinearProgress-bar": {
-                  backgroundColor: progress === 100 ? "#10B981" : "#3B82F6",
-                  borderRadius: 3,
-                },
-              }}
-            />
-          </Box>
-        )}
-
-        {/* Stats grid */}
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 1.5,
-          }}
-        >
-          {[
-            { label: "Anime Status", value: anime.AnimeStatus || "—" },
-            {
-              label: "MAL Score",
-              value:
-                (anime as any).MALScore > 0 ? (anime as any).MALScore : "—",
-            },
-            { label: "Genres", value: anime.Genre || "—" },
-            { label: "Series", value: anime.SeriesName || "No Series" },
-          ].map(({ label, value }) => (
-            <Box
-              key={label}
-              sx={{
-                backgroundColor: "rgba(255,255,255,0.04)",
-                borderRadius: "12px",
-                p: 1.5,
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: "0.65rem",
-                  color: "rgba(255,255,255,0.4)",
-                  mb: 0.3,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {label}
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: "0.85rem",
-                  color: "rgba(255,255,255,0.85)",
-                  fontWeight: 600,
-                }}
-              >
-                {String(value)}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-
-        {anime.Notes && (
-          <Box
-            sx={{
-              mt: 1.5,
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderRadius: "12px",
-              p: 1.5,
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: "0.65rem",
-                color: "rgba(255,255,255,0.4)",
-                mb: 0.3,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}
-            >
-              Notes
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: "0.85rem",
-                color: "rgba(255,255,255,0.7)",
-                lineHeight: 1.5,
-              }}
-            >
-              {anime.Notes}
-            </Typography>
-          </Box>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // Memoized: changing columns or loading more pages doesn't re-render existing cards
 const AnimeCard = memo(function AnimeCard({
   anime,
@@ -371,109 +58,104 @@ const AnimeCard = memo(function AnimeCard({
 }: {
   anime: TEATable.IAnime;
   gridSize: number;
-  onSelect: (anime: TEATable.IAnime) => void;
+  onSelect: (anime: TEATable.IAnime, cover: HTMLElement | null) => void;
   renderActions?: (anime: TEATable.IAnime) => React.ReactNode;
 }) {
   const imgSrc = getCoverSrc(anime.Cover);
   const status = getStatusInfo(anime);
-  const colWidth = `${100 / gridSize}%`;
+  const score = parseFloat(String(anime.Score)) || 0;
+  const coverRef = useRef<HTMLDivElement>(null);
 
   return (
-    <Box
-      sx={{
-        width: colWidth,
-        p: 1,
-        flexShrink: 0,
-      }}
-    >
+    <Box sx={{ width: `${100 / gridSize}%`, p: 1, flexShrink: 0, perspective: "900px" }}>
       <Box
-        onClick={() => onSelect(anime)}
+        onClick={() => onSelect(anime, coverRef.current)}
+        onPointerMove={handleTilt}
+        onPointerLeave={resetTilt}
         sx={{
+          "--rx": "0deg",
+          "--ry": "0deg",
+          "--gx": "50%",
+          "--gy": "50%",
           position: "relative",
-          borderRadius: "16px",
-          overflow: "hidden",
+          borderRadius: "10px",
           cursor: "pointer",
-          backgroundColor: "#27272a",
           aspectRatio: "2/3",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-          transition: "transform 0.25s ease, box-shadow 0.25s ease",
+          transform: "rotateX(var(--rx)) rotateY(var(--ry))",
+          transition: "transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
           "&:hover": {
-            transform: "scale(1.04) translateY(-4px)",
-            boxShadow: "0 16px 40px rgba(0,0,0,0.7)",
-            "& .anime-overlay, & .anime-actions": { opacity: 1 },
+            transition: "transform .08s linear, box-shadow .25s ease",
+            boxShadow: "0 18px 40px rgba(0,0,0,0.6)",
+            "& .anime-overlay, & .anime-actions, & .anime-glare": { opacity: 1 },
           },
+          "@media (prefers-reduced-motion: reduce)": { transform: "none" },
         }}
       >
-        {/* Cover Image */}
-        {imgSrc ? (
-          <img
-            src={imgSrc}
-            alt={anime.Name}
-            loading="lazy"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#3f3f46",
-              color: "rgba(255,255,255,0.3)",
-              fontSize: "0.75rem",
-            }}
-          >
-            No Cover
-          </Box>
-        )}
+        <Box
+          ref={coverRef}
+          sx={{ position: "absolute", inset: 0, borderRadius: "10px", overflow: "hidden", backgroundColor: "#27272a" }}
+        >
+          {imgSrc ? (
+            <img
+              src={imgSrc}
+              alt=""
+              loading="lazy"
+              onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
+          ) : (
+            <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem" }}>
+              Kapak yok
+            </Box>
+          )}
+        </Box>
 
-        {/* Score badge */}
-        {anime.Score && parseFloat(anime.Score) > 0 && (
+        {/* Işık yansıması, imleci takip eder */}
+        <Box
+          className="anime-glare"
+          sx={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "10px",
+            pointerEvents: "none",
+            opacity: 0,
+            transition: "opacity .25s ease",
+            background: "radial-gradient(circle at var(--gx) var(--gy), rgba(255,255,255,0.18), transparent 55%)",
+            mixBlendMode: "overlay",
+            zIndex: 1,
+          }}
+        />
+
+        {score > 0 && (
           <Box
             sx={{
               position: "absolute",
               top: 8,
               right: 8,
-              backgroundColor: "rgba(0,0,0,0.75)",
+              zIndex: 2,
+              backgroundColor: "rgba(0,0,0,0.7)",
               backdropFilter: "blur(6px)",
-              borderRadius: "8px",
-              px: 0.8,
+              borderRadius: "6px",
+              px: 0.75,
               py: 0.3,
               display: "flex",
               alignItems: "center",
               gap: 0.3,
-              color: "#FFD700",
+              color: "#FBBF24",
             }}
           >
             <StarIcon sx={{ fontSize: 12 }} />
-            <Typography
-              sx={{ fontSize: "0.7rem", fontWeight: 700, lineHeight: 1 }}
-            >
-              {anime.Score}
-            </Typography>
+            <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, lineHeight: 1 }}>{score}</Typography>
           </Box>
         )}
 
-        {/* Plan to Watch badge */}
         {anime.PlanToWatch && (
-          <Box sx={{ position: "absolute", top: 8, left: 8, color: "#F59E0B" }}>
-            <BookmarkIcon
-              sx={{
-                fontSize: 18,
-                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
-              }}
-            />
+          <Box sx={{ position: "absolute", top: 8, left: 8, zIndex: 2, color: "#F59E0B" }}>
+            <BookmarkIcon sx={{ fontSize: 18, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} />
           </Box>
         )}
 
-        {/* Action IconButtons (shown on hover) */}
         {renderActions && (
           <Box
             className="anime-actions"
@@ -483,7 +165,7 @@ const AnimeCard = memo(function AnimeCard({
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 2,
+              zIndex: 3,
               display: "flex",
               justifyContent: "center",
               py: 0.5,
@@ -491,20 +173,21 @@ const AnimeCard = memo(function AnimeCard({
               transition: "opacity 0.25s ease",
               backgroundColor: "rgba(0,0,0,0.55)",
               backdropFilter: "blur(4px)",
+              borderRadius: "0 0 10px 10px",
             }}
           >
             {renderActions(anime)}
           </Box>
         )}
 
-        {/* Hover overlay */}
         <Box
           className="anime-overlay"
           sx={{
             position: "absolute",
             inset: 0,
-            background:
-              "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)",
+            zIndex: 2,
+            borderRadius: "10px",
+            background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)",
             opacity: 0,
             transition: "opacity 0.25s ease",
             display: "flex",
@@ -512,18 +195,14 @@ const AnimeCard = memo(function AnimeCard({
             justifyContent: "flex-end",
             p: 1.5,
             pb: renderActions ? 6 : 1.5,
+            pointerEvents: "none",
           }}
         >
           <Typography
             sx={{
               color: "#fff",
               fontWeight: 700,
-              fontSize:
-                gridSize <= 4
-                  ? "0.9rem"
-                  : gridSize <= 6
-                    ? "0.78rem"
-                    : "0.68rem",
+              fontSize: gridSize <= 6 ? "0.8rem" : "0.7rem",
               lineHeight: 1.2,
               mb: 0.8,
               display: "-webkit-box",
@@ -539,12 +218,12 @@ const AnimeCard = memo(function AnimeCard({
             size="small"
             sx={{
               alignSelf: "flex-start",
-              backgroundColor: status.bg,
+              backgroundColor: alpha(status.color, 0.18),
               color: status.color,
-              fontWeight: "bold",
+              fontWeight: 700,
               height: 20,
               fontSize: "0.65rem",
-              backdropFilter: "blur(4px)",
+              borderRadius: "6px",
             }}
           />
         </Box>
@@ -552,6 +231,22 @@ const AnimeCard = memo(function AnimeCard({
     </Box>
   );
 });
+
+function SkeletonCards({ count, gridSize }: { count: number; gridSize: number }) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => (
+        <Box key={i} sx={{ width: `${100 / gridSize}%`, p: 1, flexShrink: 0 }}>
+          <Skeleton
+            variant="rounded"
+            animation="wave"
+            sx={{ width: "100%", height: "auto", aspectRatio: "2/3", borderRadius: "10px", bgcolor: "rgba(255,255,255,0.05)" }}
+          />
+        </Box>
+      ))}
+    </>
+  );
+}
 
 export default function AnimeGrid({
   allData,
@@ -561,11 +256,40 @@ export default function AnimeGrid({
   onLoadMore,
   renderActions,
 }: AnimeGridProps) {
-  const [selectedAnime, setSelectedAnime] = useState<TEATable.IAnime | null>(
-    null,
-  );
+  const [selectedAnime, setSelectedAnime] = useState<TEATable.IAnime | null>(null);
+  const [usedTransition, setUsedTransition] = useState(false);
+  // Açık modalın kaynak kartı: kapanışta kapak buraya geri uçar
+  const sourceCover = useRef<HTMLElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
+
+  const openDetail = useCallback((anime: TEATable.IAnime, cover: HTMLElement | null) => {
+    sourceCover.current = cover;
+    const supported = "startViewTransition" in document && !prefersReducedMotion();
+    if (cover && supported) cover.style.viewTransitionName = COVER_TRANSITION_NAME;
+    const vt = withViewTransition(() => {
+      // Aynı isim iki elemanda olamaz: yeni durumda isim modal posterine geçer
+      if (cover) cover.style.viewTransitionName = "";
+      setUsedTransition(supported);
+      setSelectedAnime(anime);
+    });
+    vt?.finished.catch(() => {});
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    const cover = sourceCover.current;
+    const vt = withViewTransition(() => {
+      setSelectedAnime(null);
+      if (cover && cover.isConnected) cover.style.viewTransitionName = COVER_TRANSITION_NAME;
+    });
+    const cleanup = () => {
+      if (cover) cover.style.viewTransitionName = "";
+    };
+    if (vt) vt.finished.then(cleanup, cleanup);
+    else cleanup();
+  }, []);
+
+  const closeImmediately = useCallback(() => setSelectedAnime(null), []);
 
   // Reset loadingMore ref when it changes
   useEffect(() => {
@@ -581,11 +305,7 @@ export default function AnimeGrid({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          !isLoadingMoreRef.current &&
-          !loading
-        ) {
+        if (entries[0].isIntersecting && !isLoadingMoreRef.current && !loading) {
           isLoadingMoreRef.current = true;
           onLoadMore();
         }
@@ -599,34 +319,13 @@ export default function AnimeGrid({
     // the fresh observer fires again and keeps filling the viewport.
   }, [onLoadMore, loading, loadingMore, allData.length]);
 
-  if (loading && allData.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100%",
-          color: "rgba(255,255,255,0.4)",
-        }}
-      >
-        <Typography>Loading...</Typography>
-      </Box>
-    );
-  }
+  const initialLoading = loading && allData.length === 0;
 
-  if (!allData || allData.length === 0) {
+  if (!initialLoading && (!allData || allData.length === 0)) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100%",
-          color: "rgba(255,255,255,0.4)",
-        }}
-      >
-        <Typography>No anime found.</Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, justifyContent: "center", alignItems: "center", height: "100%", color: "rgba(255,255,255,0.4)" }}>
+        <Typography sx={{ color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>Sonuç yok</Typography>
+        <Typography sx={{ fontSize: "0.85rem" }}>Filtreleri değiştirip tekrar dene.</Typography>
       </Box>
     );
   }
@@ -640,57 +339,36 @@ export default function AnimeGrid({
         p: 2,
         "&::-webkit-scrollbar": { width: "6px" },
         "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
-        "&::-webkit-scrollbar-thumb": {
-          backgroundColor: "rgba(255,255,255,0.1)",
-          borderRadius: "4px",
-        },
+        "&::-webkit-scrollbar-thumb": { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "4px" },
       }}
     >
-      {/* Grid */}
-      <Box
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 0,
-          mx: -1,
-        }}
-      >
-        {allData.map((anime, index) => (
-          <AnimeCard
-            key={anime.ID || `anime-${index}`}
-            anime={anime}
-            gridSize={gridSize}
-            onSelect={setSelectedAnime}
-            renderActions={renderActions}
-          />
-        ))}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0, mx: -1 }}>
+        {initialLoading ? (
+          <SkeletonCards count={gridSize * 3} gridSize={gridSize} />
+        ) : (
+          allData.map((anime, index) => (
+            <AnimeCard
+              key={anime.ID || `anime-${index}`}
+              anime={anime}
+              gridSize={gridSize}
+              onSelect={openDetail}
+              renderActions={renderActions}
+            />
+          ))
+        )}
+        {loadingMore && <SkeletonCards count={gridSize} gridSize={gridSize} />}
       </Box>
 
       {/* Sentinel div for IntersectionObserver */}
-      <Box
-        ref={sentinelRef}
-        sx={{
-          height: 60,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {loadingMore && (
-          <Typography
-            sx={{ color: "rgba(255,255,255,0.3)", fontSize: "0.8rem" }}
-          >
-            Loading more...
-          </Typography>
-        )}
-      </Box>
+      <Box ref={sentinelRef} sx={{ height: 60 }} />
 
-      {/* Detail Modal */}
       {selectedAnime && (
         <AnimeDetailModal
           anime={selectedAnime}
-          onClose={() => setSelectedAnime(null)}
+          onClose={closeDetail}
+          onActionClose={closeImmediately}
           renderActions={renderActions}
+          viewTransition={usedTransition}
         />
       )}
     </Box>
