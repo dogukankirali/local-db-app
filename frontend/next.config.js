@@ -10,7 +10,7 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   output: staticExport ? "export" : "standalone",
-  // Eski kodda çok sayıda `any` var; lint build'i kırmasın (tip kontrolü açık kalır)
+  // ESLint kurulu değil (eslint-config-next zinciri yaması olmayan bir açık taşıyor); tip kontrolü build'de açık
   eslint: { ignoreDuringBuilds: true },
   experimental: {
     // MUI ikon/bileşen importlarını yalnızca kullanılan modüllere indirger
