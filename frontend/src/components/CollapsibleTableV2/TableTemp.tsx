@@ -11,7 +11,6 @@ import CrisisAlertIcon from "@mui/icons-material/CrisisAlert";
 import { theme } from "../../theme/customTheme";
 import CustomTableRowV2 from "./Components/CustomTableRowV2";
 import TableHeader from "./Components/TableHeader";
-import { Scrollbars } from "react-custom-scrollbars-2";
 
 // INewTableProps tipini genişletelim
 declare namespace TEATableProps {
@@ -209,28 +208,28 @@ export default function TableTemp<T extends {}>(
         boxShadow: "none",
         overflow: "hidden",
         position: "relative",
+        // Ebeveynin yüksekliğini doldurur: satırlar kendi içinde kayar, sayfalama her zaman altta görünür
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         backgroundColor: `${theme.background_light} !important`,
         "& .MuiTableCell-root": { borderColor: "rgba(255,255,255,0.05)" },
       }}
     >
       <TableContainer
         sx={{
-          maxHeight: props.extendedTable
-            ? "maxContent"
-            : props.style !== undefined
-            ? props.style.height
-            : 470,
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: isMobile ? "auto" : "hidden",
           backgroundColor: theme.background,
           color: theme.primary_text,
-          overflowX: isMobile ? "scroll" : "hidden",
+          borderRadius: 0,
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(255,255,255,0.18) transparent",
         }}
         component={Paper}
       >
-        <Scrollbars
-          autoHeight
-          autoHeightMax={props.dimensions?.height ?? 600}
-          style={{ width: "100%" }}
-        >
           <Table
             stickyHeader
             sx={{
@@ -301,7 +300,6 @@ export default function TableTemp<T extends {}>(
                   .map((_, i) => <SkeletonRow key={i} />)}
             </TableBody>
           </Table>
-        </Scrollbars>
       </TableContainer>
       {props.data !== undefined && (() => {
         const p = props.data.pagination;
@@ -313,6 +311,7 @@ export default function TableTemp<T extends {}>(
           <Box
             sx={{
               width: "100%",
+              flexShrink: 0,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",

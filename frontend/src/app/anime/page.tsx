@@ -725,7 +725,9 @@ function AnimePageContent() {
             ) : (
               <Box sx={{
                 width: "100%",
-                height: "100%",
+                // Başlık çubuğundan kalan alanı doldurur; tablo kendi içinde kayar
+                flex: 1,
+                minHeight: 0,
                 "& .MuiPaper-root": { backgroundColor: "transparent", boxShadow: "none", border: "none" },
                 "& .MuiTableHead-root": { 
                    "& .MuiTableCell-root": { backgroundColor: "transparent", color: theme.primary, borderBottom: "2px solid rgba(255,255,255,0.05)", fontSize: "0.85rem", fontWeight: "bold", padding: "8px 12px" }
@@ -757,18 +759,9 @@ function AnimePageContent() {
                     innerComponent: AnimeDetailPanel,
                   }}
                   tableRerender={tableRerender}
-                  style={{
-                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-                    width: "100%",
-                    maxWidth: "100vw",
-                  }}
                   selectionFilters={filterState}
                   setSelectionFilters={tableFilterProps.setFilterState}
                   loading={dataLoading}
-                  dimensions={{
-                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-                    width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
-                  }}
                   lastFetchParams={lastFetchParams.current}
                 />
               </Box>
