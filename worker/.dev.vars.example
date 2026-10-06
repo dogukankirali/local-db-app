@@ -5,3 +5,7 @@ ENVIRONMENT=development
 APP_URL=http://localhost:3000
 # Mail göndermek istersen: https://resend.com → API Keys
 # RESEND_API_KEY=re_...
+
+# Google ile giriş (README → Google ile giriş)
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
