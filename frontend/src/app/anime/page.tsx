@@ -4,6 +4,7 @@ import React, { JSX, Suspense, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import AnimeGrid from "../../components/AnimeGrid";
+import AnimeDetailPanel from "../../components/anime/AnimeDetailPanel";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
@@ -187,7 +188,6 @@ function AnimePageContent() {
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
   );
-  const [innerColumns] = useState(Constants({ type: "innerColumns" })!);
   const [tableData, setTableData] = useState<
     TEAData.WPagination<TEATable.IAnime>
   >({
@@ -754,11 +754,7 @@ function AnimePageContent() {
                   collapsible={{
                     isCollapsible: true,
                     size: "xl",
-                    inner: {
-                      type: "list",
-                      list: innerColumns,
-                      listType: "detail",
-                    },
+                    innerComponent: AnimeDetailPanel,
                   }}
                   tableRerender={tableRerender}
                   style={{

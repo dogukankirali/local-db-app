@@ -31,7 +31,7 @@ export function getStatusInfo(anime: TEATable.IAnime) {
   return { label: "Başlanmadı", color: palette.textMuted };
 }
 
-const ANIME_STATUS_TR: Record<string, string> = {
+export const ANIME_STATUS_TR: Record<string, string> = {
   Finished: "Bitti",
   "Currently Airing": "Yayında",
   "Not yet aired": "Yayınlanmadı",
@@ -45,7 +45,7 @@ const item = {
   show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 420, damping: 32 } },
 };
 
-function Pill({ color, children }: { color: string; children: React.ReactNode }) {
+export function Pill({ color, children }: { color: string; children: React.ReactNode }) {
   return (
     <Box
       component="span"
@@ -69,7 +69,7 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
   );
 }
 
-function Stat({ label, children }: { label: string; children: React.ReactNode }) {
+export function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <Box sx={{ minWidth: 0 }}>
       <Typography sx={{ fontSize: "0.68rem", color: palette.textFaint, textTransform: "uppercase", letterSpacing: "0.06em", mb: 0.25 }}>

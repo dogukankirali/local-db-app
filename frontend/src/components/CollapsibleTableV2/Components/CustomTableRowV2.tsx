@@ -719,26 +719,23 @@ export default function CustomTableRowV2(
             }}
           >
             <Box
-              sx={{
-                margin: 2,
-                bgcolor: theme.background,
-                borderRadius: 1,
-                p: 2,
-                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  boxShadow: "0 6px 12px rgba(0,0,0,0.15)",
-                },
-              }}
+              sx={
+                // Özel panel kendi kartını çiziyor; eski liste görünümü için eski kutu korunur
+                props.collapsible.innerComponent
+                  ? { mx: 1, mt: 0.5, mb: 1.5 }
+                  : { margin: 2, bgcolor: theme.background, borderRadius: 1, p: 2 }
+              }
             >
-              <Typography
-                variant="h6"
-                gutterBottom
-                component="div"
-                sx={{ color: theme.primary_text, mb: 2 }}
-              >
-                {props.singleData.Name} - Detaylar
-              </Typography>
+              {!props.collapsible.innerComponent && (
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  component="div"
+                  sx={{ color: theme.primary_text, mb: 2 }}
+                >
+                  {props.singleData.Name} - Detaylar
+                </Typography>
+              )}
 
               {props.collapsible.innerComponent && (
                 <props.collapsible.innerComponent
