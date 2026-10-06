@@ -3,8 +3,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "kiroku",
   "main": "src/index.ts",
-  // Özel alan adı: Cloudflare DNS kaydını ve sertifikayı deploy sırasında kendisi oluşturur
-  "routes": [{ "pattern": "app.dogukankirali.com", "custom_domain": true }],
+  // app.dogukankirali.com'un yanında workers.dev ve önizleme adresleri de açık kalsın
   "workers_dev": true,
   "preview_urls": true,
   "compatibility_date": "2026-10-01",
