@@ -60,6 +60,8 @@ type UpdateUserRequest struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Password  string `json:"password"`
+	// Şifre değişikliğinde zorunlu: çalınan bir token ile şifre değiştirilemesin
+	CurrentPassword string `json:"currentPassword"`
 }
 
 // ForgotPasswordRequest, şifre sıfırlama isteği için kullanılan model

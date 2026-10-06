@@ -35,6 +35,7 @@ export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
   password?: string;
+  currentPassword?: string;
 }
 
 export interface ForgotPasswordRequest {

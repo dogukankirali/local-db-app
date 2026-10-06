@@ -64,14 +64,15 @@ export function GenreChips({
   onGenreClick,
   justify = "center",
 }: {
-  genres?: string;
+  // API virgülle ayrılmış string döndürüyor; tiplerde dizi olarak da geçebiliyor
+  genres?: string | string[];
   max?: number;
   activeGenres?: string[];
   onGenreClick?: (genre: string) => void;
   justify?: "center" | "flex-start";
 }) {
   const seen = new Set<string>();
-  const list = (genres ?? "")
+  const list = (Array.isArray(genres) ? genres.join(",") : genres ?? "")
     .split(",")
     .map((g) => g.trim())
     .filter((g) => {
