@@ -688,7 +688,7 @@ export default function CustomTableRowV2(
                   </Box>
                 </TableCell>
               );
-            } else if (header.type === "button") {
+            } else if ((header.type as any) === "button") {
               const renderFunction = header.key as any;
               return (
                 <TableCell
