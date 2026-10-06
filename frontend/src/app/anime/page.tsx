@@ -1,6 +1,6 @@
 "use client";
 
-import React, { JSX, Suspense } from "react";
+import React, { JSX, Suspense, useCallback } from "react";
 import {
   Box,
   Container,
@@ -73,11 +73,15 @@ function AnimePageContent() {
 
   const [dataLoading, setDataLoading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
+  // Kayıtlı görünüm okunana kadar hiçbir görünümü render etmiyoruz; aksi halde
+  // tablo kayıtlıyken önce grid isteği de atılıyordu (çift istek).
+  const [viewModeReady, setViewModeReady] = useState<boolean>(false);
   useEffect(() => {
     const saved = localStorage.getItem("viewMode");
     if (saved === "table" || saved === "grid") {
       setViewMode(saved);
     }
+    setViewModeReady(true);
   }, []);
   
   const handleViewModeChange = (newView: "table" | "grid") => {
@@ -90,19 +94,21 @@ function AnimePageContent() {
   const gridCachePage = useRef<number>(0); // last fetched page for grid
   const gridTotalPages = useRef<number>(Infinity);
   const [gridLoadingMore, setGridLoadingMore] = useState<boolean>(false);
-  const GRID_PRE_FETCH = 24; // pre-fetch 64 at once (max 8 cols * 8 rows)
+  const gridFetchInFlight = useRef<boolean>(false);
+  const GRID_PRE_FETCH = 24; // initial batch & page size for infinite scroll
 
   // Initial grid load & when viewMode switches to grid
   useEffect(() => {
-    if (viewMode === "grid" && gridCache.length === 0) {
-      // Fetch the big initial batch
+    if (viewModeReady && viewMode === "grid" && gridCache.length === 0) {
       fetchGridPage(1, GRID_PRE_FETCH, true);
     }
-  }, [viewMode]);
+  }, [viewMode, viewModeReady]);
 
   // gridSize change → no refetch, just re-layout (cache already has the data)
 
   const fetchGridPage = async (page: number, count: number, reset: boolean) => {
+    if (gridFetchInFlight.current && !reset) return;
+    gridFetchInFlight.current = true;
     if (reset) {
       setGridLoadingMore(false);
       setDataLoading(true);
@@ -123,8 +129,47 @@ function AnimePageContent() {
     } catch (err) {
       console.error("Grid fetch error:", err);
     } finally {
+      gridFetchInFlight.current = false;
       setDataLoading(false);
       setGridLoadingMore(false);
+    }
+  };
+
+  // Stable reference so AnimeGrid's IntersectionObserver isn't rebuilt on every render
+  const fetchGridPageRef = useRef(fetchGridPage);
+  fetchGridPageRef.current = fetchGridPage;
+  const handleGridLoadMore = useCallback(() => {
+    if (gridFetchInFlight.current) return;
+    const nextPage = gridCachePage.current + 1;
+    if (nextPage <= gridTotalPages.current) {
+      fetchGridPageRef.current(nextPage, GRID_PRE_FETCH, false);
+    }
+  }, []);
+
+  // After a create/update/delete: keep gridCache in sync without refetching
+  // everything, and only hit the table endpoint when the table is visible.
+  const refreshAfterMutation = (
+    kind: "create" | "update" | "delete",
+    anime?: TEATable.IAnime
+  ) => {
+    if (kind === "create") {
+      setGridCache([]);
+      gridCachePage.current = 0;
+      gridTotalPages.current = Infinity;
+      if (viewMode === "grid") fetchGridPage(1, GRID_PRE_FETCH, true);
+    } else if (anime) {
+      setGridCache((prev) =>
+        kind === "delete"
+          ? prev.filter((a) => a.ID !== anime.ID)
+          : prev.map((a) => (a.ID === anime.ID ? { ...a, ...anime } : a))
+      );
+    }
+    if (viewMode === "table") {
+      if (lastFetchParams.current) {
+        getData(lastFetchParams.current);
+      } else {
+        getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" });
+      }
     }
   };
 
@@ -180,7 +225,7 @@ function AnimePageContent() {
           <span>
             <IconButton
               onClick={(e) => { e.stopPropagation(); addToWatchlist(data); }}
-              sx={{ color: theme.success_alt, backgroundColor: 'rgba(16, 185, 129, 0.1)', '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.2)' }, opacity: data?.PlanToWatch ? 0.5 : 1 }}
+              sx={{ color: theme.success_alt, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.15)' }, opacity: data?.PlanToWatch ? 0.5 : 1 }}
               size='small'
               disabled={!isAdmin || data?.PlanToWatch}
             >
@@ -193,7 +238,7 @@ function AnimePageContent() {
             <IconButton
               onClick={(e) => { e.stopPropagation(); setModalData({ status: true, type: 'update', data: data }); }}
               disabled={!isAdmin}
-              sx={{ color: theme.primary, backgroundColor: 'rgba(0, 176, 240, 0.1)', '&:hover': { backgroundColor: 'rgba(0, 176, 240, 0.2)' } }}
+              sx={{ color: theme.primary, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(0, 176, 240, 0.15)' } }}
               size='small'
             >
               <EditIcon fontSize='small' />
@@ -205,7 +250,7 @@ function AnimePageContent() {
             <IconButton
               onClick={(e) => { e.stopPropagation(); setModalData({ status: true, type: 'delete', data: data }); }}
               disabled={!isAdmin}
-              sx={{ color: theme.danger, backgroundColor: 'rgba(255, 0, 0, 0.1)', '&:hover': { backgroundColor: 'rgba(255, 0, 0, 0.2)' } }}
+              sx={{ color: theme.danger, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 0, 0, 0.15)' } }}
               size='small'
             >
               <DeleteIcon fontSize='small' />
@@ -215,6 +260,15 @@ function AnimePageContent() {
       </Box>
     );
   }
+
+  // Same IconButton actions for grid cards; stable identity keeps memoized cards from re-rendering
+  const settingsButtonsRef = useRef(SettingsButtons);
+  settingsButtonsRef.current = SettingsButtons;
+  const renderGridActions = useCallback(
+    (anime: TEATable.IAnime) =>
+      settingsButtonsRef.current(String(anime.ID), 0, anime),
+    []
+  );
 
   const { filterState, handleClickFilters, ...tableFilterProps } =
     useTableFilters(Constants({ type: "tableFilters", additionalData: { genres, series } })!, () => {});
@@ -322,9 +376,7 @@ function AnimePageContent() {
           stopOnFocus: true,
         }).showToast();
         setModalData({ status: false });
-
-        // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
+        refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error updating anime:", err);
@@ -354,9 +406,7 @@ function AnimePageContent() {
           stopOnFocus: true,
         }).showToast();
         setModalData({ status: false });
-
-        // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
+        refreshAfterMutation("delete", modalData.data);
       }
     } catch (err) {
       console.error(err);
@@ -386,9 +436,7 @@ function AnimePageContent() {
           stopOnFocus: true,
         }).showToast();
         setCreateModalData({ status: false });
-
-        // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
+        refreshAfterMutation("create");
       }
     } catch (err) {
       console.error(err);
@@ -596,9 +644,7 @@ function AnimePageContent() {
           backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
           stopOnFocus: true,
         }).showToast();
-
-        // Reset order parameters to get new data
-        { if (lastFetchParams.current) { getData(lastFetchParams.current); } else { getData({ page: 1, count: 20, filters: [], order: "asc", orderBy: "Name" }); } }
+        refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error adding anime to watchlist:", err);
@@ -697,23 +743,14 @@ function AnimePageContent() {
               </ToggleButtonGroup>
             </Box>
 
-            {viewMode === "grid" ? (
+            {!viewModeReady ? null : viewMode === "grid" ? (
               <AnimeGrid
-                data={gridCache}
                 allData={gridCache}
-                pagination={tableData.pagination}
                 loading={dataLoading}
                 loadingMore={gridLoadingMore}
                 gridSize={gridSize}
-                onPageChange={() => {}}
-                onLoadMore={() => {
-                  if (!gridLoadingMore && !dataLoading) {
-                    const nextPage = gridCachePage.current + 1;
-                    if (nextPage <= gridTotalPages.current) {
-                      fetchGridPage(nextPage, GRID_PRE_FETCH, false);
-                    }
-                  }
-                }}
+                onLoadMore={handleGridLoadMore}
+                renderActions={renderGridActions}
               />
             ) : (
               <Box sx={{

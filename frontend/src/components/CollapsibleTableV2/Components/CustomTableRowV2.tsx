@@ -303,9 +303,30 @@ export default function CustomTableRowV2(
               ? theme.table_row_dark
               : theme.table_row_light,
             color: theme.primary_text,
-            fontSize: isMobile ? "0.75rem" : "inherit",
-            padding: isMobile ? "8px 4px" : "16px",
+            fontSize: isMobile ? "0.75rem" : "0.8rem",
+            padding: isMobile ? "6px 4px" : "8px 12px",
           };
+
+          // Aksiyon (Settings) sütunu: key bir render fonksiyonu, string değil
+          if (header.type === "button" && typeof header.key === "function") {
+            const renderFunction = header.key as (
+              id: string,
+              i: number,
+              data?: any
+            ) => React.ReactNode;
+            return (
+              <TableCell
+                key={`cell-button-${rowIndex}-${index}`}
+                align="center"
+                style={{ ...colStyle, whiteSpace: "nowrap" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                {renderFunction(props.singleData.id, rowIndex, props.singleData)}
+              </TableCell>
+            );
+          }
 
           if (typeof header.key === "string") {
             if (header.type === "string") {
@@ -370,8 +391,8 @@ export default function CustomTableRowV2(
                   style={{
                     ...colStyle,
                     color: theme.primary_text,
-                    fontWeight: "semi-bold",
-                    fontSize: 16,
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
                   }}
                 >
                   {props.singleData[header.key]}
@@ -397,26 +418,6 @@ export default function CustomTableRowV2(
                   style={colStyle}
                 >
                   {props.singleData[header.key]}
-                </TableCell>
-              );
-            } else if (header.type === "button") {
-              const renderFunction = header.key as any;
-              return (
-                <TableCell
-                  key={`cell-button-${rowIndex}-${index}`}
-                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
-                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
-                  align="center"
-                  style={colStyle}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
-                  }}
-                >
-                  {renderFunction(
-                    props.singleData.id,
-                    rowIndex,
-                    props.singleData
-                  )}
                 </TableCell>
               );
             } else if (
@@ -686,26 +687,6 @@ export default function CustomTableRowV2(
                           />
                         ))}
                   </Box>
-                </TableCell>
-              );
-            } else if ((header.type as any) === "button") {
-              const renderFunction = header.key as any;
-              return (
-                <TableCell
-                  key={`cell-button-${rowIndex}-${index}`}
-                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
-                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
-                  align="center"
-                  style={colStyle}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
-                  }}
-                >
-                  {renderFunction(
-                    props.singleData.id,
-                    rowIndex,
-                    props.singleData
-                  )}
                 </TableCell>
               );
             } else {

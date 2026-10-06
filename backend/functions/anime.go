@@ -343,7 +343,7 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				Order(orderClause).
 				Limit(count).
 				Offset((page - 1) * count).
-				Group("a.id, a.*, s.name").Statement
+				Group("a.id, s.name").Statement
 
 			// SQL sorgusunu yazdır
 			fmt.Println("SQL Sorgusu:", sqlQuery.SQL.String())
@@ -358,7 +358,7 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				Order(orderClause).
 				Limit(count).
 				Offset((page - 1) * count).
-				Group("a.id, a.*, s.name").
+				Group("a.id, s.name").
 				Scan(&animes)
 		} else {
 			// Sıralama parametresi varsa
@@ -373,7 +373,7 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				Order(orderClause).
 				Limit(count).
 				Offset((page - 1) * count).
-				Group("a.id, a.*, s.name").Statement
+				Group("a.id, s.name").Statement
 
 			// SQL sorgusunu yazdır
 			fmt.Println("SQL Sorgusu:", sqlQuery.SQL.String())
@@ -387,7 +387,7 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 				Order(orderClause).
 				Limit(count).
 				Offset((page - 1) * count).
-				Group("a.id, a.*, s.name").
+				Group("a.id, s.name").
 				Scan(&animes)
 		}
 
