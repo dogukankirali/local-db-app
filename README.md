@@ -102,7 +102,7 @@ Anime kataloğu (ad, durum, bölüm sayısı, kapak, türler, MAL puanı) herkes
 
 ## Yayın takibi ve yeni bölüm maili
 
-`.github/workflows/airing.yml` her 3 saatte bir yayındaki animeleri AniList'ten kontrol eder (AniList Workers'ı engellediği için GitHub Actions'ta çalışır): durum, bölüm sayısı, MAL puanı ve sıradaki bölüm güncellenir; yeni bölüm çıkınca, profilinde bildirimi açan ve animeyi listesinde tutan kullanıcılara mail atılır (Resend). Kurulum:
+**Şu an kapalı** (zamanlama yorum satırında; Actions sekmesinden elle çalıştırılabilir). Açıldığında `.github/workflows/airing.yml` her 3 saatte bir yayındaki animeleri AniList'ten kontrol eder (AniList Workers'ı engellediği için GitHub Actions'ta çalışır): durum, bölüm sayısı, MAL puanı ve sıradaki bölüm güncellenir; yeni bölüm çıkınca, profilinde bildirimi açan ve animeyi listesinde tutan kullanıcılara mail atılır (Resend). Kurulum:
 
 1. Rastgele bir değer üret ve iki yere aynısını yaz: `cd worker && npx wrangler secret put CRON_SECRET`, GitHub → Settings → Secrets and variables → Actions → `KIROKU_CRON_SECRET`.
 2. Site Cloudflare Access arkasındaysa `/api` için Bypass kuralı olmalı ya da bir service token oluşturup `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` secret'larını ekle.
@@ -119,7 +119,7 @@ Tüm uçlar `/api` altındadır. 🔑 giriş (JWT ya da eklenti anahtarı), 🔒
 | POST                | `/getAnimeTable?page&count&orderBy&order`       | Filtrelenmiş ve sayfalanmış anime listesi (giriş yapan kullanıcının puan/bölüm verisiyle) |
 | GET                 | `/getAnimeById?id`                              | Tek anime                                          |
 | GET                 | `/animeCover?id`                                | DB'de base64 saklanan kapağı cache'lenebilir döner |
-| POST 🔑             | `/createAnime`                                  | Anime ekleme (aynı isim varsa günceller); eklenti `/createAnime` adresini de kullanabilir |
+| POST 🔑             | `/createAnime`                                  | Anime ekleme (aynı isim varsa günceller); eklenti de bunu kullanır |
 | POST 🔒             | `/createAnimeWithFile`                          | CSV ile toplu ekleme                               |
 | POST 🔑             | `/updateAnimeTable`                             | Kendi puan/bölüm/PTW/notlarını günceller; admin katalog alanlarını da |
 | DELETE 🔒           | `/deleteAnime?id`                               | Anime silme                                        |

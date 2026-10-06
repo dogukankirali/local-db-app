@@ -706,7 +706,7 @@ async function handleAddFromMAL(tabId) {
                 return showSyncerStatus('Sayfadan anime bilgisi alınamadı.', true);
             }
 
-            await safeFetchJson(`${serviceUrl}/createAnime`, {
+            await safeFetchJson(`${serviceUrl}/api/createAnime`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", ...(await getAuthHeader()) },
                 body: JSON.stringify(response.animeInfo),
