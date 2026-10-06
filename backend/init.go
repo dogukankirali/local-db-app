@@ -20,6 +20,45 @@ func checkTableExists(db *gorm.DB, schema, table string) bool {
 	return count > 0
 }
 
+// EnsureWatchListSync, animes.plan_to_watch ile watch_lists tablosunu veritabanı
+// seviyesinde senkron tutan trigger'ı kurar. Böylece web arayüzü, extension veya
+// MAL sync hangi yoldan plan_to_watch yazarsa yazsın watchlist anında güncellenir.
+// Her açılışta idempotent olarak çalışır ve eksik kayıtları bir kez tamamlar.
+func EnsureWatchListSync(db *gorm.DB) error {
+	statements := []string{
+		`CREATE OR REPLACE FUNCTION anime.sync_watch_list() RETURNS trigger AS $$
+		BEGIN
+			IF NEW.plan_to_watch THEN
+				IF NOT EXISTS (SELECT 1 FROM anime.watch_lists WHERE anime_id = NEW.id) THEN
+					INSERT INTO anime.watch_lists (anime_id, order_rank)
+					SELECT NEW.id, COALESCE(MAX(order_rank), 0) + 1 FROM anime.watch_lists;
+				END IF;
+			ELSIF TG_OP = 'UPDATE' AND OLD.plan_to_watch THEN
+				DELETE FROM anime.watch_lists WHERE anime_id = NEW.id;
+			END IF;
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql`,
+		`DROP TRIGGER IF EXISTS trg_sync_watch_list ON anime.animes`,
+		`CREATE TRIGGER trg_sync_watch_list
+			AFTER INSERT OR UPDATE OF plan_to_watch ON anime.animes
+			FOR EACH ROW EXECUTE FUNCTION anime.sync_watch_list()`,
+		// Trigger'dan önce eklenmiş PTW animeleri watchlist'e ekle
+		`INSERT INTO anime.watch_lists (anime_id, order_rank)
+			SELECT a.id, (SELECT COALESCE(MAX(order_rank), 0) FROM anime.watch_lists) + ROW_NUMBER() OVER (ORDER BY a.id)
+			FROM anime.animes a
+			WHERE a.plan_to_watch AND NOT EXISTS (SELECT 1 FROM anime.watch_lists w WHERE w.anime_id = a.id)`,
+	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, s := range statements {
+			if err := tx.Exec(s).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // InitializeDatabase veritabanı başlangıç işlemlerini gerçekleştirir
 func InitializeDatabase(db *gorm.DB) error {
 	log.Println("Veritabanı yapılandırması başlatılıyor...")

@@ -2,6 +2,8 @@ package functions
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -85,6 +87,82 @@ func buildOrderByClause(orderBy, order string) string {
 		}
 		// Varsayılan olarak snake_case dönüşümü kullan
 		return fmt.Sprintf("%s %s", PascalToSnakeCase(orderBy), order)
+	}
+}
+
+// Liste sorgusunda base64 (data:) kapaklar taşınmaz; yerine işaretçi döner ve
+// rewriteInlineCovers bunu /animeCover adresine çevirir. Birkaç base64 kapak
+// sayfa yanıtını yüzlerce KB'a şişiriyordu.
+const inlineCoverMarker = "__inline__"
+
+const animeListColumns = `a.id, a.name, a.anime_status, a.watch_status, a.total_number_of_episodes, a.is_movie,
+	a.score, a.mal_score, a.notes, a.anime_link, a.mal_anime_link, a.series, a.plan_to_watch,
+	CASE WHEN a.cover LIKE 'data:%' THEN '` + inlineCoverMarker + `' ELSE a.cover END AS cover`
+
+// coverURL, isteğin geldiği host üzerinden /animeCover adresini üretir
+func coverURL(r *http.Request, id uint) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
+		scheme = proto
+	}
+	return fmt.Sprintf("%s://%s/animeCover?id=%d", scheme, r.Host, id)
+}
+
+func rewriteInlineCovers(r *http.Request, animes []models.Anime) {
+	for i := range animes {
+		if animes[i].Cover == inlineCoverMarker {
+			animes[i].Cover = coverURL(r, animes[i].ID)
+		}
+	}
+}
+
+// isCoverEndpointURL, istemcinin geri gönderdiği kapak değerinin bizim
+// ürettiğimiz /animeCover adresi olup olmadığını söyler (o durumda DB'deki
+// orijinal kapak korunmalı).
+func isCoverEndpointURL(cover string) bool {
+	return strings.Contains(cover, "/animeCover?id=")
+}
+
+// GetAnimeCover, base64 olarak saklanan kapağı ikili resim olarak, cache'lenebilir şekilde döner
+func GetAnimeCover(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			http.Error(w, "invalid id", http.StatusBadRequest)
+			return
+		}
+		var cover string
+		if err := db.Table("anime.animes").Select("cover").Where("id = ?", id).Scan(&cover).Error; err != nil || cover == "" {
+			http.NotFound(w, r)
+			return
+		}
+		if !strings.HasPrefix(cover, "data:") {
+			http.Redirect(w, r, cover, http.StatusFound)
+			return
+		}
+		meta, payload, ok := strings.Cut(cover, ",")
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		img, err := base64.StdEncoding.DecodeString(payload)
+		if err != nil {
+			http.Error(w, "invalid cover", http.StatusInternalServerError)
+			return
+		}
+		contentType := strings.TrimSuffix(strings.TrimPrefix(meta, "data:"), ";base64")
+		etag := fmt.Sprintf(`"%x"`, sha1.Sum(img))
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Header().Set("ETag", etag)
+		if r.Header.Get("If-None-Match") == etag {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		w.Write(img)
 	}
 }
 
@@ -329,71 +407,25 @@ func GetAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			}
 		}
 
+		listQuery := db.Table("anime.animes a").
+			Select(animeListColumns+", string_agg(g.genre_name, ', ') as genre, s.name as series_name").
+			Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
+			Joins("left join anime.genres g on ag.genre_id = g.id").
+			Joins("left join anime.anime_series s on a.series = s.id")
 		if len(whereString) != 0 {
-			// Sıralama parametresi varsa
-			orderClause := buildOrderByClause(orderBy, order)
-
-			// SQL sorgusunu debug et
-			sqlQuery := db.Table("anime.animes a").
-				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
-				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
-				Joins("left join anime.genres g on ag.genre_id = g.id").
-				Joins("left join anime.anime_series s on a.series = s.id").
-				Where(whereString).
-				Order(orderClause).
-				Limit(count).
-				Offset((page - 1) * count).
-				Group("a.id, s.name").Statement
-
-			// SQL sorgusunu yazdır
-			fmt.Println("SQL Sorgusu:", sqlQuery.SQL.String())
-			fmt.Println("SQL Parametreleri:", sqlQuery.Vars)
-
-			result = db.Table("anime.animes a").
-				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
-				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
-				Joins("left join anime.genres g on ag.genre_id = g.id").
-				Joins("left join anime.anime_series s on a.series = s.id").
-				Where(whereString).
-				Order(orderClause).
-				Limit(count).
-				Offset((page - 1) * count).
-				Group("a.id, s.name").
-				Scan(&animes)
-		} else {
-			// Sıralama parametresi varsa
-			orderClause := buildOrderByClause(orderBy, order)
-
-			// SQL sorgusunu debug et
-			sqlQuery := db.Table("anime.animes a").
-				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
-				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
-				Joins("left join anime.genres g on ag.genre_id = g.id").
-				Joins("left join anime.anime_series s on a.series = s.id").
-				Order(orderClause).
-				Limit(count).
-				Offset((page - 1) * count).
-				Group("a.id, s.name").Statement
-
-			// SQL sorgusunu yazdır
-			fmt.Println("SQL Sorgusu:", sqlQuery.SQL.String())
-			fmt.Println("SQL Parametreleri:", sqlQuery.Vars)
-
-			result = db.Table("anime.animes a").
-				Select("a.*, string_agg(g.genre_name, ', ') as genre, s.name as series_name").
-				Joins("left join anime.animes_genres ag on a.id = ag.anime_id").
-				Joins("left join anime.genres g on ag.genre_id = g.id").
-				Joins("left join anime.anime_series s on a.series = s.id").
-				Order(orderClause).
-				Limit(count).
-				Offset((page - 1) * count).
-				Group("a.id, s.name").
-				Scan(&animes)
+			listQuery = listQuery.Where(whereString)
 		}
+		result = listQuery.
+			Order(buildOrderByClause(orderBy, order)).
+			Limit(count).
+			Offset((page - 1) * count).
+			Group("a.id, s.name").
+			Scan(&animes)
 
 		if result.Error != nil {
 			panic(result.Error)
 		}
+		rewriteInlineCovers(r, animes)
 
 		// Sayım için sorgu
 		var totalCount int64
@@ -504,14 +536,14 @@ func UpdateAnimeTableData(db *gorm.DB) http.HandlerFunc {
 			UPDATE anime.animes 
 			SET name = $1, anime_status = $2, watch_status = $3, total_number_of_episodes = $4,
 				is_movie = $5, score = $6, mal_score = $7, notes = $8, anime_link = $9,
-				mal_anime_link = $10, cover = $11, series = $12, plan_to_watch = $13
+				mal_anime_link = $10, cover = CASE WHEN $15 THEN cover ELSE $11 END, series = $12, plan_to_watch = $13
 			WHERE id = $14
 		`
 
 		err := db.Exec(updateQuery,
 			anime.Name, anime.AnimeStatus, anime.WatchStatus, anime.TotalNumberOfEpisodes,
 			anime.IsMovie, anime.Score, anime.MALScore, anime.Notes, anime.AnimeLink,
-			anime.MALAnimeLink, anime.Cover, anime.Series, anime.PlanToWatch, reqBody.ID).Error
+			anime.MALAnimeLink, anime.Cover, anime.Series, anime.PlanToWatch, reqBody.ID, isCoverEndpointURL(anime.Cover)).Error
 
 		if err != nil {
 			fmt.Println("Update error:", err)

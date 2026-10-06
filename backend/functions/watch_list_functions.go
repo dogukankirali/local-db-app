@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -27,13 +28,11 @@ func GetWatchList(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		// Log ne kadar veri döndüğünü
-		log.Printf("GetWatchList %d kayıt buldu", len(watchList))
-
-		// Her bir kayıt için detayları logla
-		for i, item := range watchList {
-			log.Printf("Kayıt %d: ID=%d, AnimeID=%d, OrderRank=%d, AnimeName=%s",
-				i+1, item.ID, item.AnimeID, item.OrderRank, item.Anime.Name)
+		// Base64 kapakları yanıtta taşıma, cache'lenebilir kapak adresi ver
+		for i := range watchList {
+			if strings.HasPrefix(watchList[i].Anime.Cover, "data:") {
+				watchList[i].Anime.Cover = coverURL(r, watchList[i].Anime.ID)
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")

@@ -206,12 +206,11 @@ export default function WatchListPage() {
   const router = useRouter();
 
   // İzleme listesini al -> Get the watch list
-  const fetchWatchList = async () => {
+  // silent: arka plan yenilemesinde spinner gösterme (sekmeye dönüşte vb.)
+  const fetchWatchList = async (silent = false) => {
     try {
-      setLoading(true);
-      console.log("API URL:", API_URL);
+      if (!silent) setLoading(true);
       const response = await axios.get(`${API_URL}/watchlist`);
-      console.log("API Response:", response.data);
       setWatchList(response.data);
       setError("");
     } catch (err: any) {
@@ -235,28 +234,6 @@ export default function WatchListPage() {
         `Failed to remove anime from list: ${err.message || "Unknown error"}`
       );
       setOpenSnackbar(true);
-    }
-  };
-
-  // Plan to Watch işaretli olan tüm animeleri izleme listesine ekle -> Add all animes marked as Plan to Watch to the watch list
-  const syncPlanToWatch = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.post(`${API_URL}/watchlist/sync`);
-      console.log("Sync response:", response.data);
-      fetchWatchList();
-      setSuccess(
-        `${response.data.added} anime successfully added to watch list`
-      );
-      setOpenSnackbar(true);
-    } catch (err: any) {
-      console.error("Sync failed:", err);
-      setError(
-        `Failed to sync Plan to Watch animes: ${err.message || "Unknown error"}`
-      );
-      setOpenSnackbar(true);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -404,6 +381,17 @@ export default function WatchListPage() {
 
   useEffect(() => {
     fetchWatchList();
+    // Watchlist backend'de PTW ile otomatik senkron; extension veya başka sekmeden
+    // eklenenler sayfaya dönüldüğünde sessizce yenilenir.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchWatchList(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
 
   return (
@@ -418,16 +406,6 @@ export default function WatchListPage() {
           Watch List
         </Typography>
         <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={syncPlanToWatch}
-            sx={{ mr: 2 }}
-            startIcon={<RefreshIcon />}
-            disabled={loading}
-          >
-            Sync PTW Animes
-          </Button>
           <Button
             variant="outlined"
             color="primary"
@@ -462,7 +440,7 @@ export default function WatchListPage() {
       <Button
         variant="outlined"
         color="primary"
-        onClick={fetchWatchList}
+        onClick={() => fetchWatchList()}
         sx={{ mb: 2 }}
         startIcon={<RefreshIcon />}
         disabled={loading}

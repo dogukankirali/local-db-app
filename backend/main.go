@@ -217,11 +217,15 @@ func main() {
 	if err := InitializeDatabase(db); err != nil {
 		log.Printf("Veritabanı başlangıç işlemleri sırasında hata: %v", err)
 	}
+	if err := EnsureWatchListSync(db); err != nil {
+		log.Printf("Watchlist trigger kurulamadı: %v", err)
+	}
 
 	port := os.Getenv("PORT")
 
 	// API rotaları
 	router.HandleFunc("/getAnimeTable", anime_functions.GetAnimeTableData(db))
+	router.HandleFunc("/animeCover", anime_functions.GetAnimeCover(db)).Methods("GET")
 	router.HandleFunc("/getGenres", anime_functions.GetGenres(db))
 	router.HandleFunc("/getSeries", anime_functions.GetSeries(db))
 	router.HandleFunc("/updateAnimeTable", anime_functions.UpdateAnimeTableData(db))
@@ -288,9 +292,10 @@ func main() {
 	}
 
 	log.Println("Server starting at port " + port)
-	if env == "production" {
-		log.Println("Starting in production mode (HTTP)")
-		log.Fatal(srv.ListenAndServe()) // 👈 Bu satırı ekle
+	// Lokal geliştirmede sertifika gerekmesin: DEV_TLS=true verilmedikçe HTTP ile çalış
+	if env == "production" || (env == "development" && os.Getenv("DEV_TLS") != "true") {
+		log.Printf("Starting in %s mode (HTTP)", env)
+		log.Fatal(srv.ListenAndServe())
 	} else {
 		log.Println("Starting in development mode (HTTPS)")
 		log.Fatal(srv.ListenAndServeTLS(certFile, keyFile))
