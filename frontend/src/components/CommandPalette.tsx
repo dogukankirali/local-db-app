@@ -14,6 +14,7 @@ import { navSections } from "../config/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import { AnimeService } from "../Services/AnimeServices";
 import { palette } from "../theme/customTheme";
+import { sizedCover } from "../utils/cover";
 
 // Ctrl/⌘ + K ile her sayfadan açılan komut paleti: anime arama, sayfalar ve hızlı işlemler.
 // Başka bir yerden açmak için: window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE))
@@ -197,7 +198,7 @@ export default function CommandPalette() {
                 >
                   <Box
                     component="img"
-                    src={a.Cover || undefined}
+                    src={sizedCover(a.Cover, "small") || undefined}
                     alt=""
                     loading="lazy"
                     sx={{ width: 30, height: 42, borderRadius: "4px", objectFit: "cover", flexShrink: 0, backgroundColor: palette.surfaceRaised }}

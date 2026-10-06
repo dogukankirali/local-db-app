@@ -28,6 +28,7 @@ import TvIcon from "@mui/icons-material/Tv";
 import { GenreChips } from "../../Common/GenreChip";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { coverImgStyle, revealCover, sizedCover } from "../../../utils/cover";
 
 // IColumnItem tipini genişleterek hide özelliğini ekleyelim
 interface IExtendedColumnItem extends TEATable.IColumnItem {
@@ -507,17 +508,19 @@ export default function CustomTableRowV2(
                   >
                     {props.singleData[header.key] && (
                       <img
-                        src={`${props.singleData[header.key]}`}
+                        src={sizedCover(String(props.singleData[header.key]), "small")}
                         onMouseEnter={(e) => {
                           handlePopoverOpen(e, "cover");
                         }}
                         onMouseLeave={handlePopoverClose}
                         alt=""
                         loading="lazy"
+                        decoding="async"
+                        onLoad={revealCover}
                         onError={(e) => {
                           e.currentTarget.style.visibility = "hidden";
                         }}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6, display: "block" }}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6, display: "block", ...coverImgStyle }}
                       />
                     )}
                     {props.singleData["PlanToWatch"] === true && (

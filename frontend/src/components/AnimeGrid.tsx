@@ -7,6 +7,7 @@ import { alpha } from "@mui/material/styles";
 import StarIcon from "@mui/icons-material/Star";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
 import AnimeDetailModal, { COVER_TRANSITION_NAME, getCoverSrc, getStatusInfo } from "./anime/AnimeDetailModal";
+import { coverImgStyle, coverLoadingSx, revealCover, sizedCover } from "../utils/cover";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -61,7 +62,8 @@ const AnimeCard = memo(function AnimeCard({
   onSelect: (anime: TEATable.IAnime, cover: HTMLElement | null) => void;
   renderActions?: (anime: TEATable.IAnime) => React.ReactNode;
 }) {
-  const imgSrc = getCoverSrc(anime.Cover);
+  // Kalabalık grid'de kartlar küçük; orta boy yeter (7+ sütun), aksi halde büyük kapak
+  const imgSrc = sizedCover(getCoverSrc(anime.Cover), gridSize >= 7 ? "medium" : "large");
   const status = getStatusInfo(anime);
   const score = parseFloat(String(anime.Score)) || 0;
   const coverRef = useRef<HTMLDivElement>(null);
@@ -94,15 +96,17 @@ const AnimeCard = memo(function AnimeCard({
       >
         <Box
           ref={coverRef}
-          sx={{ position: "absolute", inset: 0, borderRadius: "10px", overflow: "hidden", backgroundColor: "#27272a" }}
+          sx={{ position: "absolute", inset: 0, borderRadius: "10px", overflow: "hidden", ...coverLoadingSx }}
         >
           {imgSrc ? (
             <img
               src={imgSrc}
               alt=""
               loading="lazy"
+              decoding="async"
+              onLoad={revealCover}
               onError={(e) => (e.currentTarget.style.visibility = "hidden")}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...coverImgStyle }}
             />
           ) : (
             <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem" }}>

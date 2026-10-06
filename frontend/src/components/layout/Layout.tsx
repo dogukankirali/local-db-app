@@ -23,6 +23,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  // Kapak görsellerini önbelleğe alan service worker (public/sw.js)
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker kaydedilemedi:", err));
+    }
+  }, []);
+
   // Sayfa değişince mobil menüyü kapat
   useEffect(() => setMobileOpen(false), [pathname]);
 
