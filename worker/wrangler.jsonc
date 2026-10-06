@@ -18,7 +18,7 @@
       "binding": "DB",
       "database_name": "kiroku",
       // `npx wrangler d1 create kiroku` çıktısındaki id ile değiştir
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "f889026f-21af-4a51-b19e-923f86ca5084",
       "migrations_dir": "migrations"
     }
   ],
