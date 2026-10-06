@@ -211,7 +211,7 @@ function AnimeDetailModal({
         >
           {[
             { label: "Anime Status", value: anime.AnimeStatus || "—" },
-            { label: "MAL Score", value: anime.MalScore > 0 ? anime.MalScore : "—" },
+            { label: "MAL Score", value: (anime as any).MALScore > 0 ? (anime as any).MALScore : "—" },
             { label: "Genres", value: anime.Genre || "—" },
             { label: "Series", value: anime.SeriesName || "No Series" },
           ].map(({ label, value }) => (
