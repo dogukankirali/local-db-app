@@ -182,7 +182,7 @@ export module AnimeService {
         ]);
         const items: { id: number; name: string }[] = pending.data.items ?? [];
         const batchSize: number = pending.data.batchSize ?? 8;
-        const covers: { id: number; idMal: number }[] = coverPending.data.items ?? [];
+        const covers: { id: number; idMal: number | null }[] = coverPending.data.items ?? [];
         const coverBatchSize: number = coverPending.data.batchSize ?? 50;
         state.totalWork = items.length + covers.length;
         onStart({ ...state });
@@ -228,7 +228,8 @@ export module AnimeService {
           const batch = covers.slice(i, i + coverBatchSize);
           let found: Map<number, string>;
           try {
-            found = await AniList.coversByMalIds(batch.map((b) => b.idMal), signal);
+            const ids = batch.flatMap((b) => (b.idMal ? [b.idMal] : []));
+            found = ids.length ? await AniList.coversByMalIds(ids, signal) : new Map();
           } catch (err: any) {
             if (err instanceof AniList.AniListRateLimit) {
               onProgress({ ...state, message: `AniList hız sınırı, ${err.retryAfter} sn bekleniyor...` });
@@ -237,8 +238,9 @@ export module AnimeService {
             }
             throw err;
           }
-          const updates = batch.flatMap((b) => (found.has(b.idMal) ? [{ id: b.id, url: found.get(b.idMal) }] : []));
-          const res = updates.length ? await axios.post(`${path}/covers/batch`, { items: updates }, { signal }) : { data: { updated: 0 } };
+          // AniList'te bulunamayanlar için url: null → Worker MAL'ın büyük görseline geçer
+          const updates = batch.map((b) => ({ id: b.id, url: (b.idMal && found.get(b.idMal)) || null }));
+          const res = await axios.post(`${path}/covers/batch`, { items: updates }, { signal });
           i += batch.length;
           state.updated += res.data.updated ?? 0;
           state.completed = items.length + Math.min(i, covers.length);
