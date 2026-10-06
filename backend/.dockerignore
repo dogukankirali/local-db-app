@@ -1,6 +1,0 @@
-.env
-server.crt
-server.key
-*.log
-Dockerfile
-.dockerignore

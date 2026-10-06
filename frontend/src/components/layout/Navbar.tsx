@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useAuth } from "../../contexts/AuthContext";
 import { getPageTitle } from "../../config/navigation";
 import { palette } from "../../theme/customTheme";
+import { OPEN_COMMAND_PALETTE } from "../CommandPalette";
 
 export const TOPBAR_HEIGHT = 64;
 
@@ -34,18 +35,6 @@ function SearchBox() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Ctrl/⌘ + K ile aramaya odaklan
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +74,13 @@ function SearchBox() {
         inputProps={{ "aria-label": "Anime ara" }}
         sx={{ flex: 1, fontSize: "0.875rem", color: palette.text }}
       />
+      {/* Ctrl/⌘ + K komut paletini açar (CommandPalette) */}
       <Box
         component="kbd"
+        title="Komut paleti"
+        onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE))}
         sx={{
+          cursor: "pointer",
           display: { xs: "none", md: "inline-flex" },
           px: 0.75,
           py: 0.1,

@@ -6,7 +6,7 @@ import {
   StyledTeaButton,
 } from "../CollapsibleTableV2/Components/StyledComponents";
 import { Box, Typography } from "@mui/material";
-import Toastify from "toastify-js";
+import { toast } from "sonner";
 import { theme } from "../../theme/customTheme";
 
 export default function FileUpload(props: { setFile: any }) {
@@ -24,26 +24,10 @@ export default function FileUpload(props: { setFile: any }) {
 
     try {
       AnimeService.createAniemWithFile(formData);
-      Toastify({
-        text: "Anime(s) uploaded successfully!",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.success("Anime(s) uploaded successfully!");
     } catch (err) {
       console.error(err);
-      Toastify({
-        text: "Failed to upload anime(s)!",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Failed to upload anime(s)!");
     }
   };
 

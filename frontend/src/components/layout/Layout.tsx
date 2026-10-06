@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import { Box, Drawer } from "@mui/material";
 import Navbar from "./Navbar";
 import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "./Sidebar";
+import CommandPalette from "../CommandPalette";
 
 const COLLAPSED_KEY = "sidebarCollapsed";
+const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 // Masaüstünde sabit (daraltılabilir) sidebar, md altında açılır menü (drawer).
 // Boyutlar JS yerine CSS breakpoint'leri ile yönetilir; ilk render'da kayma olmaz.
@@ -19,6 +21,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     try {
       setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1");
     } catch {}
+  }, []);
+
+  // Kapak görsellerini önbelleğe alan service worker (public/sw.js)
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker kaydedilemedi:", err));
+    }
   }, []);
 
   // Sayfa değişince mobil menüyü kapat
@@ -34,6 +43,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+
+  // Giriş/kayıt sayfaları kendi tam ekran düzenini çizer
+  if (pathname && AUTH_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))) {
+    return <>{children}</>;
+  }
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "background.default" }}>
@@ -73,6 +87,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </Box>
       </Box>
+      <CommandPalette />
     </Box>
   );
 }

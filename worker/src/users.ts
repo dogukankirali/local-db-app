@@ -11,7 +11,7 @@ import {
 import { EmailNotConfigured, sendPasswordResetEmail } from "./email";
 import { field, message, nowIso, readJson, str, type AppEnv } from "./util";
 
-type UserRow = {
+export type UserRow = {
   id: number;
   username: string;
   email: string;
@@ -27,7 +27,7 @@ type UserRow = {
   updated_at: string;
 };
 
-const toUserResponse = (u: UserRow, token?: string) => ({
+export const toUserResponse = (u: UserRow, token?: string) => ({
   id: u.id,
   username: u.username,
   email: u.email,

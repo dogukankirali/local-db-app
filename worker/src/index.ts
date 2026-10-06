@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { anilistRoutes } from "./anilist";
 import { anime, createAnime } from "./anime";
+import { coverRoutes } from "./covers";
+import { googleRoutes } from "./google";
 import { users } from "./users";
 import type { AppEnv } from "./util";
 import { watchlist } from "./watchlist";
@@ -18,6 +20,8 @@ api.route("/", anime);
 api.route("/", watchlist);
 api.route("/", users);
 api.route("/", anilistRoutes);
+api.route("/", coverRoutes);
+api.route("/", googleRoutes);
 
 const app = new Hono<AppEnv>();
 app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "Authorization"], allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] }));

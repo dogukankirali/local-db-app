@@ -35,9 +35,7 @@ local-db-app/
 │       ├── theme/        # Renk token'ları (customTheme.ts) ve MUI teması
 │       └── Services/     # API istemcileri (axios)
 ├── extension/            # Kiroku Tracker + Kiroku Sync eklentisi
-├── scripts/dev.ps1       # Windows'ta API + frontend'i tek komutla başlatır
-├── backend/              # Eski Go API (PostgreSQL); Cloudflare'e geçiş tamamlanınca kaldırılacak
-└── docker-compose.yaml   # Eski Go + PostgreSQL yığını için
+└── scripts/dev.ps1       # Windows'ta API + frontend'i tek komutla başlatır
 ```
 
 **Teknolojiler**: Cloudflare Workers, D1, Hono, TypeScript · Next.js 15, React 19, MUI 6, dnd-kit · AniList GraphQL · Resend (e-posta).

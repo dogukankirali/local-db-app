@@ -28,6 +28,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" className={inter.variable}>
+      <head>
+        {/* Kapak CDN'lerine bağlantı erken açılsın */}
+        <link rel="preconnect" href="https://s4.anilist.co" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn.myanimelist.net" />
+      </head>
       <body>
         <MUIProvider>
           <AuthProvider>

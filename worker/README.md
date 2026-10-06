@@ -61,6 +61,23 @@ Tek Cloudflare Worker: `frontend/out` altındaki statik siteyi sunar, `/api/*` i
 
 5. Her şey çalıştığını gördükten sonra Cloud Run servisi ve Cloud SQL kapatılabilir.
 
+## Google ile giriş
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services → OAuth consent screen**: uygulama adını (Kiroku) ve e-postanı gir, tür **External**, kapsamlar `openid`, `email`, `profile`. Yayın durumunu **In production** yap (Testing'de yalnızca eklediğin test kullanıcıları girebilir).
+2. **Credentials → Create credentials → OAuth client ID**, tür **Web application**.
+   - Authorized JavaScript origins: `https://app.dogukankirali.com`, `http://localhost:3000`
+   - Authorized redirect URIs: `https://app.dogukankirali.com/api/auth/google/callback`, `http://localhost:3000/api/auth/google/callback`
+3. Çıkan değerleri Worker'a secret olarak ekle:
+
+   ```bash
+   npx wrangler secret put GOOGLE_CLIENT_ID
+   npx wrangler secret put GOOGLE_CLIENT_SECRET
+   ```
+
+   Lokal geliştirme için aynı iki satırı `.dev.vars`'a yaz. Secret'lar yoksa Google butonu görünmez.
+
+Google hesabının e-postası mevcut bir kullanıcıyla eşleşirse o hesaba girilir; eşleşmezse admin olmayan yeni bir hesap açılır.
+
 ## Notlar
 
 - **Şifreler** PBKDF2-SHA256 ile saklanır (`pbkdf2$sha256$<iterasyon>$<tuz>$<özet>`). İterasyon sayısı `PASSWORD_ITERATIONS` ile değişir; eski hash'ler kendi iterasyonlarıyla doğrulanmaya devam eder.

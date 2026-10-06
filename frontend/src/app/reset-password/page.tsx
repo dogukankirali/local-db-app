@@ -1,23 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Link as MuiLink,
-  Alert,
-  InputAdornment,
-  IconButton,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Alert, Box, Button, CircularProgress, IconButton } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import Link from "next/link";
-import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import AuthShell, { authLinkSx } from "../../components/auth/AuthShell";
+import { Field, TextInput } from "../../components/ui/FormControls";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -28,188 +18,105 @@ export default function ResetPasswordPage() {
   const { resetPassword, loading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [token, setToken] = useState<string>("");
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Token bağlantıdaki ?token= parametresinden okunur (site statik sunulduğu için yol parametresi yok)
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get("token");
-    if (value) {
-      setToken(value);
-    } else {
-      setError(
-        "Geçersiz veya eksik token. Lütfen geçerli bir şifre sıfırlama bağlantısı kullanın."
-      );
-    }
+    if (value) setToken(value);
+    else setError("Geçersiz veya eksik bağlantı. Lütfen e-postadaki sıfırlama bağlantısını kullan.");
   }, []);
 
   // Kullanıcı zaten giriş yapmışsa ana sayfaya yönlendir
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/");
-    }
+    if (isAuthenticated) router.push("/");
   }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(false);
-
-    // Token kontrolü
-    if (!token) {
-      setError(
-        "Geçersiz token. Lütfen geçerli bir şifre sıfırlama bağlantısı kullanın."
-      );
-      return;
-    }
-
-    // Form doğrulama
-    if (!password) {
-      setError("Şifre gereklidir");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalıdır");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Şifreler eşleşmiyor");
-      return;
-    }
-
+    if (!token) return setError("Geçersiz bağlantı. Lütfen e-postadaki sıfırlama bağlantısını kullan.");
+    if (!password) return setError("Şifre gerekli");
+    if (password.length < 6) return setError("Şifre en az 6 karakter olmalı");
+    if (password !== confirmPassword) return setError("Şifreler eşleşmiyor");
     try {
       await resetPassword({ token, password });
       setSuccess(true);
       setPassword("");
       setConfirmPassword("");
-
       // 3 saniye sonra giriş sayfasına yönlendir
-      setTimeout(() => {
-        router.push("/login");
-      }, 3000);
+      setTimeout(() => router.push("/login"), 3000);
     } catch (error: any) {
       setError(error.response?.data?.message || "Şifre sıfırlanamadı");
     }
   };
 
+  const disabled = loading || success || !token;
+
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        p: 2,
-        backgroundColor: "background.default",
-      }}
+    <AuthShell
+      title="Yeni şifre belirle"
+      subtitle="Hesabın için yeni bir şifre seç."
+      footer={
+        <Box component={Link} href="/login" sx={authLinkSx}>
+          Giriş sayfasına dön
+        </Box>
+      }
     >
-      <Paper
-        elevation={3}
-        sx={{
-          p: isMobile ? 3 : 4,
-          width: "100%",
-          maxWidth: "450px",
-          borderRadius: 2,
-        }}
-      >
-        <Typography
-          variant="h4"
-          component="h1"
-          align="center"
-          gutterBottom
-          sx={{ fontWeight: 600, mb: 3 }}
-        >
-          Şifre Sıfırlama
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            Şifreniz başarıyla sıfırlandı. Giriş sayfasına
-            yönlendiriliyorsunuz...
-          </Alert>
-        )}
-
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Lütfen yeni şifrenizi belirleyin.
-          </Typography>
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Yeni Şifre"
-            type={showPassword ? "text" : "password"}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: "8px" }}>
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2.5, borderRadius: "8px" }}>
+          Şifren güncellendi. Giriş sayfasına yönlendiriliyorsun…
+        </Alert>
+      )}
+      <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: "grid", gap: 2 }}>
+        <Field label="Yeni şifre" hint="En az 6 karakter">
+          <TextInput
             id="password"
+            inputProps={{ "aria-label": "Yeni şifre" }}
+            name="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
+            autoFocus
+            fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{ mb: 2 }}
-            disabled={loading || success}
+            disabled={disabled}
+            endAdornmentNode={
+              <IconButton size="small" aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"} onClick={() => setShowPassword((s) => !s)}>
+                {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+              </IconButton>
+            }
           />
-
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="confirmPassword"
-            label="Şifreyi Onayla"
-            type={showPassword ? "text" : "password"}
+        </Field>
+        <Field label="Şifre tekrar">
+          <TextInput
             id="confirmPassword"
+            inputProps={{ "aria-label": "Şifre tekrar" }}
+            name="confirmPassword"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
+            fullWidth
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            sx={{ mb: 3 }}
-            disabled={loading || success}
+            disabled={disabled}
           />
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ mb: 3, py: 1.5 }}
-            disabled={loading || success}
-          >
-            {loading ? "İşleniyor..." : "Şifreyi Sıfırla"}
-          </Button>
-
-          {!success && (
-            <Box sx={{ textAlign: "center" }}>
-              <Typography variant="body2" color="text.secondary">
-                <Link href="/login" passHref>
-                  <MuiLink component="span" underline="hover">
-                    Giriş sayfasına dön
-                  </MuiLink>
-                </Link>
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      </Paper>
-    </Box>
+        </Field>
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          disabled={disabled}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+          sx={{ mt: 1, py: 1.25, borderRadius: "8px", fontWeight: 700 }}
+        >
+          Şifreyi güncelle
+        </Button>
+      </Box>
+    </AuthShell>
   );
 }

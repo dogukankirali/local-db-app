@@ -1,17 +1,15 @@
 import { Badge, Box, Tooltip } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 import TableFilters, { getFilledFilters } from "../TableFilters/TableFilters";
-import TableSettings from "../TableSettings";
 import { StyledMUIFilterButton, StyledTeaButton } from "../StyledComponents";
 import { useRouter } from "next/navigation";
 
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import SettingsIcon from "@mui/icons-material/Settings";
 import SyncIcon from "@mui/icons-material/Sync";
 import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
-import Constants from "../../../../constants/Constants";
 import { AnimeService } from "../../../../Services/AnimeServices";
-import Toastify from "toastify-js";
+import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
 import SyncProgressIndicator from "../../../Sync/SyncProgressIndicator";
 import { useAuth } from "../../../../contexts/AuthContext";
@@ -20,17 +18,23 @@ export default function TableHeaders(props: {
   genres: any;
   filterState: any;
   tableFilterProps: any;
-  settingsProps: any;
+  settingsProps?: any;
   outerColumns: any;
   setOuterColumns: any;
   setCreateModalData: any;
   handleClickFilters: any;
-  handleClickSettings: any;
+  handleClickSettings?: any;
   windowSize?: any;
   tableRerender?: TEATable.FetchData;
   user: any;
   // Toolbar'ın solunda (başlık/sayaç) ve aksiyonlardan önce (görünüm kontrolleri) gösterilecek içerik
   leading?: React.ReactNode;
+  // Filtre panelinin altında gösterilecek tablo görünümü ayarları
+  filterExtra?: React.ReactNode;
+  // Filtre butonunun yanındaki ek ikon butonlar (ör. dışa aktar)
+  actions?: React.ReactNode;
+  // Admin için "CSV ile toplu ekle"
+  onBulkImport?: () => void;
   trailing?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -120,15 +124,7 @@ export default function TableHeaders(props: {
           }
 
           if (!syncCancelled) {
-            Toastify({
-              text: `Anime data successfully synchronized: ${data.updated} updated, ${data.failed} failed`,
-              duration: 3000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-              stopOnFocus: true,
-            }).showToast();
+            toast.success(`Anime data successfully synchronized: ${data.updated} updated, ${data.failed} failed`);
           }
 
           setIsSyncing(false);
@@ -145,25 +141,9 @@ export default function TableHeaders(props: {
 
           // Don't show error message for cancelled requests
           if (error.name === "AbortError" || syncCancelled) {
-            Toastify({
-              text: "Synchronization process was stopped by the user",
-              duration: 3000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "linear-gradient(to right, #ff9966, #ff5e62)",
-              stopOnFocus: true,
-            }).showToast();
+            toast.error("Synchronization process was stopped by the user");
           } else {
-            Toastify({
-              text: "Error synchronizing anime data",
-              duration: 3000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-              stopOnFocus: true,
-            }).showToast();
+            toast.error("Error synchronizing anime data");
           }
 
           setIsSyncing(false);
@@ -199,15 +179,7 @@ export default function TableHeaders(props: {
       setIsSyncing(false);
       setSyncMessage("Synchronization stopped");
 
-      Toastify({
-        text: "Synchronization process stopped",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff9966, #ff5e62)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Synchronization process stopped");
 
       // Hide progress indicator after 3 seconds
       setTimeout(() => {
@@ -227,14 +199,10 @@ export default function TableHeaders(props: {
         <TableFilters
           filterState={props.filterState}
           {...props.tableFilterProps}
+          extraSection={props.filterExtra}
+          extraSectionTitle={props.filterExtra ? "Tablo görünümü" : undefined}
         />
       )}
-      <TableSettings
-        {...props.settingsProps}
-        headers={props.outerColumns}
-        setHeaders={props.setOuterColumns}
-        headerOpts={Constants({ type: "headers" })}
-      />
       <Box
         sx={{
           display: "flex",
@@ -258,11 +226,6 @@ export default function TableHeaders(props: {
               </Badge>
             </StyledMUIFilterButton>
           </Tooltip>
-          <Tooltip title="Tablo ayarları">
-            <StyledMUIFilterButton onClick={props.handleClickSettings} aria-label="Tablo ayarları">
-              <SettingsIcon sx={{ fontSize: 20 }} />
-            </StyledMUIFilterButton>
-          </Tooltip>
           {isAdmin &&
             (!isSyncing ? (
               <Tooltip title="Tüm animeleri MAL ile senkronize et">
@@ -277,6 +240,14 @@ export default function TableHeaders(props: {
                 </StyledMUIFilterButton>
               </Tooltip>
             ))}
+          {props.actions}
+          {isAdmin && props.onBulkImport && (
+            <Tooltip title="CSV ile toplu ekle">
+              <StyledMUIFilterButton onClick={props.onBulkImport} aria-label="CSV ile toplu ekle">
+                <UploadFileOutlinedIcon sx={{ fontSize: 20 }} />
+              </StyledMUIFilterButton>
+            </Tooltip>
+          )}
         </Box>
         <StyledTeaButton
           onClick={() => router.push("/watchlist")}
