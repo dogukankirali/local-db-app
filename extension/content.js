@@ -98,7 +98,7 @@ function createIndicator() {
     indicator.innerHTML = `
         <div class="at-header">
             <span class="at-rec-dot">🔴</span> 
-            <span>AniTracker: <span id="at-skip-count">0</span></span>
+            <span>Kiroku: <span id="at-skip-count">0</span></span>
         </div>
         <div class="at-details">
             <img id="at-anime-cover" src="" alt="anime cover" />
@@ -400,7 +400,7 @@ function addMALWatchlistButton() {
     const anisyncBtn = document.createElement("a");
     anisyncBtn.href = "#";
     anisyncBtn.className = "add-to-anisync-mal-btn";
-    anisyncBtn.textContent = "Add to AniSync Watchlist";
+    anisyncBtn.textContent = "Add to Kiroku Watchlist";
     anisyncBtn.style.cssText = `
         display: block;
         font-size: 12px;
@@ -426,12 +426,12 @@ function addMALWatchlistButton() {
             return;
         }
 
-        anisyncBtn.textContent = "Adding to AniSync...";
+        anisyncBtn.textContent = "Adding to Kiroku...";
         anisyncBtn.style.color = "#6366f1";
 
         chrome.runtime.sendMessage({ action: "addToWatchlist", data }, (response) => {
             if (response && response.success) {
-                anisyncBtn.textContent = "Added to AniSync Watchlist ✓";
+                anisyncBtn.textContent = "Added to Kiroku Watchlist ✓";
                 anisyncBtn.style.color = "#10b981";
                 anisyncBtn.style.textDecoration = "none";
                 anisyncBtn.dataset.done = "true";
@@ -476,7 +476,7 @@ function addAniziumDetailWatchlistButton() {
 
     const btn = document.createElement("button");
     btn.className = "btn add-to-anisync-detail-btn";
-    btn.textContent = "Add to AniSync Watchlist";
+    btn.textContent = "Add to Kiroku Watchlist";
     btn.style.cssText = `
         display: inline-flex;
         align-items: center;
@@ -561,7 +561,7 @@ function addStreamingUpdateButton() {
 
     const button = document.createElement("button");
     button.className = "update-watch-status-btn";
-    button.textContent = "AniSync: İzlendi İşaretle";
+    button.textContent = "Kiroku: İzlendi İşaretle";
 
     // 1. Anizium Watch Sayfası: Görsel 4'teki kontrol barına yerleştir
     if (url.includes("anizium.co") || url.includes("anizium.com")) {
@@ -637,7 +637,7 @@ function bindUpdateButtonEvent(button) {
             return;
         }
 
-        const originalText = "AniSync: İzlendi İşaretle";
+        const originalText = "Kiroku: İzlendi İşaretle";
         button.textContent = "Güncelleniyor...";
         button.style.backgroundColor = "#6366f1";
 

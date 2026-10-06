@@ -55,5 +55,5 @@ export function getPageTitle(pathname: string): string {
     if (item) return item.label;
   }
   const extra = Object.keys(extraTitles).find((p) => pathname.startsWith(p));
-  return extra ? extraTitles[extra] : "Local DB";
+  return extra ? extraTitles[extra] : "Kiroku";
 }

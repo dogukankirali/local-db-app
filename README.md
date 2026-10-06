@@ -1,6 +1,6 @@
-# Local DB App — Anime/Manga Takip Uygulaması
+# Kiroku (記録) — Kişisel Medya Arşivi
 
-Kişisel anime, manga, kitap ve dizi izleme/okuma listelerini tek bir yerden yönetmek için geliştirilmiş full-stack bir uygulama. MyAnimeList (Jikan API) ile senkronize olabilir, izleme listeni (watchlist) sürükle-bırak ile sıralayabilir ve Chrome/Firefox eklentileri sayesinde izlediğin bölümü takip ettiğin sitelerden otomatik olarak işaretleyebilirsin.
+Kiroku; kişisel anime, manga, kitap ve dizi izleme/okuma listelerini tek bir yerden yönetmek için geliştirilmiş full-stack bir uygulama. MyAnimeList (Jikan API) ile senkronize olabilir, izleme listeni (watchlist) sürükle-bırak ile sıralayabilir ve Chrome/Firefox eklentileri sayesinde izlediğin bölümü takip ettiğin sitelerden otomatik olarak işaretleyebilirsin.
 
 ## Özellikler
 
@@ -8,9 +8,9 @@ Kişisel anime, manga, kitap ve dizi izleme/okuma listelerini tek bir yerden yö
 - **AniList & MAL entegrasyonu**: AniList GraphQL API üzerinden güvenilir anime/manga verisi çekme ve arama.
 - **Watchlist (izleme listesi)**: "Plan to Watch" listesine ekleme/çıkarma, sürükle-bırak ile sıralama ve MAL planından otomatik senkronizasyon.
 - **Kullanıcı hesapları**: JWT tabanlı kayıt/giriş, profil görüntüleme/güncelleme ve şifre sıfırlama (e-posta ile).
-- **Tarayıcı eklentisi (AniTracker Pro & AniSyncer - Chrome & Firefox)**:
+- **Tarayıcı eklentisi (Kiroku Tracker & Kiroku Sync - Chrome & Firefox)**:
   - **Tracker Tabı**: AniList üzerinden anime seçimi, video oynarken sağ yön tuşu ile skip tespiti ve otomatik sezon puanlama algoritması, istatistikler ve izleme geçmişi.
-  - **AniSyncer Tabı**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sitelerinde bölüm ve watchlist durumunu algılayıp backend servisine senkronize eder.
+  - **Kiroku Sync Tabı**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sitelerinde bölüm ve watchlist durumunu algılayıp backend servisine senkronize eder.
 - **Seri (series) yönetimi**: Birden çok anime/manga kaydını bir seri altında gruplama.
 
 ## Proje Yapısı
@@ -32,7 +32,7 @@ local-db-app/
 │       ├── components/    # Tablo, modal, senkronizasyon ve ortak bileşenler
 │       ├── services/      # Backend API istemcileri (Axios)
 │       └── ...
-├── extension/            # AniTracker Pro + AniSyncer birleşik eklentisi (Chrome & Firefox - Manifest V3)
+├── extension/            # Kiroku Tracker + Kiroku Sync birleşik eklentisi (Chrome & Firefox - Manifest V3)
 ├── chrome-extension/     # Eski Chrome eklentisi (arşiv)
 ├── firefox-extension/    # Eski Firefox eklentisi (arşiv)
 ├── db/seed/             # docker compose ilk açılışta buradaki .sql dump'larını yükler
@@ -58,7 +58,7 @@ local-db-app/
 **Tarayıcı Eklentisi**
 
 - Chrome ve Firefox ile tam uyumlu Manifest V3 birleşik eklenti (`extension/`)
-- AniTracker (bölüm içi skip takibi, puanlama ve istatistik) + AniSyncer (siteler arası backend izleme durumu güncellemesi)
+- Kiroku Tracker (bölüm içi skip takibi, puanlama ve istatistik) + Kiroku Sync (siteler arası backend izleme durumu güncellemesi)
 
 ## Kurulum
 

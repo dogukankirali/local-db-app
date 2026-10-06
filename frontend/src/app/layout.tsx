@@ -14,8 +14,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Local DB", template: "%s · Local DB" },
-  description: "Your personal media tracker",
+  title: { default: "Kiroku", template: "%s · Kiroku" },
+  description: "Kiroku — anime, manga, kitap ve dizilerin için kişisel medya arşivi",
 };
 
 export const viewport: Viewport = {

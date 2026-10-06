@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AniTracker Pro",
+  "name": "Kiroku — Tracker & Sync",
   "version": "15.0",
-  "description": "Anime takip (skip sayacı, puan, istatistik) + AniSyncer: izleme sitelerinde otomatik bölüm ve watchlist takibi.",
+  "description": "Anime takip (skip sayacı, puan, istatistik) + Kiroku Sync: izleme sitelerinde otomatik bölüm ve watchlist takibi.",
   "permissions": ["storage", "activeTab", "scripting", "webRequest"],
   "host_permissions": [
     "https://graphql.anilist.co/*",

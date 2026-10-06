@@ -7,7 +7,7 @@
 services:
   db:
     image: postgres:17-alpine
-    container_name: local-db-app-db
+    container_name: kiroku-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -16,7 +16,7 @@ services:
     ports:
       - "${DB_PORT_HOST:-5432}:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - kiroku-db-data:/var/lib/postgresql/data
       - ./db/seed:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -26,7 +26,7 @@ services:
 
   backend:
     build: ./backend
-    container_name: local-db-app-be
+    container_name: kiroku-be
     restart: unless-stopped
     depends_on:
       db:
@@ -61,7 +61,7 @@ services:
       args:
         # Tarayıcı backend'e host üzerinden gider
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
-    container_name: local-db-app-fe
+    container_name: kiroku-fe
     restart: unless-stopped
     depends_on:
       backend:
@@ -70,4 +70,4 @@ services:
       - "3000:3000"
 
 volumes:
-  db-data:
+  kiroku-db-data:

@@ -43,9 +43,9 @@ export function Brand({ collapsed }: { collapsed: boolean }) {
         {!collapsed && (
           <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700, fontSize: "0.98rem", lineHeight: 1.1, letterSpacing: "-0.01em" }}>
-              Local DB
+              Kiroku
             </Typography>
-            <Typography sx={{ fontSize: "0.7rem", color: "text.secondary" }}>Media tracker</Typography>
+            <Typography sx={{ fontSize: "0.7rem", color: "text.secondary" }}>記録 · medya arşivi</Typography>
           </Box>
         )}
       </Box>

@@ -121,7 +121,7 @@ func SendPasswordResetEmail(to, token, appURL string) error {
 		return ErrNotConfigured
 	}
 
-	subject := "Şifre Sıfırlama"
+	subject := "Kiroku · Şifre sıfırlama"
 	body := fmt.Sprintf(`<!doctype html>
 <html>
 <body style="margin:0;padding:24px;background:#0B0D12;font-family:Inter,Segoe UI,Arial,sans-serif;color:#E7E9EE">
