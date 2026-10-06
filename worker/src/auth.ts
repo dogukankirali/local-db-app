@@ -109,11 +109,13 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
 };
 
-/** Listelerde verisi gösterilecek kullanıcı: giriş yapan kullanıcı, yoksa site sahibi (ilk admin) */
+/** Listelerde verisi gösterilecek kullanıcı: giriş yapan kullanıcı, yoksa site sahibi (en son giriş yapan admin; 0002 migration'ı ile aynı seçim) */
 export async function viewerId(c: Ctx): Promise<number> {
   const user = c.get("user");
   if (user) return user.userId;
-  const owner = await c.env.DB.prepare("SELECT id FROM users WHERE is_admin = 1 ORDER BY id LIMIT 1").first<{ id: number }>();
+  const owner = await c.env.DB.prepare(
+    "SELECT id FROM users WHERE is_admin = 1 ORDER BY last_login IS NULL, last_login DESC, id LIMIT 1"
+  ).first<{ id: number }>();
   return owner?.id ?? 0;
 }
 

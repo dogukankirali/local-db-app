@@ -193,7 +193,8 @@ function animeFields(body: Record<string, unknown>) {
     anime_status: str(field(body, "AnimeStatus")),
     total_number_of_episodes: int(field(body, "TotalNumberOfEpisodes")),
     is_movie: bool(field(body, "IsMovie")) ? 1 : 0,
-    mal_score: num(field(body, "MALScore")),
+    // MAL puanı 0-10 ölçeğinde; aralık dışı değer (ör. 44) önerileri ve sıralamayı bozar, boş sayılır
+    mal_score: ((v) => (v >= 0 && v <= 10 ? v : 0))(num(field(body, "MALScore"))),
     anime_link: str(field(body, "AnimeLink")),
     mal_anime_link: str(field(body, "MALAnimeLink")),
     cover: str(field(body, "Cover")),

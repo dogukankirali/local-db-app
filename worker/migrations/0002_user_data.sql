@@ -2,6 +2,7 @@
 --
 -- Anime kataloğu (ad, durum, bölüm sayısı, kapak, türler, MAL puanı) ortak kalır.
 -- Puan, izlenen bölüm, Plan to Watch ve notlar artık her kullanıcı için ayrı tutulur (user_anime).
+-- Mevcut veri, en son giriş yapmış yöneticiye taşınır (hiç giriş yapmamış "admin" gibi eski hesaplara değil).
 -- Mevcut değerler ilk admin hesabına (Spoon) taşınır. animes tablosundaki eski score / watch_status /
 -- plan_to_watch / notes sütunları geri dönüş kolaylığı için yerinde bırakıldı; artık okunmuyor.
 
@@ -19,7 +20,7 @@ CREATE TABLE IF NOT EXISTS user_anime (
 CREATE INDEX IF NOT EXISTS idx_user_anime_anime ON user_anime (anime_id);
 
 INSERT OR IGNORE INTO user_anime (user_id, anime_id, score, watch_status, plan_to_watch, notes)
-SELECT (SELECT id FROM users WHERE is_admin = 1 ORDER BY id LIMIT 1), a.id, a.score, a.watch_status, a.plan_to_watch, a.notes
+SELECT (SELECT id FROM users WHERE is_admin = 1 ORDER BY last_login IS NULL, last_login DESC, id LIMIT 1), a.id, a.score, a.watch_status, a.plan_to_watch, a.notes
 FROM animes a
 WHERE EXISTS (SELECT 1 FROM users WHERE is_admin = 1);
 
@@ -38,7 +39,7 @@ CREATE TABLE watch_lists_new (
   UNIQUE (user_id, anime_id)
 );
 INSERT INTO watch_lists_new (id, user_id, anime_id, order_rank, created_at, updated_at)
-SELECT w.id, (SELECT id FROM users WHERE is_admin = 1 ORDER BY id LIMIT 1), w.anime_id, w.order_rank, w.created_at, w.updated_at
+SELECT w.id, (SELECT id FROM users WHERE is_admin = 1 ORDER BY last_login IS NULL, last_login DESC, id LIMIT 1), w.anime_id, w.order_rank, w.created_at, w.updated_at
 FROM watch_lists w
 WHERE EXISTS (SELECT 1 FROM users WHERE is_admin = 1);
 DROP TABLE watch_lists;
@@ -88,3 +89,6 @@ ALTER TABLE animes ADD COLUMN next_episode INTEGER;
 ALTER TABLE animes ADD COLUMN next_episode_at TEXT;
 ALTER TABLE animes ADD COLUMN aired_episodes INTEGER;
 ALTER TABLE animes ADD COLUMN airing_checked_at TEXT;
+
+-- Aralık dışı MAL puanları (0-10 dışı, ör. 44) temizlenir; sonraki Sync AniList'ten doğrusunu yazar
+UPDATE animes SET mal_score = NULL WHERE mal_score > 10 OR mal_score < 0;
