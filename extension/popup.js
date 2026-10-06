@@ -152,7 +152,7 @@ async function performSearch(queryText) {
     ui.dropdown.innerHTML = '<div class="dropdown-item" style="justify-content: center; color: var(--text-secondary);">Aranıyor...</div>';
     ui.dropdown.style.display = 'block';
 
-    const graphqlQuery = `query ($search: String) { Page(page: 1, perPage: 5) { media(search: $search, type: ANIME) { id title { romaji english } episodes coverImage { large } genres } } }`;
+    const graphqlQuery = `query ($search: String) { Page(page: 1, perPage: 5) { media(search: $search, type: ANIME) { id title { romaji english } episodes coverImage { extraLarge large } genres } } }`;
 
     try {
         const res = await fetch('https://graphql.anilist.co', {
@@ -170,7 +170,7 @@ async function performSearch(queryText) {
                 const div = document.createElement('div');
                 div.className = 'dropdown-item';
                 const title = anime.title.english || anime.title.romaji;
-                const imgUrl = anime.coverImage.large || '';
+                const imgUrl = anime.coverImage.extraLarge || anime.coverImage.large || '';
                 
                 div.innerHTML = `<img src="${imgUrl}" alt="poster"> <span>${title}</span>`;
                 div.onclick = () => {

@@ -176,15 +176,24 @@ export module AnimeService {
     (async () => {
       const state: SyncState = { success: false, message: "", updated: 0, failed: 0, errors: [], progress: 0, totalWork: 0, completed: 0 };
       try {
-        const pending = await axios.get(`${path}/sync/pending`, { signal });
+        const [pending, coverPending] = await Promise.all([
+          axios.get(`${path}/sync/pending`, { signal }),
+          axios.get(`${path}/covers/pending`, { signal }),
+        ]);
         const items: { id: number; name: string }[] = pending.data.items ?? [];
         const batchSize: number = pending.data.batchSize ?? 8;
-        state.totalWork = items.length;
+        const covers: { id: number; idMal: number }[] = coverPending.data.items ?? [];
+        const coverBatchSize: number = coverPending.data.batchSize ?? 50;
+        state.totalWork = items.length + covers.length;
         onStart({ ...state });
-        if (!items.length) {
+        if (!state.totalWork) {
           onComplete({ ...state, success: true, progress: 100, message: "Güncellenecek anime yok" });
           return;
         }
+        const report = () => {
+          state.progress = (state.completed / state.totalWork) * 100;
+          onProgress({ ...state });
+        };
         for (let i = 0; i < items.length; ) {
           const batch = items.slice(i, i + batchSize);
           let media: unknown[][];
@@ -209,10 +218,33 @@ export module AnimeService {
           state.failed += res.data.failed ?? 0;
           state.errors.push(...(res.data.errors ?? []));
           state.completed = Math.min(i, items.length);
-          state.progress = (state.completed / items.length) * 100;
           state.message = (res.data.messages ?? []).slice(-1)[0] ?? `${state.completed}/${items.length} işlendi`;
-          onProgress({ ...state });
-          if (i < items.length) await wait(SYNC_DELAY_MS);
+          report();
+          if (i < items.length || covers.length) await wait(SYNC_DELAY_MS);
+        }
+
+        // Kapakları AniList'teki en yüksek çözünürlüklü sürümle değiştir (MAL id ile birebir eşleşme)
+        for (let i = 0; i < covers.length; ) {
+          const batch = covers.slice(i, i + coverBatchSize);
+          let found: Map<number, string>;
+          try {
+            found = await AniList.coversByMalIds(batch.map((b) => b.idMal), signal);
+          } catch (err: any) {
+            if (err instanceof AniList.AniListRateLimit) {
+              onProgress({ ...state, message: `AniList hız sınırı, ${err.retryAfter} sn bekleniyor...` });
+              await wait(err.retryAfter * 1000);
+              continue;
+            }
+            throw err;
+          }
+          const updates = batch.flatMap((b) => (found.has(b.idMal) ? [{ id: b.id, url: found.get(b.idMal) }] : []));
+          const res = updates.length ? await axios.post(`${path}/covers/batch`, { items: updates }, { signal }) : { data: { updated: 0 } };
+          i += batch.length;
+          state.updated += res.data.updated ?? 0;
+          state.completed = items.length + Math.min(i, covers.length);
+          state.message = `Kapaklar yükseltiliyor: ${Math.min(i, covers.length)}/${covers.length}`;
+          report();
+          if (i < covers.length) await wait(SYNC_DELAY_MS);
         }
         onComplete({ ...state, success: true, progress: 100, message: "Senkronizasyon tamamlandı" });
       } catch (err: any) {
