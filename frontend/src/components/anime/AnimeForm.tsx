@@ -63,12 +63,16 @@ export default function AnimeForm({
   onChange,
   genres,
   readOnly,
+  catalogLocked,
 }: {
   value: AnimeDraft;
   onChange: (patch: AnimeDraft) => void;
   genres: { value: string; label: string }[];
   readOnly?: boolean;
+  /** Admin olmayan kullanıcı: yalnızca kendi bölüm, puan, watchlist ve notlarını değiştirir (#39) */
+  catalogLocked?: boolean;
 }) {
+  const lockCatalog = readOnly || catalogLocked;
   const fileRef = useRef<HTMLInputElement>(null);
   const [series, setSeries] = useState<SeriesOption[]>([]);
   const [coverUrlDraft, setCoverUrlDraft] = useState("");
@@ -136,7 +140,7 @@ export default function AnimeForm({
             </Box>
           )}
         </Box>
-        {!readOnly && (
+        {!lockCatalog && (
           <>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
             <Button
@@ -170,7 +174,7 @@ export default function AnimeForm({
       {/* Alanlar */}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2, alignContent: "start" }}>
         <Field label="İsim" sx={{ gridColumn: "1 / -1" }}>
-          <TextInput value={value.Name ?? ""} onChange={(e) => onChange({ Name: e.target.value })} disabled={readOnly} placeholder="Anime adı" autoFocus={!readOnly && !value.Name} />
+          <TextInput value={value.Name ?? ""} onChange={(e) => onChange({ Name: e.target.value })} disabled={lockCatalog} placeholder="Anime adı" autoFocus={!readOnly && !value.Name} />
         </Field>
 
         <Field label="Yayın durumu">
@@ -181,7 +185,7 @@ export default function AnimeForm({
             getOptionLabel={(o) => o.label}
             isOptionEqualToValue={(a, b) => a.value === b.value}
             onChange={(_, o) => onChange({ AnimeStatus: o.value })}
-            disabled={readOnly}
+            disabled={lockCatalog}
             slotProps={listboxPaper}
             sx={autocompleteSx}
             renderInput={(params) => <TextFieldLike params={params} />}
@@ -191,7 +195,7 @@ export default function AnimeForm({
         <Field label="Format">
           <Segmented
             value={Boolean(value.IsMovie)}
-            disabled={readOnly}
+            disabled={lockCatalog}
             onChange={(v) => onChange({ IsMovie: v })}
             options={[
               { value: false, label: <><TvRoundedIcon /> TV</> },
@@ -227,7 +231,7 @@ export default function AnimeForm({
             type="number"
             value={total}
             onChange={(e) => onChange({ TotalNumberOfEpisodes: Math.max(0, Number(e.target.value)) })}
-            disabled={readOnly}
+            disabled={lockCatalog}
             inputProps={{ min: 0 }}
           />
         </Field>
@@ -263,14 +267,14 @@ export default function AnimeForm({
             value={selectedGenres}
             getOptionLabel={(g) => genreLabel(g)}
             onChange={(_, list) => onChange({ Genre: list.join(", ") })}
-            disabled={readOnly}
+            disabled={lockCatalog}
             slotProps={listboxPaper}
             sx={autocompleteSx}
             renderTags={(list, getTagProps) =>
               list.map((g, index) => {
                 const { key, onDelete } = getTagProps({ index });
                 return (
-                  <Box key={key} component="span" sx={{ m: "2px", display: "inline-flex" }} onClick={readOnly ? undefined : onDelete}>
+                  <Box key={key} component="span" sx={{ m: "2px", display: "inline-flex" }} onClick={lockCatalog ? undefined : onDelete}>
                     <GenreChip genre={g} active />
                   </Box>
                 );
@@ -287,7 +291,7 @@ export default function AnimeForm({
             getOptionLabel={(s) => s.name}
             isOptionEqualToValue={(a, b) => a.id === b.id}
             onChange={(_, s) => onChange({ Series: s ? s.id : 0, SeriesName: s ? s.name : "" })}
-            disabled={readOnly}
+            disabled={lockCatalog}
             slotProps={listboxPaper}
             sx={autocompleteSx}
             renderInput={(params) => <TextFieldLike params={params} placeholder="Seri yok" />}
@@ -299,7 +303,7 @@ export default function AnimeForm({
             type="number"
             value={Number(value.MALScore) || 0}
             onChange={(e) => onChange({ MALScore: Number(e.target.value) })}
-            disabled={readOnly}
+            disabled={lockCatalog}
             inputProps={{ min: 0, max: 10, step: 0.01 }}
           />
         </Field>
@@ -316,8 +320,8 @@ export default function AnimeForm({
           />
         </Field>
 
-        <LinkField label="İzleme linki" value={value.AnimeLink ?? ""} readOnly={readOnly} onChange={(v) => onChange({ AnimeLink: v })} />
-        <LinkField label="MAL sayfası" value={value.MALAnimeLink ?? ""} readOnly={readOnly} onChange={(v) => onChange({ MALAnimeLink: v })} />
+        <LinkField label="İzleme linki" value={value.AnimeLink ?? ""} readOnly={lockCatalog} onChange={(v) => onChange({ AnimeLink: v })} />
+        <LinkField label="MAL sayfası" value={value.MALAnimeLink ?? ""} readOnly={lockCatalog} onChange={(v) => onChange({ MALAnimeLink: v })} />
 
         <Field label="Notlar" sx={{ gridColumn: "1 / -1" }}>
           <TextInput multiline minRows={3} value={value.Notes ?? ""} onChange={(e) => onChange({ Notes: e.target.value })} disabled={readOnly} placeholder="Kendine not…" />

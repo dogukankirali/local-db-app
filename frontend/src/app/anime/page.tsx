@@ -2,7 +2,8 @@
 
 import React, { JSX, Suspense, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Box, IconButton, Tooltip } from "@mui/material";
+import { Box, CircularProgress, IconButton, Tooltip } from "@mui/material";
+import SyncRoundedIcon from "@mui/icons-material/SyncRounded";
 import AnimeGrid from "../../components/AnimeGrid";
 import AnimeDetailPanel from "../../components/anime/AnimeDetailPanel";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
@@ -227,14 +228,32 @@ function AnimePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Tek anime sync (#20): AniList'teki güncel durum, bölüm, MAL puanı, kapak ve türler; kullanıcı verisine dokunmaz
+  const [syncingId, setSyncingId] = useState<number | null>(null);
+  const syncOne = async (anime: TEATable.IAnime) => {
+    if (!anime) return;
+    setSyncingId(anime.ID);
+    try {
+      const res = await AnimeService.syncSingleAnime(anime);
+      toast.success(res.message ? `Senkronize edildi: ${res.message}` : "Senkronize edildi");
+      refreshAfterMutation("update", res.anime);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Senkronize edilemedi");
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
   function SettingsButtons(id: string, i: number, data?: any): JSX.Element {
     let isAdmin = false;
+    let isLoggedIn = false;
     if (typeof window !== 'undefined') {
       try {
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const userData = JSON.parse(userStr);
           isAdmin = userData?.isAdmin || false;
+          isLoggedIn = Boolean(userData);
         }
       } catch (error) {
         console.error('User information parsing failed:', error);
@@ -249,7 +268,7 @@ function AnimePageContent() {
               onClick={(e) => { e.stopPropagation(); addToWatchlist(data); }}
               sx={{ color: theme.success_alt, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.15)' }, opacity: data?.PlanToWatch ? 0.5 : 1 }}
               size='small'
-              disabled={!isAdmin || data?.PlanToWatch}
+              disabled={!isLoggedIn || data?.PlanToWatch}
             >
               <PlaylistAddIcon fontSize='small' />
             </IconButton>
@@ -259,7 +278,7 @@ function AnimePageContent() {
           <span>
             <IconButton
               onClick={(e) => { e.stopPropagation(); setModalData({ status: true, type: 'update', data: data }); }}
-              disabled={!isAdmin}
+              disabled={!isLoggedIn}
               sx={{ color: theme.primary, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(0, 176, 240, 0.15)' } }}
               size='small'
             >
@@ -267,6 +286,20 @@ function AnimePageContent() {
             </IconButton>
           </span>
         </Tooltip>
+        {isAdmin && (
+          <Tooltip title='AniList ile senkronize et'>
+            <span>
+              <IconButton
+                onClick={(e) => { e.stopPropagation(); syncOne(data); }}
+                disabled={syncingId === data?.ID}
+                sx={{ color: theme.primary, backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(0, 176, 240, 0.15)' } }}
+                size='small'
+              >
+                {syncingId === data?.ID ? <CircularProgress size={16} color='inherit' /> : <SyncRoundedIcon fontSize='small' />}
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
         <Tooltip title='Delete Anime'>
           <span>
             <IconButton
@@ -776,11 +809,12 @@ function AnimePageContent() {
           onChange={(patch) => setModalData((m) => ({ ...m, data: { ...(m.data as TEATable.IAnime), ...patch } }))}
           onSave={updateAnime}
           onDelete={deleteAnime}
-          onRequestDelete={() => setModalData((m) => ({ ...m, type: "delete" }))}
+          onRequestDelete={user?.isAdmin || isAdminFromStorage() ? () => setModalData((m) => ({ ...m, type: "delete" })) : undefined}
           form={
             <AnimeForm
               value={modalData.data ?? {}}
               genres={genres ?? []}
+              catalogLocked={!user?.isAdmin && !isAdminFromStorage()}
               onChange={(patch) => setModalData((m) => ({ ...m, data: { ...(m.data as TEATable.IAnime), ...patch } }))}
             />
           }
@@ -794,6 +828,14 @@ function AnimePageContent() {
       )}
     </div>
   );
+}
+
+function isAdminFromStorage() {
+  try {
+    return Boolean(JSON.parse(localStorage.getItem("user") ?? "null")?.isAdmin);
+  } catch {
+    return false;
+  }
 }
 
 export default function AnimePage() {

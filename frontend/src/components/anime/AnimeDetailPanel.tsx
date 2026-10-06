@@ -9,7 +9,7 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { GenreChips } from "../Common/GenreChip";
 import { useCoverColor } from "../../hooks/useCoverColor";
 import { palette } from "../../theme/customTheme";
-import { ANIME_STATUS_TR, Pill, Stat, getCoverSrc, getStatusInfo } from "./AnimeDetailModal";
+import { ANIME_STATUS_TR, Pill, Stat, formatNextEpisode, getCoverSrc, getStatusInfo } from "./AnimeDetailModal";
 
 /** Tabloda satır genişletilince görünen özet paneli */
 export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; update?: unknown }) {
@@ -74,6 +74,7 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
             <Stat label="MAL">{malScore > 0 ? malScore.toFixed(2) : "—"}</Stat>
             <Stat label="Seri">{a.SeriesName || "—"}</Stat>
             <Stat label="Bölüm">{total > 0 ? total : "?"}</Stat>
+            {formatNextEpisode(data) && <Stat label="Sıradaki bölüm">{formatNextEpisode(data)}</Stat>}
           </Box>
 
           {total > 0 && (

@@ -82,6 +82,15 @@ export function Stat({ label, children }: { label: string; children: React.React
   );
 }
 
+/** Yayın takibi (#19): "6. bölüm · 13 Eki 17:00" (yerel saat); bilinmiyorsa null */
+export function formatNextEpisode(anime: Partial<TEATable.IAnime>): string | null {
+  if (!anime.NextEpisode || !anime.NextEpisodeAt) return null;
+  const at = new Date(anime.NextEpisodeAt);
+  if (Number.isNaN(at.getTime())) return null;
+  const when = at.toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return `${anime.NextEpisode}. bölüm · ${when}`;
+}
+
 export default function AnimeDetailModal({
   anime,
   onClose,
@@ -108,6 +117,7 @@ export default function AnimeDetailModal({
   const progress = total > 0 ? Math.min(100, (watched / total) * 100) : 0;
   const score = Number(a.Score) || 0;
   const malScore = Number(a.MALScore) || 0;
+  const nextEpisode = formatNextEpisode(anime);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -248,9 +258,10 @@ export default function AnimeDetailModal({
               )}
 
               <motion.div variants={item}>
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: nextEpisode ? "1fr 1fr 1fr" : "1fr 1fr", gap: 2 }}>
                   <Stat label="Seri">{a.SeriesName || "—"}</Stat>
                   <Stat label="Bölüm">{total > 0 ? total : "?"}</Stat>
+                  {nextEpisode && <Stat label="Sıradaki bölüm">{nextEpisode}</Stat>}
                 </Box>
               </motion.div>
 
