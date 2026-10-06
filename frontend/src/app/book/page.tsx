@@ -1,12 +1,9 @@
-import { Typography, Container } from "@mui/material";
+import type { Metadata } from "next";
+import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
+import ComingSoon from "../../components/Common/ComingSoon";
+
+export const metadata: Metadata = { title: "Kitaplar" };
 
 export default function BookPage() {
-  return (
-    <Container>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Kitap Listesi
-      </Typography>
-      {/* Tablo yapısı daha sonra eklenecek */}
-    </Container>
-  );
+  return <ComingSoon title="Kitaplar" description="Kitap arşivi yakında burada. Okuduğun ve okuyacağın kitapları listeleyebileceksin." icon={<AutoStoriesOutlinedIcon />} />;
 }

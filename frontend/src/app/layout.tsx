@@ -1,14 +1,26 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import Layout from "../components/layout/Layout";
 import MUIProvider from "../providers/MUIProvider";
 import { AuthProvider } from "../contexts/AuthContext";
-import "../styles/fonts.css"; // Local fontlar için style dosyası
+import { palette } from "../theme/customTheme";
 
 export const runtime = "edge";
 
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  variable: "--font-sans",
+});
+
 export const metadata: Metadata = {
-  title: "Local DB App",
+  title: { default: "Local DB", template: "%s · Local DB" },
   description: "Your personal media tracker",
+};
+
+export const viewport: Viewport = {
+  themeColor: palette.ink,
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -17,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr">
+    <html lang="tr" className={inter.variable}>
       <body>
         <MUIProvider>
           <AuthProvider>

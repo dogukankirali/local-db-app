@@ -71,7 +71,11 @@ function AnimePageContent() {
     }
   }, []);
 
-  const [dataLoading, setDataLoading] = useState<boolean>(false);
+  // İlk veri gelene kadar "No anime found" yerine yükleniyor durumu gösterilsin
+  const [dataLoading, setDataLoading] = useState<boolean>(true);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  // Grid isteklerinde kullanılan güncel filtreler (useTableFilters aşağıda tanımlı)
+  const filterStateRef = useRef<TEATable.IFilterType[]>([]);
   const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
   // Kayıtlı görünüm okunana kadar hiçbir görünümü render etmiyoruz; aksi halde
   // tablo kayıtlıyken önce grid isteği de atılıyordu (çift istek).
@@ -115,11 +119,12 @@ function AnimePageContent() {
     } else {
       setGridLoadingMore(true);
     }
-    const filters = getFilledFilters(lastFetchParams.current?.filters ?? []);
+    const filters = getFilledFilters(filterStateRef.current);
     try {
       const res = await AnimeService.getAnimes({ page, count, filters, order: lastFetchParams.current?.order || "asc", orderBy: lastFetchParams.current?.orderBy || "Name" });
       gridCachePage.current = page;
       gridTotalPages.current = res?.pagination?.totalPageCount || Infinity;
+      setTotalCount(res?.pagination?.totalItemCount ?? null);
       if (reset) {
         setGridCache(res?.data || []);
         setTableData(res); // keep tableData in sync for table view
@@ -273,6 +278,26 @@ function AnimePageContent() {
   const { filterState, handleClickFilters, ...tableFilterProps } =
     useTableFilters(Constants({ type: "tableFilters", additionalData: { genres, series } })!, () => {});
   const { handleClickSettings, ...settingsProps } = useTableSettings();
+  filterStateRef.current = filterState;
+
+  // Grid görünümünde filtre değişince listeyi baştan yükle (tablo kendi isteğini atıyor)
+  const filtersKey = JSON.stringify(getFilledFilters(filterState));
+  const lastGridFiltersKey = useRef(filtersKey);
+  useEffect(() => {
+    if (!viewModeReady || viewMode !== "grid" || lastGridFiltersKey.current === filtersKey) return;
+    lastGridFiltersKey.current = filtersKey;
+    gridCachePage.current = 0;
+    gridTotalPages.current = Infinity;
+    fetchGridPage(1, GRID_PRE_FETCH, true);
+  }, [filtersKey, viewMode, viewModeReady]);
+
+  // Üst bardaki arama (?q=) isim filtresine yansır
+  const searchQuery = searchParams.get("q") ?? "";
+  useEffect(() => {
+    tableFilterProps.setFilterState((prev) =>
+      prev.map((f): TEATable.IFilterType => (f.key === "Name" && f.value !== searchQuery ? ({ ...f, value: searchQuery } as TEATable.IFilterType) : f))
+    );
+  }, [searchQuery]);
 
   const getGenres = async () => {
     try {
@@ -308,6 +333,7 @@ function AnimePageContent() {
 
       if (!aborted) {
         setTableData(res);
+        setTotalCount(res?.pagination?.totalItemCount ?? null);
       }
     } catch (err) {
       if (axios.isCancel(err)) {
@@ -666,33 +692,58 @@ function AnimePageContent() {
         sx={{
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
+          // Topbar (64px) + main padding çıkınca kalan alan; grid/tablo kendi içinde kayar
+          height: { xs: "calc(100dvh - 64px - 24px)", md: "calc(100dvh - 64px - 48px)" },
           width: "100%",
           overflow: "hidden",
-          "@media (max-width: 768px)": {
-            width: "100%",
-            position: "absolute",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            height: "100%",
-            padding: "10px",
-            left: "0px",
-            top: "50px",
-          },
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            height: "100%",
-            width: "100%",
-            padding: windowSize.width < 768 ? "10px" : "20px",
-            overflow: "hidden",
-          }}
-        >
           <TableHeaders
+            leading={
+              <Box>
+                <MuiTypography sx={{ fontSize: "1.35rem", fontWeight: 700, letterSpacing: "-0.015em", lineHeight: 1.2 }}>
+                  Anime arşivi
+                </MuiTypography>
+                <MuiTypography sx={{ fontSize: "0.8rem", color: theme.secondary_text }}>
+                  {totalCount === null ? "Yükleniyor…" : `${totalCount} anime${searchQuery ? ` · “${searchQuery}” araması` : ""}`}
+                </MuiTypography>
+              </Box>
+            }
+            trailing={
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                {viewMode === "grid" && (
+                  <Box sx={{ display: { xs: "none", lg: "flex" }, alignItems: "center", gap: 1.5, width: 150 }}>
+                    <MuiTypography variant="caption" sx={{ color: theme.secondary_text, whiteSpace: "nowrap" }}>
+                      Sütun {gridSize}
+                    </MuiTypography>
+                    <Slider value={gridSize} min={2} max={8} step={1} onChange={(e, val) => setGridSize(val as number)} size="small" />
+                  </Box>
+                )}
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  onChange={(e, newView) => { if (newView) handleViewModeChange(newView as "table" | "grid"); }}
+                  aria-label="Görünüm"
+                  size="small"
+                  sx={{
+                    height: 38,
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: "10px",
+                    p: "3px",
+                    "& .MuiToggleButton-root": { border: 0, borderRadius: "7px !important", px: 1, color: theme.secondary_text },
+                    "& .Mui-selected": { backgroundColor: "rgba(124,92,255,0.18) !important", color: `${theme.primary} !important` },
+                  }}
+                >
+                  <ToggleButton value="table" aria-label="Tablo görünümü">
+                    <ViewListIcon fontSize="small" />
+                  </ToggleButton>
+                  <ToggleButton value="grid" aria-label="Kart görünümü">
+                    <ViewModuleIcon fontSize="small" />
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            }
             genres={genres}
             filterState={filterState}
             tableFilterProps={tableFilterProps}
@@ -707,51 +758,17 @@ function AnimePageContent() {
             user={user}
           />
 
-          
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, mr: 2 }}>
-              
-              {viewMode === 'grid' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mr: 3, width: '150px' }}>
-                  <MuiTypography variant="caption" sx={{ color: theme.secondary_text, mr: 2, whiteSpace: 'nowrap' }}>
-                    Sütun: {gridSize}
-                  </MuiTypography>
-                  <Slider
-                    value={gridSize}
-                    min={2}
-                    max={8}
-                    step={1}
-                    onChange={(e, val) => setGridSize(val as number)}
-                    size="small"
-                  />
-                </Box>
-              )}
-
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                onChange={(e, newView) => { if (newView) handleViewModeChange(newView as "table" | "grid"); }}
-                aria-label="view toggle"
-                size="small"
-                sx={{ backgroundColor: theme.table_row_light }}
-              >
-                <ToggleButton value="table" aria-label="table view">
-                  <ViewListIcon sx={{ color: viewMode === 'table' ? theme.primary : theme.secondary_text }} />
-                </ToggleButton>
-                <ToggleButton value="grid" aria-label="grid view">
-                  <ViewModuleIcon sx={{ color: viewMode === 'grid' ? theme.primary : theme.secondary_text }} />
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-
             {!viewModeReady ? null : viewMode === "grid" ? (
-              <AnimeGrid
-                allData={gridCache}
-                loading={dataLoading}
-                loadingMore={gridLoadingMore}
-                gridSize={gridSize}
-                onLoadMore={handleGridLoadMore}
-                renderActions={renderGridActions}
-              />
+              <Box sx={{ flex: 1, minHeight: 0 }}>
+                <AnimeGrid
+                  allData={gridCache}
+                  loading={dataLoading}
+                  loadingMore={gridLoadingMore}
+                  gridSize={gridSize}
+                  onLoadMore={handleGridLoadMore}
+                  renderActions={renderGridActions}
+                />
+              </Box>
             ) : (
               <Box sx={{
                 width: "100%",
@@ -806,7 +823,6 @@ function AnimePageContent() {
                 />
               </Box>
             )}
-        </Box>
       </Box>
       <UpdateDeleteAnimeModal
         modalData={modalData}
