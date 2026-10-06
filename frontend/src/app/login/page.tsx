@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import AuthShell, { authLinkSx } from "../../components/auth/AuthShell";
+import GoogleButton, { readGoogleHash } from "../../components/auth/GoogleButton";
 import { Field, TextInput } from "../../components/ui/FormControls";
 
 export default function LoginPage() {
@@ -15,13 +16,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, loginWithSession, isAuthenticated } = useAuth();
   const router = useRouter();
 
   // Kullanıcı zaten giriş yapmışsa ana sayfaya yönlendir
   React.useEffect(() => {
     if (isAuthenticated) router.push("/");
   }, [isAuthenticated, router]);
+
+  // Google dönüşü: /login#google=<oturum> ya da #google_error=<mesaj>
+  React.useEffect(() => {
+    const result = readGoogleHash();
+    if (result?.session) loginWithSession(result.session);
+    else if (result?.error) setError(result.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +66,7 @@ export default function LoginPage() {
           {error}
         </Alert>
       )}
+      <GoogleButton />
       <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: "grid", gap: 2 }}>
         <Field label="Kullanıcı adı">
           <TextInput

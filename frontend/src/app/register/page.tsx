@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import AuthShell, { authLinkSx } from "../../components/auth/AuthShell";
+import GoogleButton from "../../components/auth/GoogleButton";
 import { Field, TextInput } from "../../components/ui/FormControls";
 import { palette } from "../../theme/customTheme";
 
@@ -89,6 +90,7 @@ export default function RegisterPage() {
           {error}
         </Alert>
       )}
+      <GoogleButton />
       <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: "grid", gap: 2 }}>
         <Field label="Kullanıcı adı">
           <TextInput

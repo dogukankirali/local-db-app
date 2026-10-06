@@ -24,6 +24,8 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   login: (data: LoginRequest) => Promise<void>;
+  /** Google dönüşündeki hazır oturumu (kullanıcı + token) kaydeder */
+  loginWithSession: (session: User & { token?: string }) => void;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   updateProfile: (data: UpdateProfileRequest) => Promise<void>;
@@ -84,6 +86,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     initAuth();
   }, []);
+
+  // Google ile girişte backend oturumu hazır döner; AuthService.login ile aynı şekilde saklanır
+  const loginWithSession = (session: User & { token?: string }) => {
+    if (!session?.token) return;
+    localStorage.setItem("token", session.token);
+    localStorage.setItem("user", JSON.stringify(session));
+    setUser(session);
+    setIsAuthenticated(true);
+    setIsAdmin(Boolean(session.isAdmin));
+    router.push("/");
+  };
 
   // Giriş işlevi
   const login = async (data: LoginRequest) => {
@@ -185,6 +198,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     loading,
     error,
     login,
+    loginWithSession,
     register,
     logout,
     updateProfile,
