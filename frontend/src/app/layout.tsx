@@ -5,8 +5,6 @@ import MUIProvider from "../providers/MUIProvider";
 import { AuthProvider } from "../contexts/AuthContext";
 import { palette } from "../theme/customTheme";
 
-export const runtime = "edge";
-
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
   display: "swap",

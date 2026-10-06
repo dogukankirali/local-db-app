@@ -1,0 +1,7 @@
+# cp .dev.vars.example .dev.vars  (wrangler dev bu dosyayı okur, git'e girmez)
+JWT_SECRET_KEY=dev-only-change-me
+ENVIRONMENT=development
+# Şifre sıfırlama bağlantısı next dev (:3000) adresine gitsin
+APP_URL=http://localhost:3000
+# Mail göndermek istersen: https://resend.com → API Keys
+# RESEND_API_KEY=re_...

@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const path = process.env.NEXT_PUBLIC_API_URL || "https://localhost:8080";
+import { API_BASE } from "./http";
+
+const path = API_BASE;
 
 // Kullanıcı tipi tanımlamaları
 export interface User {
@@ -48,8 +50,8 @@ export interface ResetPasswordRequest {
 }
 
 // Axios instance oluştur
+// İstekler zaten `${path}/...` ile tam yol veriyor; baseURL göreli "/api" olunca yol iki kez ekleniyordu
 const authAxios = axios.create({
-  baseURL: path,
   headers: {
     "Content-Type": "application/json",
   },

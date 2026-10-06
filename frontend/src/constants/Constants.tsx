@@ -4,8 +4,7 @@ import { FilterStateProp } from "../components/CollapsibleTableV2/Components/Tab
 import { genreLabel } from "../components/Common/GenreChip";
 
 // API URL
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://localhost:8080";
+export { API_BASE as API_URL } from "../Services/http";
 
 export default function Constants({
   type,

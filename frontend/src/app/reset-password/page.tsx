@@ -16,8 +16,8 @@ import {
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import Link from "next/link";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useRouter, useParams } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -27,21 +27,21 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const { resetPassword, loading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const params = useParams();
   const [token, setToken] = useState<string>("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // Token'ı params'dan al
+  // Token bağlantıdaki ?token= parametresinden okunur (site statik sunulduğu için yol parametresi yok)
   useEffect(() => {
-    if (params && params.token) {
-      setToken(params.token as string);
+    const value = new URLSearchParams(window.location.search).get("token");
+    if (value) {
+      setToken(value);
     } else {
       setError(
         "Geçersiz veya eksik token. Lütfen geçerli bir şifre sıfırlama bağlantısı kullanın."
       );
     }
-  }, [params]);
+  }, []);
 
   // Kullanıcı zaten giriş yapmışsa ana sayfaya yönlendir
   useEffect(() => {

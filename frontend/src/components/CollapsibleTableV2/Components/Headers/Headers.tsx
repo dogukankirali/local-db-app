@@ -46,10 +46,7 @@ export default function TableHeaders(props: {
   const [syncMessage, setSyncMessage] = useState("");
   const [showProgressIndicator, setShowProgressIndicator] = useState(false);
   const syncControllerRef = useRef<AbortController | null>(null);
-  const eventSourceRef = useRef<{
-    eventSource: EventSource;
-    close: () => void;
-  } | null>(null);
+  const eventSourceRef = useRef<{ close: () => void } | null>(null);
 
   // Render sırasında localStorage okumak hydration hatası veriyordu; auth context mount sonrası doluyor
   const { isAdmin } = useAuth();
@@ -198,18 +195,6 @@ export default function TableHeaders(props: {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
-
-      // Send cancel request to backend
-      AnimeService.cancelSync()
-        .then(() => {
-          console.log("Backend synchronization cancel request sent");
-        })
-        .catch((err) => {
-          console.error(
-            "Error sending backend synchronization cancel request:",
-            err
-          );
-        });
 
       setIsSyncing(false);
       setSyncMessage("Synchronization stopped");

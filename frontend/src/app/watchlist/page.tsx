@@ -249,9 +249,10 @@ export default function WatchListPage() {
 
     const changed = reordered.filter((item) => previous.find((p) => p.id === item.id)?.order_rank !== item.order_rank);
     try {
-      await Promise.all(
-        changed.map((item) => axios.put(`${API_URL}/watchlist/order`, { id: item.id, order_rank: item.order_rank }))
-      );
+      // Tüm değişen sıralar tek istekte, tek D1 batch'inde yazılır
+      if (changed.length) {
+        await axios.put(`${API_URL}/watchlist/order`, changed.map((item) => ({ id: item.id, order_rank: item.order_rank })));
+      }
     } catch (err: any) {
       setToast({ severity: "error", text: `Sıralama kaydedilemedi: ${err.message || "Bilinmeyen hata"}` });
       fetchWatchList(true);

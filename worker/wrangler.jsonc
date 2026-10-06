@@ -1,0 +1,33 @@
+{
+  // Kiroku: tek Worker hem statik siteyi (frontend/out) hem /api'yi sunar.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kiroku",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../frontend/out",
+    "binding": "ASSETS",
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page",
+    // Statik dosyalardan önce Worker'a gidecek yollar. /createAnime tarayıcı eklentisi için.
+    "run_worker_first": ["/api/*", "/createAnime"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kiroku",
+      // `npx wrangler d1 create kiroku` çıktısındaki id ile değiştir
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "MAIL_FROM": "Kiroku <onboarding@resend.dev>",
+    "PASSWORD_ITERATIONS": "10000"
+  },
+  // APP_URL (şifre sıfırlama bağlantısının adresi) verilmezse isteğin geldiği adres kullanılır.
+  // Gizli değerler: `npx wrangler secret put JWT_SECRET_KEY` (ve isteğe bağlı RESEND_API_KEY).
+  // Lokal geliştirmede .dev.vars dosyasından okunur.
+  "observability": { "enabled": true }
+}
