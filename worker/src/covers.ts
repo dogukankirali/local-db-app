@@ -6,7 +6,7 @@ import { field, int, readJson, type AppEnv } from "./util";
 // Tarayıcı, MAL id'leriyle AniList'ten en büyük kapağı (coverImage.extraLarge) alır;
 // bu uçlar yalnızca hangi animelerin yükseltileceğini söyler ve gelen adresleri yazar.
 // AniList'te karşılığı bulunamayan MAL kapakları MAL'ın büyük sürümüne (aynı yol + "l.jpg") çevrilir.
-// Elle yüklenen (data:) kapaklara dokunulmaz.
+// Base64 (data:) kapaklar da MAL id'si varsa AniList kapağıyla değiştirilir.
 
 export const coverRoutes = new Hono<AppEnv>();
 
@@ -23,8 +23,7 @@ const malId = (link: string | null) => {
 coverRoutes.get("/covers/pending", requireAdmin, async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, mal_anime_link FROM animes
-     WHERE (cover IS NULL OR cover NOT LIKE 'data:%')
-       AND (cover IS NULL OR cover NOT LIKE 'https://s4.anilist.co/%/cover/large/%')
+     WHERE (cover IS NULL OR cover NOT LIKE 'https://s4.anilist.co/%/cover/large/%')
        AND (cover IS NULL OR cover NOT GLOB 'https://cdn.myanimelist.net/images/anime/*l.jpg')
      ORDER BY id`
   ).all<{ id: number; mal_anime_link: string | null }>();
@@ -46,7 +45,7 @@ coverRoutes.post("/covers/batch", requireAdmin, async (c) => {
   const results = await db.batch(
     items.map((it) =>
       it.url
-        ? db.prepare("UPDATE animes SET cover = ? WHERE id = ? AND (cover IS NULL OR cover NOT LIKE 'data:%')").bind(it.url, it.id)
+        ? db.prepare("UPDATE animes SET cover = ? WHERE id = ?").bind(it.url, it.id)
         : db
             .prepare(
               `UPDATE animes SET cover = substr(cover, 1, length(cover) - 4) || 'l.jpg'
