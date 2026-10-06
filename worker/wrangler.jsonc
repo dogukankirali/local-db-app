@@ -3,6 +3,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "kiroku",
   "main": "src/index.ts",
+  // Workers Builds'te deploy'dan önce yeni D1 migration'ları uygulanır (scripts/ci-migrate.mjs, #24)
+  "build": { "command": "node scripts/ci-migrate.mjs" },
   // app.dogukankirali.com'un yanında workers.dev ve önizleme adresleri de açık kalsın
   "workers_dev": true,
   "preview_urls": true,

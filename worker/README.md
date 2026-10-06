@@ -82,7 +82,7 @@ Google hesabının e-postası mevcut bir kullanıcıyla eşleşirse o hesaba gir
 
 - **Şifreler** PBKDF2-SHA256 ile saklanır (`pbkdf2$sha256$<iterasyon>$<tuz>$<özet>`). İterasyon sayısı `PASSWORD_ITERATIONS` ile değişir; eski hash'ler kendi iterasyonlarıyla doğrulanmaya devam eder.
 - **Yetki**: katalog değişiklikleri (anime silme, katalog alanları, CSV yükleme) ve sync admin ister. Puan, bölüm, PTW, notlar ve watchlist her kullanıcının kendi kaydıdır ve girişle değişir. `/createAnime` ve `/api/anime/update-episode` artık token ister; eklenti `/api/auth/extension-token` ile aldığı `kk_` önekli anahtarı gönderir (DB'de yalnızca SHA-256 özeti).
-- **Migration'lar**: Workers Builds deploy komutu `npx wrangler d1 migrations apply kiroku --remote && npx wrangler deploy` olmalı ki yeni migration'lar (ör. `0002_user_data.sql`) deploy'dan önce uygulansın.
+- **Migration'lar**: `wrangler.jsonc`'deki `build.command` Workers Builds'te (`WORKERS_CI=1`) deploy'dan önce `wrangler d1 migrations apply kiroku --remote` çalıştırır; lokal ve CI dry-run'da atlanır. Build token'ında D1 Edit izni olmalı.
 - **Sync**: AniList, Workers'ın çıkış IP'lerini engellediği için arama tarayıcıda yapılır (her grup 8 anime, tek istek). Worker `/api/sync/batch` ile gelen sonuçlardan en iyi eşleşmeyi seçip eksik alanları yazar. İstemci gruplar arasında 2 sn bekler, AniList hız sınırında belirtilen süre kadar bekler.
 - **Otomatik deploy**: Cloudflare Workers Builds, `main`'e her push'ta `worker/` içinden build alıp deploy eder (ayarlar dashboard'da: kiroku → Settings → Builds).
 - **Watchlist**, `user_anime.plan_to_watch` alanına bağlı D1 trigger'larıyla kendiliğinden güncel kalır.
