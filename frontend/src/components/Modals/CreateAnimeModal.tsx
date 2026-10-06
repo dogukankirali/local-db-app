@@ -40,14 +40,18 @@ const modalStyle = {
   top: "50%",
   left: "50%",
   transform: "translate(-50%, -50%)",
-  width: "80%",
+  width: "90%",
+  maxWidth: "800px",
   maxHeight: "90vh",
-  bgcolor: theme.background,
-  boxShadow: 24,
+  bgcolor: "#202022",
+  boxShadow: "0 16px 64px rgba(0, 0, 0, 0.8)",
   p: 4,
-  borderRadius: 2,
+  borderRadius: "20px",
   outline: "none",
   overflow: "hidden",
+  border: "1px solid rgba(255,255,255,0.05)",
+  display: "flex",
+  flexDirection: "column"
 };
 
 const LoadingFallback = () => (
@@ -386,7 +390,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
   }, [searchResults]); */
 
   // Erken return ifadesi Hook'lardan sonra olmalı
-  if (!props.createModalData.status) return null;
+  
 
   const list = Constants({ type: "modalList" }).toSpliced(8, 0, {
     key: "Genre",
@@ -482,7 +486,7 @@ const CreateAnimeModal = memo(function CreateAnimeModal(props: {
                       ),
                     }}
                     sx={{
-                      "& .MuiOutlinedInput-root": {
+                      "& .MuiOutlinedInput-root, & .MuiFilledInput-root": {
                         "& fieldset": {
                           borderColor: theme.input_border,
                         },

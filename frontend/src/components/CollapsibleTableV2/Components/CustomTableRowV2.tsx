@@ -495,7 +495,7 @@ export default function CustomTableRowV2(
                       }}
                       onMouseLeave={handlePopoverClose}
                       alt={props.singleData["Name"] + "_cover"}
-                      style={{ width: 70, borderRadius: 10 }}
+                      style={{ width: 40, height: 40, objectFit: "cover", borderRadius: "8px", boxShadow: "0 2px 5px rgba(0,0,0,0.3)" }}
                     />
                     {props.singleData["PlanToWatch"] === true && (
                       <div
@@ -727,8 +727,7 @@ export default function CustomTableRowV2(
                         maxWidth: "280px",
                         pb: 1,
                         alignItems: "center",
-                        "&::-webkit-scrollbar": { height: "4px" },
-                        "&::-webkit-scrollbar-thumb": { backgroundColor: "#555", borderRadius: "4px" },
+                        "&::-webkit-scrollbar": { display: "none" }, MsOverflowStyle: "none", scrollbarWidth: "none",
                       }}
                     >
                     {props.singleData[header.key].length !== 0 &&
@@ -742,10 +741,10 @@ export default function CustomTableRowV2(
                               display: "inline-block",
                               backgroundColor: "transparent",
                               cursor: "pointer",
-                              padding: 0, // İç boşlukları sıfırlayın
+                              padding: "2px 8px", borderRadius: "16px", flexShrink: 0, whiteSpace: "nowrap", margin: "0",
                               width: "100%",
                               height: "auto",
-                              margin: "0 2px",
+                              
                               ":hover": {
                                 backgroundColor: "transparent",
                               },

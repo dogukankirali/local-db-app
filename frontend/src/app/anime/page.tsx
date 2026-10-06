@@ -71,6 +71,17 @@ function AnimePageContent() {
 
   const [dataLoading, setDataLoading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
+  useEffect(() => {
+    const saved = localStorage.getItem("viewMode");
+    if (saved === "table" || saved === "grid") {
+      setViewMode(saved);
+    }
+  }, []);
+  
+  const handleViewModeChange = (newView: "table" | "grid") => {
+    setViewMode(newView);
+    localStorage.setItem("viewMode", newView);
+  };
   const [gridSize, setGridSize] = useState<number>(5);
   
   useEffect(() => {
@@ -669,7 +680,7 @@ function AnimePageContent() {
               <ToggleButtonGroup
                 value={viewMode}
                 exclusive
-                onChange={(e, newView) => { if (newView) setViewMode(newView); }}
+                onChange={(e, newView) => { if (newView) handleViewModeChange(newView as "table" | "grid"); }}
                 aria-label="view toggle"
                 size="small"
                 sx={{ backgroundColor: theme.table_row_light }}
@@ -707,20 +718,20 @@ function AnimePageContent() {
                 height: "100%",
                 "& .MuiPaper-root": { backgroundColor: "transparent", boxShadow: "none", border: "none" },
                 "& .MuiTableHead-root": { 
-                   "& .MuiTableCell-root": { backgroundColor: theme.background_light, color: theme.primary, borderBottom: "2px solid #333", fontSize: "0.9rem", fontWeight: "bold" }
+                   "& .MuiTableCell-root": { backgroundColor: "transparent", color: theme.primary, borderBottom: "2px solid rgba(255,255,255,0.05)", fontSize: "0.85rem", fontWeight: "bold", padding: "8px 12px" }
                 },
                 "& .MuiTableBody-root .MuiTableRow-root": {
-                   transition: "all 0.25s ease",
-                   backgroundColor: theme.table_row_light,
+                   transition: "background-color 0.2s ease",
+                   backgroundColor: "transparent",
                    display: "table-row",
                    "&:hover": {
-                      transform: "scale(1.001)",
-                      boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
-                      zIndex: 10,
-                      position: "relative",
-                      backgroundColor: "#2c2c30",
+                      backgroundColor: "rgba(255,255,255,0.03)",
                    },
-                   "& .MuiTableCell-root": { borderBottom: "1px solid rgba(255,255,255,0.05)" }
+                   "& .MuiTableCell-root": { 
+                      borderBottom: "1px solid rgba(255,255,255,0.03)", 
+                      backgroundColor: "transparent !important", // Fix crazy column colors
+                      padding: "8px 12px" // More compact
+                   }
                 }
               }}>
                 <TableTemp

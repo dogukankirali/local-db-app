@@ -12,7 +12,7 @@ import Constants from "../../../../constants/Constants";
 import FileUpload from "../../../Common/FileUpload";
 import { AnimeService } from "../../../../Services/AnimeServices";
 import Toastify from "toastify-js";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import SyncProgressIndicator from "../../../Sync/SyncProgressIndicator";
 import axios from "axios";
 
