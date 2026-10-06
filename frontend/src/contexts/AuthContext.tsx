@@ -133,19 +133,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   // Profil güncelleme işlevi
+  // Global `loading` değiştirilmez: ProtectedRoute onu oturum kontrolü için kullanıyor,
+  // kaydetme sırasında sayfa spinner'a dönüp form durumu kayboluyordu.
   const updateProfile = async (data: UpdateProfileRequest) => {
-    setLoading(true);
     setError(null);
     try {
       const updatedUser = await AuthService.updateProfile(data);
       setUser(updatedUser);
       setIsAdmin(updatedUser.isAdmin);
     } catch (error: any) {
-      console.error("Profil güncelleme hatası:", error);
       setError(error.response?.data?.message || "Profil güncellenemedi");
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

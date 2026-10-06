@@ -224,7 +224,7 @@ export default function TableTemp<T extends {}>(
     >
       <TableContainer
         sx={{
-          height: props.extendedTable
+          maxHeight: props.extendedTable
             ? "maxContent"
             : props.style !== undefined
             ? props.style.height
@@ -236,9 +236,9 @@ export default function TableTemp<T extends {}>(
         component={Paper}
       >
         <Scrollbars
-          style={{
-            height: props.dimensions?.height ?? 600,
-          }}
+          autoHeight
+          autoHeightMax={props.dimensions?.height ?? 600}
+          style={{ width: "100%" }}
         >
           <Table
             stickyHeader

@@ -25,7 +25,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import React from "react";
 import LocalMoviesIcon from "@mui/icons-material/LocalMovies";
 import TvIcon from "@mui/icons-material/Tv";
-import { genreColors } from "../../../constants/Constants";
+import { GenreChips } from "../../Common/GenreChip";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
@@ -303,9 +303,30 @@ export default function CustomTableRowV2(
               ? theme.table_row_dark
               : theme.table_row_light,
             color: theme.primary_text,
-            fontSize: isMobile ? "0.75rem" : "inherit",
-            padding: isMobile ? "8px 4px" : "16px",
+            fontSize: isMobile ? "0.75rem" : "0.8rem",
+            padding: isMobile ? "6px 4px" : "8px 12px",
           };
+
+          // Aksiyon (Settings) sütunu: key bir render fonksiyonu, string değil
+          if (header.type === "button" && typeof header.key === "function") {
+            const renderFunction = header.key as (
+              id: string,
+              i: number,
+              data?: any
+            ) => React.ReactNode;
+            return (
+              <TableCell
+                key={`cell-button-${rowIndex}-${index}`}
+                align="center"
+                style={{ ...colStyle, whiteSpace: "nowrap" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                {renderFunction(props.singleData.id, rowIndex, props.singleData)}
+              </TableCell>
+            );
+          }
 
           if (typeof header.key === "string") {
             if (header.type === "string") {
@@ -341,27 +362,34 @@ export default function CustomTableRowV2(
                 );
               }
             } else if (header.type === "tv-movie") {
-              if (props.singleData[header.key] === true) {
-                return (
-                  <TableCell
-                    key={`cell-${header.key}-${index}`}
-                    align="center"
-                    style={{ ...colStyle, color: "green" }}
+              const isMovie = props.singleData[header.key] === true;
+              return (
+                <TableCell
+                  key={`cell-${header.key}-${index}`}
+                  align="center"
+                  style={colStyle}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                      height: 22,
+                      px: 1,
+                      borderRadius: "6px",
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      backgroundColor: isMovie ? "rgba(34,211,238,0.12)" : "rgba(124,92,255,0.14)",
+                      color: isMovie ? "#22D3EE" : "#A895FF",
+                    }}
                   >
-                    <LocalMoviesIcon />
-                  </TableCell>
-                );
-              } else {
-                return (
-                  <TableCell
-                    key={`cell-${header.key}-${index}`}
-                    align="center"
-                    style={{ ...colStyle, color: "red" }}
-                  >
-                    <TvIcon />
-                  </TableCell>
-                );
-              }
+                    {isMovie ? <LocalMoviesIcon sx={{ fontSize: 14 }} /> : <TvIcon sx={{ fontSize: 14 }} />}
+                    {isMovie ? "Film" : "TV"}
+                  </Box>
+                </TableCell>
+              );
             } else if (header.type === "number") {
               return (
                 <TableCell
@@ -370,8 +398,8 @@ export default function CustomTableRowV2(
                   style={{
                     ...colStyle,
                     color: theme.primary_text,
-                    fontWeight: "semi-bold",
-                    fontSize: 20,
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
                   }}
                 >
                   {props.singleData[header.key]}
@@ -397,26 +425,6 @@ export default function CustomTableRowV2(
                   style={colStyle}
                 >
                   {props.singleData[header.key]}
-                </TableCell>
-              );
-            } else if (header.type === "button") {
-              const renderFunction = header.key as any;
-              return (
-                <TableCell
-                  key={`cell-button-${rowIndex}-${index}`}
-                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
-                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
-                  align="center"
-                  style={colStyle}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
-                  }}
-                >
-                  {renderFunction(
-                    props.singleData.id,
-                    rowIndex,
-                    props.singleData
-                  )}
                 </TableCell>
               );
             } else if (
@@ -495,38 +503,28 @@ export default function CustomTableRowV2(
                       }}
                       onMouseLeave={handlePopoverClose}
                       alt={props.singleData["Name"] + "_cover"}
-                      style={{ width: 70, borderRadius: 10 }}
+                      style={{ width: 44, height: 44, objectFit: "cover", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", display: "block", margin: "auto" }}
                     />
                     {props.singleData["PlanToWatch"] === true && (
                       <div
                         style={{
                           position: "absolute",
-                          top: 0,
-                          right: 0,
+                          top: -4,
+                          right: -4,
                           backgroundColor: "#FFD700",
                           color: "#000",
-                          width: "24px",
-                          height: "24px",
-                          textAlign: "center",
+                          borderRadius: "50%",
+                          width: "16px",
+                          height: "16px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           fontSize: "8px",
                           fontWeight: "bold",
-                          padding: "3px 0",
-                          zIndex: 1,
-                          clipPath: "polygon(0 0, 100% 0, 100% 100%)",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.5)"
                         }}
                       >
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "2px",
-                            right: "2px",
-                            fontSize: "8px",
-                            fontWeight: "bold",
-                            transform: "rotate(45deg)",
-                          }}
-                        >
-                          PTW
-                        </div>
+                        P
                       </div>
                     )}
                   </div>
@@ -540,59 +538,16 @@ export default function CustomTableRowV2(
                     }}
                     open={openAlCover}
                     anchorEl={anchorElCover}
-                    anchorOrigin={{
-                      vertical: "bottom",
-                      horizontal: "left",
-                    }}
-                    transformOrigin={{
-                      vertical: "top",
-                      horizontal: "left",
-                    }}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                    transformOrigin={{ vertical: "top", horizontal: "left" }}
                     onClose={handlePopoverClose}
                     disableRestoreFocus
                   >
-                    <div
-                      style={{ position: "relative", display: "inline-block" }}
-                    >
-                      <img
-                        src={`${props.singleData[header.key]}`}
-                        alt={props.singleData["Name"] + "_cover"}
-                        style={{ width: 400 }}
-                      />
-                      {props.singleData["PlanToWatch"] === true && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            right: 0,
-                            backgroundColor: "#FFD700",
-                            color: "#000",
-                            width: "60px",
-                            height: "60px",
-                            textAlign: "center",
-                            fontSize: "14px",
-                            fontWeight: "bold",
-                            padding: "8px 0",
-                            zIndex: 1,
-                            clipPath: "polygon(0 0, 100% 0, 100% 100%)",
-                          }}
-                        >
-                          <div
-                            style={{
-                              position: "absolute",
-                              top: "8px",
-                              right: "10px",
-                              fontSize: "14px",
-                              fontWeight: "bold",
-                              transform: "rotate(45deg)",
-                              transformOrigin: "center",
-                            }}
-                          >
-                            PTW
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <img
+                      src={`${props.singleData[header.key]}`}
+                      alt={props.singleData["Name"] + "_cover"}
+                      style={{ width: 300, borderRadius: "12px", boxShadow: "0 16px 32px rgba(0,0,0,0.8)" }}
+                    />
                   </Popover>
                 </TableCell>
               );
@@ -609,18 +564,25 @@ export default function CustomTableRowV2(
                 </TableCell>
               );
             } else if (header.type === "status") {
+              const isFinished = props.singleData[header.key] === "Finished";
               return (
                 <TableCell
                   key={`cell-${header.key}-${index}`}
                   align="center"
-                  style={{
-                    color:
-                      props.singleData[header.key] === "Finished"
-                        ? "#00B0F0"
-                        : "#FF0000",
-                  }}
+                  style={colStyle}
                 >
-                  {props.singleData[header.key]}
+                  <Chip 
+                    label={props.singleData[header.key]} 
+                    size="small"
+                    sx={{ 
+                      height: "22px", 
+                      fontSize: "0.7rem", 
+                      fontWeight: "bold", 
+                      backgroundColor: isFinished ? "rgba(0, 176, 240, 0.15)" : "rgba(255, 0, 0, 0.15)",
+                      color: isFinished ? "#00B0F0" : "#FF0000",
+                      border: `1px solid ${isFinished ? "#00B0F0" : "#FF0000"}`
+                    }} 
+                  />
                 </TableCell>
               );
             } else if (header.type === "score") {
@@ -646,69 +608,34 @@ export default function CustomTableRowV2(
                 </TableCell>
               );
             } else if (header.type === "episode") {
+              const watched = parseInt(props.singleData[header.key]) || 0;
+              const total = parseInt(props.singleData["TotalNumberOfEpisodes"]) || 0;
+              const isFinished = total > 0 && watched === total;
+              const progress = total > 0 ? (watched / total) * 100 : 0;
+              const isPlanToWatch = props.singleData["PlanToWatch"] === true;
+              
               return (
                 <TableCell
                   key={`cell-${header.key}-${index}`}
                   align="center"
                   style={colStyle}
                 >
-                  {props.singleData[header.key] !== 0 &&
-                  props.singleData[header.key] ===
-                    props.singleData["TotalNumberOfEpisodes"] ? (
-                    <Typography sx={{ color: theme.primary_text }}>
-                      Finished
-                    </Typography>
+                  {isPlanToWatch && watched === 0 ? (
+                    <Chip size="small" label="Plan To Watch" sx={{ backgroundColor: "rgba(255, 215, 0, 0.15)", color: "#FFD700", fontWeight: "bold", fontSize: "0.7rem", height: "22px" }} />
+                  ) : isFinished ? (
+                    <Chip size="small" label="Completed" sx={{ backgroundColor: "rgba(16, 185, 129, 0.15)", color: "#10B981", fontWeight: "bold", fontSize: "0.7rem", height: "22px" }} />
                   ) : (
-                    <>
-                      {props.singleData[header.key] !== -1 && (
-                        <Box sx={{ color: theme.primary_text }}>
-                          {props.singleData[header.key]} Episode(s)
-                        </Box>
-                      )}
-                    </>
-                  )}{" "}
-                  <Box sx={{ width: "100%" }}>
-                    {props.singleData[header.key] ===
-                    props.singleData["TotalNumberOfEpisodes"] ? (
-                      <>
-                        {props.singleData[header.key] !== 0 ? (
-                          <LinearProgressWithLabel
-                            sx={{
-                              "& .MuiLinearProgress-colorPrimary": {
-                                backgroundColor: "red",
-                              },
-                              "& .MuiLinearProgress-barColorPrimary": {
-                                backgroundColor: epSetter(100),
-                              },
-                            }}
-                            value={100}
-                          />
-                        ) : (
-                          "-"
-                        )}
-                      </>
-                    ) : (
-                      <LinearProgressWithLabel
-                        sx={{
-                          "& .MuiLinearProgress-colorPrimary": {
-                            backgroundColor: "red",
-                          },
-                          "& .MuiLinearProgress-barColorPrimary": {
-                            backgroundColor: epSetter(
-                              (parseInt(props.singleData[header.key]) * 100) /
-                                parseInt(
-                                  props.singleData["TotalNumberOfEpisodes"]
-                                )
-                            ),
-                          },
-                        }}
-                        value={
-                          (parseInt(props.singleData[header.key]) * 100) /
-                          parseInt(props.singleData["TotalNumberOfEpisodes"])
-                        }
-                      />
-                    )}
-                  </Box>
+                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5, minWidth: "70px" }}>
+                       <Typography sx={{ fontSize: "0.75rem", fontWeight: "bold", color: theme.primary_text }}>
+                         {watched} {total > 0 ? `/ ${total}` : ""}
+                       </Typography>
+                       {total > 0 && (
+                         <Box sx={{ width: "100%", height: "4px", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "2px", overflow: "hidden" }}>
+                           <Box sx={{ width: `${progress}%`, height: "100%", backgroundColor: theme.primary }} />
+                         </Box>
+                       )}
+                    </Box>
+                  )}
                 </TableCell>
               );
             } else if (header.type === "pill") {
@@ -719,177 +646,25 @@ export default function CustomTableRowV2(
                   style={colStyle}
                   id={header.key}
                 >
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: {
-                        xs: "repeat(3, 1fr)", // Mobil görünümde 3 sütun
-                        sm: "repeat(3, 1fr)", // Tablet görünümde 3 sütun
-                        md: "repeat(3, 1fr)", // Küçük masaüstü görünümde 3 sütun
-                        lg: "repeat(4, 1fr)", // Büyük masaüstü görünümde 4 sütun
-                      },
-                      gap: { xs: 1, sm: 1, md: 1.5, lg: 2 },
-                      width: "100%",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    {props.singleData[header.key].length !== 0 &&
-                      props.singleData[header.key]
-                        .split(", ")
-                        .map((pill: string, index: number) => (
-                          <Button
-                            key={`button-${rowIndex}-${pill}-${index}`}
-                            sx={{
-                              // Butonun tüm stil özelliklerini kaldır
-                              display: "inline-block",
-                              backgroundColor: "transparent",
-                              cursor: "pointer",
-                              padding: 0, // İç boşlukları sıfırlayın
-                              width: "100%",
-                              height: "auto",
-                              margin: "0 2px",
-                              ":hover": {
-                                backgroundColor: "transparent",
-                              },
-                              ":focus": {
-                                backgroundColor: "transparent",
-                              },
-                            }}
-                            onClick={() => {
-                              props.setFilterState((prevState: any) => {
-                                const newState = prevState;
-                                newState.filter((item: any) => {
-                                  if (item.key === "Genre") {
-                                    if (item.value.includes(pill)) {
-                                      item.value = item.value.filter(
-                                        (genre: string) => genre !== pill
-                                      );
-                                    } else {
-                                      item.value = item.value.concat([pill]);
-                                    }
-                                  }
-                                  return item;
-                                });
-                                return newState;
-                              });
-                            }}
-                          >
-                            <Chip
-                              key={`chip-${index}`}
-                              id={`chip-${rowIndex}-${index}`}
-                              onMouseEnter={(e) => {
-                                handlePopoverOpen(e, "genre");
-                              }}
-                              onMouseLeave={handlePopoverClose}
-                              size="small"
-                              label={pill}
-                              color="primary"
-                              sx={{
-                                backgroundColor: genreColors[pill as string],
-                                color: getFontColor(
-                                  genreColors[pill as string]
-                                ),
-                                minWidth: {
-                                  xs: "100%",
-                                  sm: "100%",
-                                  md: "80px",
-                                },
-                                maxWidth: "100%",
-                                height: "24px",
-                                "& .MuiChip-label": {
-                                  padding: "0 8px",
-                                  fontSize: {
-                                    xs: "0.7rem",
-                                    sm: "0.75rem",
-                                    md: "0.8rem",
-                                  },
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                },
-                              }}
-                            />
-                          </Button>
-                        ))}
-                  </Box>
-                  <Popover
-                    id="mouse-over-popover"
-                    sx={{
-                      pointerEvents: "none",
-                      backgroundColor: "transparent",
-                      color: /* "transparent" */ "red",
-                      border: "none",
-                    }}
-                    open={openAl}
-                    anchorEl={anchorEl}
-                    anchorOrigin={{
-                      vertical: "bottom",
-                      horizontal: "left",
-                    }}
-                    transformOrigin={{
-                      vertical: "top",
-                      horizontal: "left",
-                    }}
-                    PaperProps={{
-                      style: {
-                        backgroundColor: "transparent",
-                        boxShadow: "none", // Gölgeyi de kaldırmak için
-                      },
-                    }}
-                    onClose={handlePopoverClose}
-                    disableRestoreFocus
-                  >
-                    <Chip
-                      key="popover-chip"
-                      size="small"
-                      label={popData}
-                      color="primary"
-                      sx={{
-                        backgroundColor: genreColors[popData! as string],
-                        color: getFontColor(genreColors[popData! as string]),
-                        minWidth: "120px",
-                        height: "28px",
-                        "& .MuiChip-label": {
-                          padding: "0 12px",
-                          fontSize: "0.85rem",
-                          fontWeight: 500,
-                        },
-                      }}
-                    />
-                  </Popover>
-                </TableCell>
-              );
-            } else {
-              return (
-                <TableCell
-                  key={`cell-${header.key}-${index}`}
-                  align="center"
-                  style={colStyle}
-                >
-                  {props.singleData[header.key]}
-                </TableCell>
-              );
-            }
-          } else {
-            if (header.type === "button") {
-              const renderFunction = header.key as any;
-              return (
-                <TableCell
-                  key={`cell-button-${rowIndex}-${index}`}
-                  className={`${props.collapsible.inner?.tableName}_${rowIndex}`}
-                  id={`${props.collapsible.inner?.tableName}_${rowIndex}_row`}
-                  align="center"
-                  style={colStyle}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Burada da tıklamayı durduruyoruz
-                  }}
-                >
-                  {renderFunction(
-                    props.singleData.id,
-                    rowIndex,
-                    props.singleData
-                  )}
+                  <GenreChips
+                    genres={props.singleData[header.key]}
+                    max={3}
+                    // Türe tıklamak Genre filtresine ekler/çıkarır (state değişmeden mutasyon yapılmıyor)
+                    onGenreClick={(pill) =>
+                      props.setFilterState((prevState: any[]) =>
+                        prevState.map((item: any) =>
+                          item.key !== "Genre"
+                            ? item
+                            : {
+                                ...item,
+                                value: item.value.includes(pill)
+                                  ? item.value.filter((genre: string) => genre !== pill)
+                                  : [...item.value, pill],
+                              }
+                        )
+                      )
+                    }
+                  />
                 </TableCell>
               );
             } else {

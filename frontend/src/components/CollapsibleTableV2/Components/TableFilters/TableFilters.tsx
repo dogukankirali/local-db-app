@@ -1,12 +1,14 @@
-import { Popover, Box } from "@mui/material";
-import { useState } from "react";
+import { Popover, Box, Button, IconButton, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { useEffect, useState } from "react";
 import InputFilter from "./InputFilter";
 import SelectFilter from "./SelectFilter";
 import MultiSelectFilter from "./MultiSelectFilter";
-import SCButtonGroup from "../SCButtonGroup";
+import ChipFilter from "./ChipFilter";
 import NumberFilter from "./NumberFilter";
 import React from "react";
-import { theme } from "../../../../theme/customTheme";
+import { palette } from "../../../../theme/customTheme";
 
 type FilterElementProps =
   | {
@@ -30,12 +32,23 @@ type FilterElementProps =
         min?: number;
         max?: number;
       };
+    }
+  | {
+      // Az seçenekli alanlar: tıklanabilir chip'ler (exclusive: tek seçim)
+      type: "chips";
+      options: {
+        label: string;
+        value: string;
+      }[];
+      exclusive?: boolean;
     };
 
 export type FilterStateProp = {
   label: string;
   key: string;
   style?: React.CSSProperties;
+  // Panelde yarım genişlik (iki sütunlu yerleşim)
+  half?: boolean;
 } & FilterElementProps;
 
 export type FilterState = TEATable.IFilterType;
@@ -58,13 +71,13 @@ function createFilterState(opts: FilterStateProp[]): FilterState[] {
       result.push({
         key: opt.key,
         value: null,
-        operand: "<",
+        operand: ">",
       });
       return;
     }
     result.push({
       key: opt.key,
-      value: opt.type === "multi-select" ? [] : "",
+      value: opt.type === "multi-select" || opt.type === "chips" ? [] : "",
     });
   });
   return result;
@@ -154,7 +167,10 @@ export default function TableSettings({
   onFilterChange,
 }: TemporaryProps) {
   const [localFilters, setLocalFilters] = useState(filterState);
-  // const intl = useIntl();
+  // Dışarıdan (tür chip'ine tıklama, üst bardaki arama) değişen filtreler panel açılınca görünsün
+  useEffect(() => {
+    if (anchorEl) setLocalFilters(filterState);
+  }, [anchorEl, filterState]);
 
   const handleClose = () => {
     setAnchorEl(null);
@@ -199,6 +215,66 @@ export default function TableSettings({
   };
 
   const isOpen = Boolean(anchorEl);
+  const activeCount = getFilledFilters(localFilters).length;
+
+  const renderControl = (element: FilterStateProp, index: number) => {
+    const state = localFilters[index];
+    if (!state) return null;
+    switch (element.type) {
+      case "input":
+        return (
+          <InputFilter
+            label={element.label}
+            elKey={element.key}
+            value={state.value as string}
+            handleStateChange={handleStateChange}
+            onKeyDown={onKeyDown}
+          />
+        );
+      case "single-select":
+        return (
+          <SelectFilter
+            label={element.label}
+            elKey={element.key}
+            value={state.value as string}
+            handleStateChange={handleStateChange}
+            options={element.options}
+          />
+        );
+      case "multi-select":
+        return (
+          <MultiSelectFilter
+            label={`${element.label} seç…`}
+            elKey={element.key}
+            value={state.value as string[]}
+            handleStateChange={handleStateChange}
+            options={element.options}
+          />
+        );
+      case "chips":
+        return (
+          <ChipFilter
+            elKey={element.key}
+            value={state.value as string[]}
+            options={element.options}
+            exclusive={element.exclusive}
+            handleStateChange={handleStateChange}
+          />
+        );
+      case "number":
+        return (
+          <NumberFilter
+            label={element.label}
+            state={state as TEATable.NumberFilterType}
+            handleStateChange={handleStateChange}
+            min={element.options?.min}
+            max={element.options?.max}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <Popover
@@ -206,98 +282,95 @@ export default function TableSettings({
       open={isOpen}
       anchorEl={anchorEl}
       onClose={handleClose}
-      anchorOrigin={{
-        vertical: "bottom",
-        horizontal: "left",
-      }}
-      sx={{
-        "& .MuiPopover-paper": {
-          backgroundColor: theme.background,
-          boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
-          borderRadius: "12px",
-          border: `1px solid ${theme.input_border}`,
-          overflow: "visible",
-          padding: "16px",
-          maxWidth: "calc(100vw - 32px)",
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "right" }}
+      slotProps={{
+        paper: {
+          sx: {
+            mt: 1,
+            backgroundColor: palette.surface,
+            backgroundImage: "none",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+            borderRadius: "16px",
+            border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
+            overflow: "visible",
+            width: { xs: "calc(100vw - 32px)", sm: 480 },
+          },
         },
       }}
     >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2.5, pt: 2, pb: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: "1rem" }}>Filtreler</Typography>
+          {activeCount > 0 && (
+            <Box
+              sx={{
+                minWidth: 20,
+                height: 20,
+                px: 0.75,
+                borderRadius: "10px",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                color: "#fff",
+                backgroundColor: palette.primary,
+              }}
+            >
+              {activeCount}
+            </Box>
+          )}
+        </Box>
+        <IconButton size="small" onClick={handleClose} aria-label="Kapat" sx={{ color: palette.textMuted }}>
+          <CloseRoundedIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
       <Box
         sx={{
-          width: { xs: "100%", sm: 400 },
-          display: "flex",
-          flexDirection: "column",
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
           gap: 2,
+          px: 2.5,
+          pb: 2.5,
+          maxHeight: "min(70vh, 640px)",
+          overflowY: "auto",
         }}
       >
         {filterElements.map((element, index) => {
-          if (element.type === "input") {
-            return (
-              <InputFilter
-                key={element.key}
-                label={element.label}
-                elKey={element.key}
-                value={localFilters[index].value as string}
-                handleStateChange={handleStateChange}
-                onKeyDown={onKeyDown}
-              />
-            );
-          }
-          if (element.type === "single-select") {
-            return (
-              <SelectFilter
-                key={element.key}
-                label={element.label}
-                elKey={element.key}
-                value={localFilters[index].value as string}
-                handleStateChange={handleStateChange}
-                options={element.options}
-              />
-            );
-          }
-          if (element.type === "multi-select") {
-            return (
-              <MultiSelectFilter
-                key={element.key}
-                label={element.label}
-                elKey={element.key}
-                value={localFilters[index].value as string[]}
-                handleStateChange={handleStateChange}
-                options={element.options}
-                style={element.style}
-              />
-            );
-          }
-          if (element.type === "number") {
-            return (
-              <NumberFilter
-                key={element.key}
-                label={element.label}
-                state={localFilters[index] as TEATable.NumberFilterType}
-                handleStateChange={handleStateChange}
-                min={element.options?.min}
-                max={element.options?.max}
-              />
-            );
-          }
-          return null;
+          const control = renderControl(element, index);
+          if (!control) return null;
+          return (
+            <Box key={element.key} sx={{ gridColumn: element.half ? "auto" : "1 / -1", minWidth: 0 }}>
+              <Typography
+                component="label"
+                sx={{ display: "block", mb: 0.75, fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: palette.textMuted }}
+              >
+                {element.label}
+              </Typography>
+              {control}
+            </Box>
+          );
         })}
+      </Box>
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 2,
-            mt: 2,
-          }}
-        >
-          <SCButtonGroup
-            cancelText="Temizle"
-            confirmText="Uygula"
-            handleCancel={clearFilters}
-            handleConfirm={applyFilters}
-          />
-        </Box>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 1,
+          px: 2.5,
+          py: 1.5,
+          borderTop: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        }}
+      >
+        <Button onClick={clearFilters} sx={{ color: palette.textMuted }} disabled={activeCount === 0 && getFilledFilters(filterState).length === 0}>
+          Tümünü temizle
+        </Button>
+        <Button variant="contained" onClick={applyFilters}>
+          Uygula
+        </Button>
       </Box>
     </Popover>
   );

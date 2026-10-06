@@ -1,225 +1,231 @@
 "use client";
 
-import {
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemButton,
-  Box,
-  IconButton,
-  useMediaQuery,
-  useTheme,
-  Drawer,
-  Divider,
-} from "@mui/material";
-import MovieIcon from "@mui/icons-material/Movie";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import LiveTvIcon from "@mui/icons-material/LiveTv";
-import ImportContactsIcon from "@mui/icons-material/ImportContacts";
-import CloseIcon from "@mui/icons-material/Close";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Avatar, Box, ButtonBase, IconButton, Tooltip, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
+import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
+import LoginRoundedIcon from "@mui/icons-material/LoginRounded";
+import StorageRoundedIcon from "@mui/icons-material/StorageRounded";
+import { navSections, isNavItemActive } from "../../config/navigation";
+import { palette } from "../../theme/customTheme";
+import { useAuth } from "../../contexts/AuthContext";
 
-const drawerWidth = 240;
-const closedDrawerWidth = 64;
+export const SIDEBAR_WIDTH = 248;
+export const SIDEBAR_COLLAPSED_WIDTH = 76;
 
 interface SidebarProps {
-  open: boolean;
-  onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapsed?: () => void;
+  onNavigate?: () => void;
 }
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
-  const pathname = usePathname();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+export function Brand({ collapsed }: { collapsed: boolean }) {
+  return (
+    // Satır içi style, tarayıcı eklentilerinin değiştirdiği bir özellik olduğu için hydration uyuşmazlığı veriyordu; sx sınıf üretir
+    <Box component={Link} href="/" sx={{ display: "block", textDecoration: "none", color: "inherit" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: collapsed ? 0 : 0.5, justifyContent: collapsed ? "center" : "flex-start" }}>
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: "11px",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+            color: "#fff",
+            background: `linear-gradient(135deg, ${palette.primary} 0%, ${palette.accent} 100%)`,
+            boxShadow: `0 6px 18px ${alpha(palette.primary, 0.35)}`,
+          }}
+        >
+          <StorageRoundedIcon sx={{ fontSize: 20 }} />
+        </Box>
+        {!collapsed && (
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: "0.98rem", lineHeight: 1.1, letterSpacing: "-0.01em" }}>
+              Kiroku
+            </Typography>
+            <Typography sx={{ fontSize: "0.7rem", color: "text.secondary" }}>記録 · medya arşivi</Typography>
+          </Box>
+        )}
+      </Box>
+    </Box>
+  );
+}
 
-  const menuItems = [
-    { text: "Anime", icon: <MovieIcon />, path: "/anime" },
-    { text: "Manga", icon: <MenuBookIcon />, path: "/manga" },
-    { text: "Kitaplar", icon: <ImportContactsIcon />, path: "/book" },
-    { text: "Diziler", icon: <LiveTvIcon />, path: "/series" },
-  ];
+function UserCard({ collapsed }: { collapsed: boolean }) {
+  const { user, isAuthenticated } = useAuth();
 
-  // Mobil cihazlar için drawer kullanıyoruz
-  if (isMobile) {
-    return (
-      <Drawer
-        anchor="left"
-        open={open}
-        onClose={onClose}
+  if (!isAuthenticated || !user) {
+    const button = (
+      <ButtonBase
+        component={Link}
+        href="/login"
         sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: drawerWidth,
-            boxSizing: "border-box",
-            top: 0,
-            height: "100%",
-          },
+          width: "100%",
+          justifyContent: collapsed ? "center" : "flex-start",
+          gap: 1.25,
+          px: collapsed ? 0 : 1.5,
+          py: 1.1,
+          borderRadius: "10px",
+          color: "text.primary",
+          fontSize: "0.85rem",
+          fontWeight: 600,
+          backgroundColor: alpha(palette.primary, 0.12),
+          "&:hover": { backgroundColor: alpha(palette.primary, 0.2) },
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            p: 1,
-            minHeight: 64, // Navbar ile aynı yükseklik
-          }}
-        >
-          <IconButton onClick={onClose} size="medium">
-            <CloseIcon />
-          </IconButton>
-        </Box>
-        <Divider />
-        <List sx={{ pt: 0 }}>
-          {menuItems.map((item) => {
-            const isActive = pathname === item.path;
-            return (
-              <ListItem key={item.text} disablePadding>
-                <Link
-                  href={item.path}
-                  style={{
-                    textDecoration: "none",
-                    color: "inherit",
-                    width: "100%",
-                  }}
-                  onClick={onClose} // Mobilde menüye tıklayınca sidebar'ı kapat
-                >
-                  <ListItemButton
-                    sx={{
-                      minHeight: 56, // Mobil için daha büyük dokunma alanı
-                      px: 2.5,
-                      bgcolor: isActive ? "action.selected" : "transparent",
-                      "&:hover": {
-                        bgcolor: isActive ? "action.selected" : "action.hover",
-                      },
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{
-                        minWidth: 0,
-                        mr: 3,
-                        justifyContent: "center",
-                        color: isActive ? "primary.main" : "inherit",
-                      }}
-                    >
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={item.text}
-                      sx={{
-                        color: isActive ? "primary.main" : "inherit",
-                      }}
-                    />
-                  </ListItemButton>
-                </Link>
-              </ListItem>
-            );
-          })}
-        </List>
-        <Box
-          sx={{
-            position: "absolute",
-            bottom: 16,
-            width: "100%",
-            textAlign: "center",
-            color: "text.secondary",
-            fontSize: "0.875rem",
-          }}
-        >
-          v1.1.3
-        </Box>
-      </Drawer>
+        <LoginRoundedIcon sx={{ fontSize: 20, color: palette.primary }} />
+        {!collapsed && "Giriş yap"}
+      </ButtonBase>
     );
+    return collapsed ? <Tooltip title="Giriş yap" placement="right">{button}</Tooltip> : button;
   }
 
-  // Masaüstü görünümü
-  return (
-    <Box
+  const card = (
+    <ButtonBase
+      component={Link}
+      href="/profile"
       sx={{
-        position: "fixed",
-        top: 64,
-        left: 0,
-        bottom: 0,
-        width: open ? drawerWidth : closedDrawerWidth,
-        bgcolor: "background.paper",
-        borderRight: 1,
-        borderColor: "divider",
-        transition: (theme) =>
-          theme.transitions.create("width", {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
-        overflowX: "hidden",
-        zIndex: (theme) => theme.zIndex.drawer,
+        width: "100%",
+        justifyContent: collapsed ? "center" : "flex-start",
+        gap: 1.25,
+        p: collapsed ? 0.5 : 1,
+        borderRadius: "12px",
+        textAlign: "left",
+        "&:hover": { backgroundColor: "action.hover" },
       }}
     >
-      <List>
-        {menuItems.map((item) => {
-          const isActive = pathname === item.path;
-          return (
-            <ListItem key={item.text} disablePadding>
-              <Link
-                href={item.path}
-                style={{
-                  textDecoration: "none",
-                  color: "inherit",
-                  width: "100%",
+      <Avatar sx={{ width: 34, height: 34, fontSize: "0.9rem", fontWeight: 700, bgcolor: alpha(palette.primary, 0.25), color: "#fff" }}>
+        {user.username?.charAt(0).toUpperCase() || "U"}
+      </Avatar>
+      {!collapsed && (
+        <Box sx={{ minWidth: 0 }}>
+          <Typography noWrap sx={{ fontSize: "0.85rem", fontWeight: 600 }}>
+            {user.username}
+          </Typography>
+          <Typography noWrap sx={{ fontSize: "0.72rem", color: "text.secondary" }}>
+            {user.isAdmin ? "Yönetici" : "Kullanıcı"}
+          </Typography>
+        </Box>
+      )}
+    </ButtonBase>
+  );
+  return collapsed ? <Tooltip title={user.username} placement="right">{card}</Tooltip> : card;
+}
+
+export default function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarProps) {
+  const pathname = usePathname() || "/";
+
+  return (
+    <Box
+      component="nav"
+      aria-label="Ana menü"
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        px: collapsed ? 1.25 : 1.75,
+        py: 2,
+        backgroundColor: palette.surface,
+        borderRight: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+      }}
+    >
+      <Box sx={{ mb: 3, mt: 0.5 }}>
+        <Brand collapsed={collapsed} />
+      </Box>
+
+      <Box sx={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+        {navSections.map((section) => (
+          <Box key={section.title} sx={{ mb: 2 }}>
+            {collapsed ? (
+              <Box sx={{ height: 1, mx: 1.5, mb: 1.25, backgroundColor: alpha("#FFFFFF", 0.06) }} />
+            ) : (
+              <Typography
+                sx={{
+                  px: 1.25,
+                  mb: 0.75,
+                  fontSize: "0.68rem",
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: palette.textFaint,
                 }}
               >
-                <ListItemButton
+                {section.title}
+              </Typography>
+            )}
+            {section.items.map((item) => {
+              const active = isNavItemActive(pathname, item.href);
+              const link = (
+                <ButtonBase
+                  key={item.href}
+                  component={Link}
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
                   sx={{
-                    minHeight: 44,
-                    justifyContent: open ? "initial" : "center",
-                    px: 2.5,
-                    bgcolor: isActive ? "action.selected" : "transparent",
+                    position: "relative",
+                    width: "100%",
+                    height: 40,
+                    mb: 0.5,
+                    px: collapsed ? 0 : 1.25,
+                    gap: 1.5,
+                    justifyContent: collapsed ? "center" : "flex-start",
+                    borderRadius: "10px",
+                    color: active ? palette.text : palette.textMuted,
+                    fontSize: "0.875rem",
+                    fontWeight: active ? 600 : 500,
+                    backgroundColor: active ? alpha(palette.primary, 0.14) : "transparent",
+                    transition: "background-color .15s ease, color .15s ease",
+                    "& svg": { fontSize: 21, color: active ? palette.primary : "inherit", transition: "color .15s ease" },
                     "&:hover": {
-                      bgcolor: isActive ? "action.selected" : "action.hover",
+                      color: palette.text,
+                      backgroundColor: active ? alpha(palette.primary, 0.18) : alpha("#FFFFFF", 0.04),
                     },
+                    "&::before": active
+                      ? {
+                          content: '""',
+                          position: "absolute",
+                          left: collapsed ? -10 : -14,
+                          top: 10,
+                          bottom: 10,
+                          width: 3,
+                          borderRadius: "0 3px 3px 0",
+                          backgroundColor: palette.primary,
+                        }
+                      : undefined,
                   }}
                 >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 0,
-                      mr: open ? 2 : "auto",
-                      justifyContent: "center",
-                      color: isActive ? "primary.main" : "inherit",
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    sx={{
-                      opacity: open ? 1 : 0,
-                      color: isActive ? "primary.main" : "inherit",
-                    }}
-                  />
-                </ListItemButton>
-              </Link>
-            </ListItem>
-          );
-        })}
-      </List>
-      <Box
-        sx={{
-          position: "absolute",
-          bottom: 16,
-          width: "100%",
-          textAlign: "center",
-          color: "text.secondary",
-          fontSize: "0.875rem",
-          opacity: open ? 1 : 0,
-          transition: (theme) =>
-            theme.transitions.create("opacity", {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-        }}
-      >
-        v1.1.3
+                  {item.icon}
+                  {!collapsed && <span>{item.label}</span>}
+                </ButtonBase>
+              );
+              return collapsed ? (
+                <Tooltip key={item.href} title={item.label} placement="right">
+                  {link}
+                </Tooltip>
+              ) : (
+                link
+              );
+            })}
+          </Box>
+        ))}
+      </Box>
+
+      <Box sx={{ pt: 1.5, borderTop: `1px solid ${alpha("#FFFFFF", 0.06)}` }}>
+        <UserCard collapsed={collapsed} />
+        {onToggleCollapsed && (
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", mt: 1, px: collapsed ? 0 : 0.5 }}>
+            {!collapsed && <Typography sx={{ fontSize: "0.7rem", color: palette.textFaint }}>v3.0.0-dev</Typography>}
+            <Tooltip title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"} placement="right">
+              <IconButton size="small" onClick={onToggleCollapsed} sx={{ color: palette.textMuted }}>
+                {collapsed ? <KeyboardDoubleArrowRightIcon fontSize="small" /> : <KeyboardDoubleArrowLeftIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
       </Box>
     </Box>
   );

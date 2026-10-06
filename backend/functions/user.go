@@ -276,6 +276,16 @@ func UpdateProfile(db *gorm.DB) http.HandlerFunc {
 
 		// Şifre güncellemesi
 		if updateRequest.Password != "" {
+			if !auth.CheckPassword(updateRequest.CurrentPassword, user.Password) {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(models.ErrorResponse{Message: "Mevcut şifre hatalı"})
+				return
+			}
+			if len(updateRequest.Password) < 6 {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(models.ErrorResponse{Message: "Yeni şifre en az 6 karakter olmalı"})
+				return
+			}
 			hashedPassword, err := auth.HashPassword(updateRequest.Password)
 			if err != nil {
 				log.Printf("Şifre hashleme hatası: %v", err)

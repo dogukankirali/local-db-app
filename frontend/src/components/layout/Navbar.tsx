@@ -1,276 +1,204 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  AppBar,
-  Toolbar,
-  IconButton,
-  InputBase,
-  Box,
-  Menu,
-  MenuItem,
   Avatar,
-  Theme,
-  Typography,
-  useMediaQuery,
-  useTheme,
-  Tooltip,
+  Box,
   Button,
   Divider,
+  IconButton,
+  InputBase,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Typography,
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import MenuIcon from "@mui/icons-material/Menu";
-import StorageIcon from "@mui/icons-material/Storage";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import LogoutIcon from "@mui/icons-material/Logout";
-import PersonIcon from "@mui/icons-material/Person";
-import SettingsIcon from "@mui/icons-material/Settings";
-import Link from "next/link";
+import { alpha } from "@mui/material/styles";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useAuth } from "../../contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { getPageTitle } from "../../config/navigation";
+import { palette } from "../../theme/customTheme";
+
+export const TOPBAR_HEIGHT = 64;
 
 interface NavbarProps {
   onMenuClick: () => void;
 }
 
-export default function Navbar({ onMenuClick }: NavbarProps) {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
-  const { user, isAuthenticated, logout } = useAuth();
+function SearchBox() {
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+  // Ctrl/⌘ + K ile aramaya odaklan
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-  };
-
-  const handleLogout = async () => {
-    handleClose();
-    await logout();
-  };
-
-  const handleProfileClick = () => {
-    handleClose();
-    router.push("/profile");
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    router.push(q ? `/anime?q=${encodeURIComponent(q)}` : "/anime");
+    inputRef.current?.blur();
   };
 
   return (
-    <AppBar
-      position="fixed"
+    <Box
+      component="form"
+      onSubmit={submit}
+      role="search"
       sx={{
-        zIndex: (theme) => theme.zIndex.drawer + 1,
-        backgroundColor: "background.paper",
-        borderBottom: 1,
-        borderColor: "divider",
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        width: { xs: "100%", sm: 280, md: 360 },
+        height: 40,
+        px: 1.5,
+        borderRadius: "10px",
+        backgroundColor: alpha("#FFFFFF", 0.04),
+        border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        transition: "border-color .15s ease, background-color .15s ease",
+        "&:focus-within": {
+          borderColor: alpha(palette.primary, 0.6),
+          backgroundColor: alpha("#FFFFFF", 0.06),
+        },
       }}
-      elevation={0}
-      color="inherit"
     >
-      <Toolbar sx={{ px: isMobile ? 1 : 2 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            minWidth: isMobile ? "auto" : 200,
-            mr: isMobile ? 1 : 2,
-          }}
-        >
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={onMenuClick}
-            sx={{ mr: isMobile ? 0.5 : 2 }}
-            size={isMobile ? "small" : "medium"}
-          >
-            <MenuIcon fontSize={isMobile ? "small" : "medium"} />
+      <SearchRoundedIcon sx={{ fontSize: 20, color: palette.textMuted }} />
+      <InputBase
+        inputRef={inputRef}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Anime ara…"
+        inputProps={{ "aria-label": "Anime ara" }}
+        sx={{ flex: 1, fontSize: "0.875rem", color: palette.text }}
+      />
+      <Box
+        component="kbd"
+        sx={{
+          display: { xs: "none", md: "inline-flex" },
+          px: 0.75,
+          py: 0.1,
+          borderRadius: "6px",
+          border: `1px solid ${alpha("#FFFFFF", 0.1)}`,
+          fontSize: "0.7rem",
+          fontFamily: "inherit",
+          color: palette.textMuted,
+        }}
+      >
+        Ctrl K
+      </Box>
+    </Box>
+  );
+}
+
+export default function Navbar({ onMenuClick }: NavbarProps) {
+  const pathname = usePathname() || "/";
+  const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const close = () => setAnchorEl(null);
+
+  return (
+    <Box
+      component="header"
+      sx={{
+        position: "sticky",
+        top: 0,
+        zIndex: (t) => t.zIndex.appBar,
+        height: TOPBAR_HEIGHT,
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+        px: { xs: 1.5, md: 3 },
+        backgroundColor: alpha(palette.ink, 0.72),
+        backdropFilter: "saturate(160%) blur(14px)",
+        borderBottom: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+      }}
+    >
+      <IconButton onClick={onMenuClick} aria-label="Menüyü aç" sx={{ display: { md: "none" }, color: palette.textMuted }}>
+        <MenuRoundedIcon />
+      </IconButton>
+
+      <Typography
+        component="h1"
+        noWrap
+        sx={{ display: { xs: "none", sm: "block" }, fontSize: "1.05rem", fontWeight: 700, letterSpacing: "-0.01em", minWidth: 0 }}
+      >
+        {getPageTitle(pathname)}
+      </Typography>
+
+      <Box sx={{ flex: 1, display: "flex", justifyContent: { xs: "stretch", sm: "flex-end" } }}>
+        <SearchBox />
+      </Box>
+
+      {isAuthenticated && user ? (
+        <>
+          <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Hesap menüsü" sx={{ p: 0.5 }}>
+            <Avatar sx={{ width: 34, height: 34, fontSize: "0.9rem", fontWeight: 700, bgcolor: alpha(palette.primary, 0.25), color: "#fff" }}>
+              {user.username?.charAt(0).toUpperCase() || "U"}
+            </Avatar>
           </IconButton>
-
-          <Link
-            href="/"
-            style={{
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-            }}
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={close}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{ paper: { sx: { mt: 1, minWidth: 220 } } }}
           >
-            <StorageIcon
-              sx={{ mr: isMobile ? 0.5 : 1 }}
-              fontSize={isMobile ? "small" : "medium"}
-            />
-            <Typography
-              variant={isMobile ? "body2" : "subtitle1"}
-              noWrap
-              component="div"
-              sx={{
-                fontWeight: 600,
-                display: { xs: isMobile ? "none" : "block", sm: "block" },
+            <Box sx={{ px: 2, py: 1.25 }}>
+              <Typography sx={{ fontWeight: 600, fontSize: "0.9rem" }}>{user.username}</Typography>
+              <Typography sx={{ color: "text.secondary", fontSize: "0.8rem" }}>{user.email}</Typography>
+            </Box>
+            <Divider />
+            <MenuItem
+              onClick={() => {
+                close();
+                router.push("/profile");
               }}
             >
-              Local DB
-            </Typography>
-          </Link>
-        </Box>
-
-        <Box
-          sx={{
-            flexGrow: 1,
-            display: "flex",
-            justifyContent: "center",
-            mx: isMobile ? 0.5 : 2,
-          }}
-        >
-          <Box
-            sx={{
-              position: "relative",
-              borderRadius: 1,
-              bgcolor: "action.hover",
-              width: "100%",
-              maxWidth: isMobile ? "150px" : isTablet ? "250px" : "400px",
-            }}
-          >
-            <Box
-              sx={{
-                padding: isMobile ? "0 8px" : "0 12px",
-                height: "100%",
-                position: "absolute",
-                pointerEvents: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+              <ListItemIcon>
+                <PersonOutlineRoundedIcon fontSize="small" />
+              </ListItemIcon>
+              Profil
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                close();
+                logout();
               }}
+              sx={{ color: palette.danger }}
             >
-              <SearchIcon fontSize={isMobile ? "small" : "medium"} />
-            </Box>
-            <InputBase
-              placeholder={isMobile ? "Ara" : "Ara..."}
-              value={searchQuery}
-              onChange={handleSearch}
-              sx={{
-                color: "inherit",
-                width: "100%",
-                "& .MuiInputBase-input": {
-                  padding: isMobile ? "8px 8px 8px 0" : "12px 12px 12px 0",
-                  paddingLeft: isMobile
-                    ? `calc(1em + 16px)`
-                    : `calc(1em + 28px)`,
-                  width: "100%",
-                  fontSize: isMobile ? "0.75rem" : "0.875rem",
-                },
-              }}
-              inputProps={{ "aria-label": "search" }}
-            />
-          </Box>
+              <ListItemIcon sx={{ color: "inherit" }}>
+                <LogoutRoundedIcon fontSize="small" />
+              </ListItemIcon>
+              Çıkış yap
+            </MenuItem>
+          </Menu>
+        </>
+      ) : (
+        <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1 }}>
+          <Button component={Link} href="/login" variant="text" sx={{ color: palette.text }}>
+            Giriş
+          </Button>
+          <Button component={Link} href="/register" variant="contained">
+            Kayıt ol
+          </Button>
         </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            minWidth: isMobile ? "auto" : 200,
-            justifyContent: "flex-end",
-          }}
-        >
-          {isAuthenticated && user ? (
-            <>
-              <Tooltip title="Profil">
-                <IconButton
-                  size={isMobile ? "small" : "medium"}
-                  aria-label="account of current user"
-                  aria-controls="menu-appbar"
-                  aria-haspopup="true"
-                  onClick={handleMenu}
-                >
-                  <Avatar
-                    sx={{
-                      width: isMobile ? 28 : 36,
-                      height: isMobile ? 28 : 36,
-                    }}
-                  >
-                    {user.username
-                      ? user.username.charAt(0).toUpperCase()
-                      : "U"}
-                  </Avatar>
-                </IconButton>
-              </Tooltip>
-              <Menu
-                id="menu-appbar"
-                anchorEl={anchorEl}
-                anchorOrigin={{
-                  vertical: "bottom",
-                  horizontal: "right",
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: "top",
-                  horizontal: "right",
-                }}
-                open={Boolean(anchorEl)}
-                onClose={handleClose}
-              >
-                <Box sx={{ px: 2, py: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {user.username}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {user.email}
-                  </Typography>
-                </Box>
-                <Divider />
-                <MenuItem onClick={handleProfileClick}>
-                  <PersonIcon fontSize="small" sx={{ mr: 1 }} />
-                  Profil
-                </MenuItem>
-                {user.isAdmin && (
-                  <MenuItem onClick={handleClose}>
-                    <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
-                    Yönetici Paneli
-                  </MenuItem>
-                )}
-                <Divider />
-                <MenuItem onClick={handleLogout}>
-                  <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-                  Çıkış Yap
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Link href="/login" style={{ textDecoration: "none" }}>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  size={isMobile ? "small" : "medium"}
-                >
-                  Giriş
-                </Button>
-              </Link>
-              {!isMobile && (
-                <Link href="/register" style={{ textDecoration: "none" }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size={isMobile ? "small" : "medium"}
-                  >
-                    Kayıt Ol
-                  </Button>
-                </Link>
-              )}
-            </Box>
-          )}
-        </Box>
-      </Toolbar>
-    </AppBar>
+      )}
+    </Box>
   );
 }

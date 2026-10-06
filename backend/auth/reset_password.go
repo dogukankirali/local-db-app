@@ -2,6 +2,8 @@ package auth
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -21,6 +23,13 @@ func GenerateResetToken() (string, error) {
 	return token, nil
 }
 
+// HashResetToken, DB'de saklanacak token özetini üretir; DB sızsa bile
+// bağlantıdaki ham token elde edilemez.
+func HashResetToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
+
 // IsTokenExpired, token'ın süresinin dolup dolmadığını kontrol eder
 func IsTokenExpired(expiresAt *time.Time) bool {
 	if expiresAt == nil {
@@ -35,19 +44,16 @@ func GetTokenExpirationTime() time.Time {
 	return time.Now().Add(1 * time.Hour)
 }
 
-// ValidateResetToken, şifre sıfırlama token'ının geçerli olup olmadığını kontrol eder
-func ValidateResetToken(token string, storedToken string, expiresAt *time.Time) error {
-	// Token boş mu kontrol et
-	if token == "" || storedToken == "" {
+// ValidateResetToken, gelen ham token'ı DB'deki özetle karşılaştırır ve süresini kontrol eder
+func ValidateResetToken(token string, storedHash string, expiresAt *time.Time) error {
+	if token == "" || storedHash == "" {
 		return errors.New("geçersiz token")
 	}
 
-	// Token eşleşiyor mu kontrol et
-	if token != storedToken {
+	if subtle.ConstantTimeCompare([]byte(HashResetToken(token)), []byte(storedHash)) != 1 {
 		return errors.New("geçersiz token")
 	}
 
-	// Token süresi dolmuş mu kontrol et
 	if IsTokenExpired(expiresAt) {
 		return errors.New("token süresi dolmuş")
 	}

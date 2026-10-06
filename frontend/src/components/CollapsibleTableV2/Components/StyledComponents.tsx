@@ -129,14 +129,19 @@ export const StyledMUIFilterButton = styled((props: ButtonProps) => (
   <Button variant="contained" {...props} />
 ))(() => {
   return {
-    backgroundColor: customTheme.input_background,
-    color: customTheme.primary_text,
-    borderRadius: "100%",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    color: customTheme.secondary_text,
+    border: "1px solid rgba(255,255,255,0.06)",
+    boxShadow: "none",
+    borderRadius: 10,
     padding: 6,
     minWidth: 0,
-    aspectRatio: "1",
+    width: 38,
+    height: 38,
     "&:hover": {
-      backgroundColor: customTheme.foreground_alt,
+      backgroundColor: "rgba(255,255,255,0.08)",
+      color: customTheme.primary_text,
+      boxShadow: "none",
     },
   };
 });
@@ -145,14 +150,16 @@ export const StyledTeaButton = styled((props: ButtonProps) => (
   <Button variant="contained" {...props} />
 ))(() => {
   return {
-    fontFamily: "Work Sans",
+    fontFamily: "inherit",
     backgroundColor: customTheme.primary,
     color: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 10,
     textTransform: "none",
-    fontWeight: "500",
+    fontWeight: 600,
+    height: 38,
+    paddingInline: 16,
     ":hover": {
-      backgroundColor: Utils.ChangeColorAlpha(customTheme.primary, 0.8),
+      backgroundColor: customTheme.primary_button_sub,
     },
   };
 });
@@ -168,11 +175,15 @@ export const StyledFormInput = React.forwardRef<
   <input
     ref={ref}
     {...props}
-    className={`bg-transparent text-primary-text border border-secondary-text rounded px-3 py-2 focus:border-[${
-      customTheme.scondary_button
-    }] focus:ring-1 focus:ring-[${
-      customTheme.scondary_button
-    }] focus:outline-none ${className || ""}`}
+    className={className}
+    style={{
+      background: "transparent",
+      color: customTheme.primary_text,
+      border: `1px solid ${customTheme.input_border}`,
+      borderRadius: 10,
+      padding: "8px 12px",
+      ...props.style,
+    }}
     placeholder="..."
     onKeyDown={(e) => {
       if (e.key === "Enter") {
@@ -187,10 +198,10 @@ export const StyledNeutralButton = styled((props: ButtonProps) => (
   <Button variant="contained" {...props} />
 ))(() => {
   return {
-    fontFamily: "Work Sans",
+    fontFamily: "inherit",
     backgroundColor: Utils.ChangeColorAlpha(customTheme.input_border, 0.4),
     color: customTheme.button_text,
-    borderRadius: 20,
+    borderRadius: 10,
     textTransform: "none",
     ":hover": {
       backgroundColor: Utils.ChangeColorAlpha(customTheme.input_border, 0.7),
@@ -202,10 +213,10 @@ export const StyledDangerButton = styled((props: ButtonProps) => (
   <Button variant="contained" {...props} />
 ))(() => {
   return {
-    fontFamily: "Work Sans",
+    fontFamily: "inherit",
     backgroundColor: customTheme.danger_alt,
     color: customTheme.button_text,
-    borderRadius: 20,
+    borderRadius: 10,
     textTransform: "none",
     ":hover": {
       backgroundColor: Utils.ChangeColorAlpha(customTheme.danger_alt, 0.8),
@@ -217,10 +228,10 @@ export const StyledCustomButton = styled((props: ButtonProps) => (
   <Button variant="contained" {...props} />
 ))((props: { bg: string; text: string; radius?: number; hoverBg?: string }) => {
   return {
-    fontFamily: "Work Sans",
+    fontFamily: "inherit",
     backgroundColor: props.bg,
     color: props.text,
-    borderRadius: props.radius ?? 20,
+    borderRadius: props.radius ?? 10,
     textTransform: "none",
     ":hover": {
       backgroundColor: props.hoverBg ?? Utils.ChangeColorAlpha(props.bg, 0.8),
