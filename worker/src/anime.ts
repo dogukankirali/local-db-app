@@ -437,7 +437,6 @@ export async function updateEpisode(c: Ctx) {
   return c.json({ id: found.id, name: found.name, watchStatus });
 }
 
-anime.all("/api/anime/update-episode", requireAuth, updateEpisode);
 anime.all("/anime/update-episode", requireAuth, updateEpisode);
 anime.all("/updateAnimeStatus", requireAuth, updateEpisode);
 
