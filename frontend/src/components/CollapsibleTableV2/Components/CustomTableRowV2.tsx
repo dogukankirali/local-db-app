@@ -664,7 +664,7 @@ export default function CustomTableRowV2(
                                   if (item.key === "Genre") {
                                     if (item.value.includes(pill)) {
                                       item.value = item.value.filter(
-                                        (genre) => genre !== pill
+                                        (genre: any) => genre !== pill
                                       );
                                     } else {
                                       item.value = item.value.concat([pill]);
