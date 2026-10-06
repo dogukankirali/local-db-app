@@ -4,6 +4,7 @@ import React, { JSX, Suspense, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import AnimeGrid from "../../components/AnimeGrid";
+import AnimeDetailPanel from "../../components/anime/AnimeDetailPanel";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
@@ -14,10 +15,9 @@ import {
   useTableFilters,
 } from "../../components/CollapsibleTableV2/Components/TableFilters/TableFilters";
 import axios from "axios";
-import Toastify from "toastify-js";
-import "toastify-js/src/toastify.css";
+import { toast } from "sonner";
 import { theme } from "../../theme/customTheme";
-import { useTableSettings } from "../../components/CollapsibleTableV2/Components/TableSettings";
+import TableViewSettings, { columnId, ROWS_PER_PAGE_OPTIONS } from "../../components/CollapsibleTableV2/Components/TableFilters/TableViewSettings";
 import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
 import Constants from "../../constants/Constants";
 import { AnimeService } from "../../Services/AnimeServices";
@@ -30,10 +30,16 @@ import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 const TableTemp = dynamic(() => import("../../components/CollapsibleTableV2/TableTemp"), {
   ssr: false,
 }) as typeof import("../../components/CollapsibleTableV2/TableTemp").default;
-const CreateAnimeModal = dynamic(() => import("../../components/Modals/CreateAnimeModal"), { ssr: false });
-const UpdateDeleteAnimeModal = dynamic(() => import("../../components/Modals/UpdateDeleteAnimeModal"), { ssr: false });
+const AnimeCreateDialog = dynamic(() => import("../../components/anime/AnimeCreateDialog"), { ssr: false });
+const BulkImportDialog = dynamic(() => import("../../components/anime/BulkImportDialog"), { ssr: false });
+const AnimeEditorDialog = dynamic(() => import("../../components/anime/AnimeEditorDialog"), { ssr: false });
+const AnimeForm = dynamic(() => import("../../components/anime/AnimeForm"), { ssr: false });
+const ExportMenu = dynamic(() => import("../../components/anime/ExportMenu"), { ssr: false });
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+
+const GRID_MIN_COLUMNS = 5;
+const GRID_MAX_COLUMNS = 10;
 
 function AnimePageContent() {
   const [windowSize, setWindowSize] = useState({
@@ -77,14 +83,23 @@ function AnimePageContent() {
     if (saved === "table" || saved === "grid") {
       setViewMode(saved);
     }
+    const savedSize = Number(localStorage.getItem("gridSize"));
+    if (savedSize >= GRID_MIN_COLUMNS && savedSize <= GRID_MAX_COLUMNS) {
+      setGridSize(savedSize);
+    }
     setViewModeReady(true);
   }, []);
-  
+
   const handleViewModeChange = (newView: "table" | "grid") => {
     setViewMode(newView);
     localStorage.setItem("viewMode", newView);
   };
-  const [gridSize, setGridSize] = useState<number>(5);
+  // Grid sütun sayısı tarayıcıda saklanır; her girişte yeniden ayarlamak gerekmesin
+  const [gridSize, setGridSize] = useState<number>(GRID_MIN_COLUMNS);
+  const handleGridSizeChange = (size: number) => {
+    setGridSize(size);
+    localStorage.setItem("gridSize", String(size));
+  };
   // Grid-specific cache: accumulates all loaded anime so column changes don't cause refetch
   const [gridCache, setGridCache] = useState<TEATable.IAnime[]>([]);
   const gridCachePage = useRef<number>(0); // last fetched page for grid
@@ -173,7 +188,6 @@ function AnimePageContent() {
   const [outerColumns, setOuterColumns] = useState<TEATable.IColumnItems>(
     Constants({ type: "outerColumns", additionalData: { SettingsButtons } })!
   );
-  const [innerColumns] = useState(Constants({ type: "innerColumns" })!);
   const [tableData, setTableData] = useState<
     TEAData.WPagination<TEATable.IAnime>
   >({
@@ -195,6 +209,17 @@ function AnimePageContent() {
     data?: TEATable.IAnime;
     status: boolean;
   }>({ status: false });
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  // Ctrl+K paletinden gelen kısayollar: /anime?new=1 (yeni anime) ve /anime?import=1 (CSV import)
+  const paletteNew = useSearchParams().get("new");
+  const paletteImport = useSearchParams().get("import");
+  const navRouter = useRouter();
+  useEffect(() => {
+    if (paletteNew !== "1" && paletteImport !== "1") return;
+    if (paletteNew === "1") setCreateModalData({ status: true });
+    if (paletteImport === "1") setBulkImportOpen(true);
+    navRouter.replace("/anime");
+  }, [paletteNew, paletteImport]);
   const [genres, setGenres] = useState<{ value: string; label: string }[]>();
   const [series, setSeries] = useState<{ value: string; label: string }[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -269,7 +294,33 @@ function AnimePageContent() {
 
   const { filterState, handleClickFilters, ...tableFilterProps } =
     useTableFilters(Constants({ type: "tableFilters", additionalData: { genres, series } })!, () => {});
-  const { handleClickSettings, ...settingsProps } = useTableSettings();
+  // Tablo görünümü (filtre panelinin altında): sayfa başına satır ve gizli sütunlar, tarayıcıda saklanır
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const rpp = Number(localStorage.getItem("tableRowsPerPage"));
+      if (ROWS_PER_PAGE_OPTIONS.includes(rpp)) setRowsPerPage(rpp);
+      const hidden = JSON.parse(localStorage.getItem("tableHiddenColumns") || "[]");
+      if (Array.isArray(hidden)) setHiddenColumns(hidden);
+    } catch {}
+  }, []);
+  const changeRowsPerPage = (n: number) => {
+    setRowsPerPage(n);
+    localStorage.setItem("tableRowsPerPage", String(n));
+  };
+  const changeHiddenColumns = (hidden: string[]) => {
+    setHiddenColumns(hidden);
+    localStorage.setItem("tableHiddenColumns", JSON.stringify(hidden));
+  };
+  const visibleColumns = outerColumns.filter((c) => !hiddenColumns.includes(columnId(c)));
+  // Tablo sütunları sürükleyerek sıralanınca gizli sütunlar kaybolmasın: yeni sıra + gizliler
+  const sortVisibleColumns: React.Dispatch<React.SetStateAction<TEATable.IColumnItems>> = (next) => {
+    setOuterColumns((prev) => {
+      const visibleNext = typeof next === "function" ? next(prev.filter((c) => !hiddenColumns.includes(columnId(c)))) : next;
+      return [...visibleNext, ...prev.filter((c) => hiddenColumns.includes(columnId(c)))];
+    });
+  };
   filterStateRef.current = filterState;
 
   // Grid görünümünde filtre değişince listeyi baştan yükle (tablo kendi isteğini atıyor)
@@ -347,15 +398,7 @@ function AnimePageContent() {
       // Ensure modalData.data is defined
       if (!modalData.data) {
         console.error("Anime data not found");
-        Toastify({
-          text: "Anime data not found, update is not possible",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.error("Anime bilgisi bulunamadı, güncellenemedi");
         return;
       }
 
@@ -384,29 +427,13 @@ function AnimePageContent() {
 
       const res = await AnimeService.updateAnime(updatedData);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully updated",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.success("Anime güncellendi");
         setModalData({ status: false });
         refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error updating anime:", err);
-      Toastify({
-        text: "An error occurred while updating the anime",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Anime güncellenirken hata oluştu");
     }
   }
 
@@ -414,60 +441,29 @@ function AnimePageContent() {
     try {
       const res = await AnimeService.deleteAnime(modalData.data!);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully deleted",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.success("Anime silindi");
         setModalData({ status: false });
         refreshAfterMutation("delete", modalData.data);
       }
     } catch (err) {
       console.error(err);
-      Toastify({
-        text: "An error occurred while deleting the anime",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Anime silinirken hata oluştu");
     }
   }
 
-  async function createAnime() {
+  async function createAnime(draft: Record<string, any>): Promise<boolean> {
     try {
-      const res = await AnimeService.createAnime(createModalData.data!);
+      const res = await AnimeService.createAnime(draft as TEATable.IAnime);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully created",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
-        setCreateModalData({ status: false });
+        toast.success("Anime eklendi");
         refreshAfterMutation("create");
+        return true;
       }
     } catch (err) {
       console.error(err);
-      Toastify({
-        text: "An error occurred while creating the anime",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Anime eklenirken hata oluştu");
     }
+    return false;
   }
 
   const tableRerender: TEATable.FetchData = async (params) => {
@@ -577,27 +573,11 @@ function AnimePageContent() {
               "Anime not found or data structure not as expected, ID:",
               animeId
             );
-            Toastify({
-              text: "Anime to be edited not found or data structure not appropriate",
-              duration: 3000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-              stopOnFocus: true,
-            }).showToast();
+            toast.error("Düzenlenecek anime bulunamadı");
           }
         } catch (err) {
           console.error("Error getting anime information:", err);
-          Toastify({
-            text: "An error occurred while getting anime information",
-            duration: 3000,
-            close: true,
-            gravity: "top",
-            position: "right",
-            backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-            stopOnFocus: true,
-          }).showToast();
+          toast.error("Anime bilgisi alınamadı");
         }
       };
 
@@ -627,15 +607,7 @@ function AnimePageContent() {
       router.push("/login");
     } catch (error) {
       console.error("Error occurred during logout:", error);
-      Toastify({
-        text: "An error occurred while logging out",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Çıkış yapılırken hata oluştu");
     }
   };
 
@@ -653,28 +625,12 @@ function AnimePageContent() {
 
       const res = await AnimeService.updateAnime(updatedData);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully added to watchlist",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.success("Watchlist'e eklendi");
         refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error adding anime to watchlist:", err);
-      Toastify({
-        text: "An error occurred while adding anime to watchlist",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Watchlist'e eklenirken hata oluştu");
     }
   }
 
@@ -708,7 +664,7 @@ function AnimePageContent() {
                     <MuiTypography variant="caption" sx={{ color: theme.secondary_text, whiteSpace: "nowrap" }}>
                       Sütun {gridSize}
                     </MuiTypography>
-                    <Slider value={gridSize} min={2} max={8} step={1} onChange={(e, val) => setGridSize(val as number)} size="small" />
+                    <Slider value={gridSize} min={GRID_MIN_COLUMNS} max={GRID_MAX_COLUMNS} step={1} marks onChange={(e, val) => handleGridSizeChange(val as number)} size="small" />
                   </Box>
                 )}
                 <ToggleButtonGroup
@@ -739,12 +695,17 @@ function AnimePageContent() {
             genres={genres}
             filterState={filterState}
             tableFilterProps={tableFilterProps}
-            settingsProps={settingsProps}
             outerColumns={outerColumns}
             setOuterColumns={setOuterColumns}
             setCreateModalData={setCreateModalData}
             handleClickFilters={handleClickFilters}
-            handleClickSettings={handleClickSettings}
+            actions={<ExportMenu filters={getFilledFilters(filterState)} orderBy={lastFetchParams.current?.orderBy} order={lastFetchParams.current?.order} />}
+            onBulkImport={() => setBulkImportOpen(true)}
+            filterExtra={
+              viewMode === "table" ? (
+                <TableViewSettings columns={outerColumns} hidden={hiddenColumns} onHiddenChange={changeHiddenColumns} rowsPerPage={rowsPerPage} onRowsPerPageChange={changeRowsPerPage} />
+              ) : undefined
+            }
             windowSize={windowSize}
             tableRerender={tableRerender}
             user={user}
@@ -764,7 +725,9 @@ function AnimePageContent() {
             ) : (
               <Box sx={{
                 width: "100%",
-                height: "100%",
+                // Başlık çubuğundan kalan alanı doldurur; tablo kendi içinde kayar
+                flex: 1,
+                minHeight: 0,
                 "& .MuiPaper-root": { backgroundColor: "transparent", boxShadow: "none", border: "none" },
                 "& .MuiTableHead-root": { 
                    "& .MuiTableCell-root": { backgroundColor: "transparent", color: theme.primary, borderBottom: "2px solid rgba(255,255,255,0.05)", fontSize: "0.85rem", fontWeight: "bold", padding: "8px 12px" }
@@ -787,51 +750,47 @@ function AnimePageContent() {
                   tableName="anime-table"
                   data={tableData}
                   setData={setTableData}
-                  header={outerColumns}
-                  sortHeader={setOuterColumns}
+                  header={visibleColumns}
+                  sortHeader={sortVisibleColumns}
+                  rowsPerPage={rowsPerPage}
                   collapsible={{
                     isCollapsible: true,
                     size: "xl",
-                    inner: {
-                      type: "list",
-                      list: innerColumns,
-                      listType: "detail",
-                    },
+                    innerComponent: AnimeDetailPanel,
                   }}
                   tableRerender={tableRerender}
-                  style={{
-                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-                    width: "100%",
-                    maxWidth: "100vw",
-                  }}
                   selectionFilters={filterState}
                   setSelectionFilters={tableFilterProps.setFilterState}
                   loading={dataLoading}
-                  dimensions={{
-                    height: windowSize.height - (windowSize.width < 768 ? 150 : 200),
-                    width: windowSize.width - (windowSize.width < 768 ? 20 : 150),
-                  }}
                   lastFetchParams={lastFetchParams.current}
                 />
               </Box>
             )}
       </Box>
-      {modalData.status && (
-        <UpdateDeleteAnimeModal
-          modalData={modalData}
-          setModalData={setModalData}
-          updateAnime={updateAnime}
-          deleteAnime={deleteAnime}
-          genres={genres}
+      {modalData.status && modalData.type && (
+        <AnimeEditorDialog
+          open
+          mode={modalData.type}
+          data={modalData.data}
+          onClose={() => setModalData({ status: false })}
+          onChange={(patch) => setModalData((m) => ({ ...m, data: { ...(m.data as TEATable.IAnime), ...patch } }))}
+          onSave={updateAnime}
+          onDelete={deleteAnime}
+          onRequestDelete={() => setModalData((m) => ({ ...m, type: "delete" }))}
+          form={
+            <AnimeForm
+              value={modalData.data ?? {}}
+              genres={genres ?? []}
+              onChange={(patch) => setModalData((m) => ({ ...m, data: { ...(m.data as TEATable.IAnime), ...patch } }))}
+            />
+          }
         />
       )}
       {createModalData.status && (
-        <CreateAnimeModal
-          genres={genres}
-          createModalData={createModalData}
-          setCreateModalData={setCreateModalData}
-          handleCreate={createAnime}
-        />
+        <AnimeCreateDialog open genres={genres ?? []} onClose={() => setCreateModalData({ status: false })} onCreate={createAnime} />
+      )}
+      {bulkImportOpen && (
+        <BulkImportDialog open onClose={() => setBulkImportOpen(false)} onDone={() => refreshAfterMutation("create")} />
       )}
     </div>
   );

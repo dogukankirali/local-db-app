@@ -19,7 +19,7 @@ type Media = {
   format: string | null;
   averageScore: number | null;
   genres: string[];
-  coverImage: { large: string | null } | null;
+  coverImage: { large: string | null; extraLarge?: string | null } | null;
   relations: { edges: { relationType: string; node: { type: string; title: { romaji: string | null; english: string | null } } }[] } | null;
 };
 
@@ -48,7 +48,8 @@ function isMedia(v: unknown): v is Media {
     (m.idMal == null || Number.isInteger(m.idMal)) &&
     (m.episodes == null || Number.isInteger(m.episodes)) &&
     (m.averageScore == null || typeof m.averageScore === "number") &&
-    (m.coverImage?.large == null || /^https:\/\//.test(m.coverImage.large))
+    (m.coverImage?.large == null || /^https:\/\//.test(m.coverImage.large)) &&
+    (m.coverImage?.extraLarge == null || /^https:\/\//.test(m.coverImage.extraLarge))
   );
 }
 
@@ -135,7 +136,8 @@ anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
     if (!(anime.mal_score! > 0) && m.averageScore) sets.mal_score = m.averageScore / 10;
     if (!(anime.total_number_of_episodes! > 0) && m.episodes) sets.total_number_of_episodes = m.episodes;
     if (!anime.anime_status && m.status) sets.anime_status = m.status === "FINISHED" ? "Finished" : "Currently Airing";
-    if (!anime.cover && m.coverImage?.large) sets.cover = m.coverImage.large;
+    const cover = m.coverImage?.extraLarge ?? m.coverImage?.large;
+    if (!anime.cover && cover) sets.cover = cover;
 
     const stmts: D1PreparedStatement[] = [];
     const seriesName = seriesNameFor(m);

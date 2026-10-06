@@ -34,7 +34,7 @@ type SearchMedia = {
   format: string | null;
   averageScore: number | null;
   genres: string[];
-  coverImage: { large: string | null; medium: string | null } | null;
+  coverImage: { extraLarge: string | null; large: string | null; medium: string | null } | null;
   siteUrl: string;
 };
 
@@ -44,7 +44,7 @@ const SEARCH_QUERY = `
       pageInfo { currentPage lastPage hasNextPage }
       media(search: $search, type: ANIME) {
         id idMal title { romaji english native } episodes status format averageScore genres
-        coverImage { large medium } siteUrl
+        coverImage { extraLarge large medium } siteUrl
       }
     }
   }`;
@@ -63,7 +63,7 @@ export async function searchAnime(search: string, page = 1) {
         title: m.title.romaji ?? m.title.english ?? "",
         title_english: m.title.english ?? undefined,
         title_japanese: m.title.native ?? undefined,
-        images: { jpg: { image_url: m.coverImage?.large ?? m.coverImage?.medium ?? "" } },
+        images: { jpg: { image_url: m.coverImage?.extraLarge ?? m.coverImage?.large ?? m.coverImage?.medium ?? "" } },
         type: m.format === "MOVIE" ? "Movie" : m.format ?? undefined,
         episodes: m.episodes ?? undefined,
         status: m.status ?? undefined,
@@ -76,7 +76,7 @@ export async function searchAnime(search: string, page = 1) {
   };
 }
 
-const SYNC_FIELDS = `id idMal title { romaji english } episodes status format averageScore genres coverImage { large }
+const SYNC_FIELDS = `id idMal title { romaji english } episodes status format averageScore genres coverImage { extraLarge large }
   relations { edges { relationType node { type title { romaji english } } } }`;
 
 // Sync grubu: her anime adı tek GraphQL isteğinde alias'la aranır
@@ -89,4 +89,18 @@ export async function searchForSync(names: string[], signal?: AbortSignal): Prom
     signal
   );
   return names.map((_, i) => data[`a${i}`]?.media ?? []);
+}
+
+// Kapak yükseltme: MAL id'lerinden AniList'in en büyük kapağını (extraLarge) bulur
+export async function coversByMalIds(ids: number[], signal?: AbortSignal): Promise<Map<number, string>> {
+  const data = await anilistQuery<{ Page: { media: { idMal: number | null; coverImage: { extraLarge: string | null } | null }[] } }>(
+    `query ($ids: [Int]) { Page(perPage: 50) { media(idMal_in: $ids, type: ANIME) { idMal coverImage { extraLarge } } } }`,
+    { ids },
+    signal
+  );
+  const out = new Map<number, string>();
+  for (const m of data.Page.media) {
+    if (m.idMal && m.coverImage?.extraLarge) out.set(m.idMal, m.coverImage.extraLarge);
+  }
+  return out;
 }

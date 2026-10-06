@@ -28,6 +28,7 @@ import TvIcon from "@mui/icons-material/Tv";
 import { GenreChips } from "../../Common/GenreChip";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { coverImgStyle, revealCover, sizedCover } from "../../../utils/cover";
 
 // IColumnItem tipini genişleterek hide özelliğini ekleyelim
 interface IExtendedColumnItem extends TEATable.IColumnItem {
@@ -493,18 +494,35 @@ export default function CustomTableRowV2(
                   align="center"
                   style={colStyle}
                 >
+                  {/* Sabit boyutlu kutu: görsel yüklenemese de satır yüksekliği değişmez */}
                   <div
-                    style={{ position: "relative", display: "inline-block" }}
+                    style={{
+                      position: "relative",
+                      width: 40,
+                      height: 56,
+                      margin: "auto",
+                      borderRadius: 6,
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                    }}
                   >
-                    <img
-                      src={`${props.singleData[header.key]}`}
-                      onMouseEnter={(e) => {
-                        handlePopoverOpen(e, "cover");
-                      }}
-                      onMouseLeave={handlePopoverClose}
-                      alt={props.singleData["Name"] + "_cover"}
-                      style={{ width: 44, height: 44, objectFit: "cover", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", display: "block", margin: "auto" }}
-                    />
+                    {props.singleData[header.key] && (
+                      <img
+                        src={sizedCover(String(props.singleData[header.key]), "small")}
+                        onMouseEnter={(e) => {
+                          handlePopoverOpen(e, "cover");
+                        }}
+                        onMouseLeave={handlePopoverClose}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        onLoad={revealCover}
+                        onError={(e) => {
+                          e.currentTarget.style.visibility = "hidden";
+                        }}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6, display: "block", ...coverImgStyle }}
+                      />
+                    )}
                     {props.singleData["PlanToWatch"] === true && (
                       <div
                         style={{
@@ -545,7 +563,7 @@ export default function CustomTableRowV2(
                   >
                     <img
                       src={`${props.singleData[header.key]}`}
-                      alt={props.singleData["Name"] + "_cover"}
+                      alt=""
                       style={{ width: 300, borderRadius: "12px", boxShadow: "0 16px 32px rgba(0,0,0,0.8)" }}
                     />
                   </Popover>
@@ -704,26 +722,23 @@ export default function CustomTableRowV2(
             }}
           >
             <Box
-              sx={{
-                margin: 2,
-                bgcolor: theme.background,
-                borderRadius: 1,
-                p: 2,
-                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  boxShadow: "0 6px 12px rgba(0,0,0,0.15)",
-                },
-              }}
+              sx={
+                // Özel panel kendi kartını çiziyor; eski liste görünümü için eski kutu korunur
+                props.collapsible.innerComponent
+                  ? { mx: 1, mt: 0.5, mb: 1.5 }
+                  : { margin: 2, bgcolor: theme.background, borderRadius: 1, p: 2 }
+              }
             >
-              <Typography
-                variant="h6"
-                gutterBottom
-                component="div"
-                sx={{ color: theme.primary_text, mb: 2 }}
-              >
-                {props.singleData.Name} - Detaylar
-              </Typography>
+              {!props.collapsible.innerComponent && (
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  component="div"
+                  sx={{ color: theme.primary_text, mb: 2 }}
+                >
+                  {props.singleData.Name} - Detaylar
+                </Typography>
+              )}
 
               {props.collapsible.innerComponent && (
                 <props.collapsible.innerComponent

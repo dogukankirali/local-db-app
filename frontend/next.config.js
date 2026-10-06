@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 // `npm run build:cf`: Cloudflare Worker'ın sunacağı statik çıktı (out/). API aynı origin'de /api altında.
-// `npm run build`: Docker için standalone Node sunucusu.
+// `npm run build`: `next start` ile çalışan Node çıktısı.
 const staticExport = process.env.npm_lifecycle_event === "build:cf" || process.env.NEXT_OUTPUT === "export";
 // `next dev` sırasında /api istekleri lokal Worker'a (wrangler dev) yönlendirilir
 const devApi = process.env.KIROKU_API_ORIGIN || "http://127.0.0.1:8787";
@@ -9,8 +9,8 @@ const devApi = process.env.KIROKU_API_ORIGIN || "http://127.0.0.1:8787";
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  output: staticExport ? "export" : "standalone",
-  // Eski kodda çok sayıda `any` var; lint build'i kırmasın (tip kontrolü açık kalır)
+  ...(staticExport ? { output: "export" } : {}),
+  // ESLint kurulu değil (eslint-config-next zinciri yaması olmayan bir açık taşıyor); tip kontrolü build'de açık
   eslint: { ignoreDuringBuilds: true },
   experimental: {
     // MUI ikon/bileşen importlarını yalnızca kullanılan modüllere indirger

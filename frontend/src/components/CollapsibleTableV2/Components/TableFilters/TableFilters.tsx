@@ -62,6 +62,9 @@ type TemporaryProps = {
   filterState: FilterState[];
   setFilterState: React.Dispatch<React.SetStateAction<FilterState[]>>;
   onFilterChange?: () => void;
+  // Filtrelerin altında gösterilen ek bölüm (ör. tablo görünümü ayarları); anında uygulanır
+  extraSection?: React.ReactNode;
+  extraSectionTitle?: string;
 };
 
 function createFilterState(opts: FilterStateProp[]): FilterState[] {
@@ -165,6 +168,8 @@ export default function TableSettings({
   filterState,
   setFilterState,
   onFilterChange,
+  extraSection,
+  extraSectionTitle,
 }: TemporaryProps) {
   const [localFilters, setLocalFilters] = useState(filterState);
   // Dışarıdan (tür chip'ine tıklama, üst bardaki arama) değişen filtreler panel açılınca görünsün
@@ -352,6 +357,14 @@ export default function TableSettings({
             </Box>
           );
         })}
+        {extraSection && (
+          <Box sx={{ gridColumn: "1 / -1", pt: 2, mt: 0.5, borderTop: `1px solid ${alpha("#FFFFFF", 0.06)}` }}>
+            {extraSectionTitle && (
+              <Typography sx={{ fontWeight: 700, fontSize: "0.9rem", mb: 1.5 }}>{extraSectionTitle}</Typography>
+            )}
+            {extraSection}
+          </Box>
+        )}
       </Box>
 
       <Box

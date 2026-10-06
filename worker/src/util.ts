@@ -8,6 +8,9 @@ export type Env = {
   MAIL_FROM: string;
   RESEND_API_KEY?: string;
   PASSWORD_ITERATIONS?: string;
+  /** Google ile giriş (ikisi de secret); yoksa Google butonu gizlenir */
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
   /** "development" olduğunda mail gönderilmez, bağlantı loga yazılır */
   ENVIRONMENT?: string;
 };
