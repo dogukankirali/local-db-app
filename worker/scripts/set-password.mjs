@@ -6,6 +6,7 @@
 // Şifre terminalden sorulur (ya da KIROKU_PASSWORD ortam değişkeninden okunur).
 // Hash biçimi Worker'daki src/auth.ts ile aynıdır.
 import { execFileSync } from "node:child_process";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { pbkdf2Sync, randomBytes } from "node:crypto";
 import { createInterface } from "node:readline";
 
@@ -36,10 +37,19 @@ const stored = `pbkdf2$sha256$${iterations}$${salt.toString("base64")}$${hash.to
 const q = (s) => `'${s.replace(/'/g, "''")}'`;
 const sql = `UPDATE users SET password = ${q(stored)}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE username = ${q(username)}; SELECT changes() AS updated;`;
 
-const out = execFileSync("npx", ["wrangler", "d1", "execute", "kiroku", remote ? "--remote" : "--local", "--json", "--command", sql], {
-  encoding: "utf8",
-  shell: process.platform === "win32",
-});
+// SQL dosya üzerinden verilir: Windows'ta (shell üzerinden npx) --command argümanı boşluklardan bölünüyordu
+mkdirSync(".import", { recursive: true });
+const file = ".import/set-password.sql";
+writeFileSync(file, sql);
+let out;
+try {
+  out = execFileSync("npx", ["wrangler", "d1", "execute", "kiroku", remote ? "--remote" : "--local", "--json", `--file=${file}`], {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+} finally {
+  rmSync(file, { force: true });
+}
 const updated = JSON.parse(out).at(-1)?.results?.[0]?.updated ?? 0;
 console.log(updated ? `${username} şifresi güncellendi (${remote ? "Cloudflare" : "lokal"} D1)` : `${username} bulunamadı`);
 process.exit(updated ? 0 : 1);

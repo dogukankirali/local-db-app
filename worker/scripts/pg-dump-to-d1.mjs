@@ -44,7 +44,14 @@ function parseCopyBlocks(sql) {
 const q = (v) => (v === null || v === undefined ? "NULL" : `'${String(v).replace(/'/g, "''")}'`);
 const b = (v) => (v === "t" || v === "true" ? 1 : 0);
 const n = (v) => (v === null || v === undefined || v === "" ? "NULL" : Number(v));
-const ts = (v) => (v ? q(new Date(v.replace(" ", "T").replace(/\+00$/, "Z")).toISOString()) : "NULL");
+// timestamptz metni sunucunun saat dilimiyle gelir: "2025-03-14 22:17:40.5+03", "+05:30" ya da "+00"
+const ts = (v) => {
+  if (!v) return "NULL";
+  const iso = v.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00");
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) throw new Error(`Tarih okunamadı: ${v}`);
+  return q(d.toISOString());
+};
 
 const t = parseCopyBlocks(readFileSync(input, "utf8"));
 const out = [
