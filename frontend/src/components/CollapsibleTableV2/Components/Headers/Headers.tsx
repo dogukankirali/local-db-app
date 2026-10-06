@@ -1,15 +1,12 @@
 import { Badge, Box, Tooltip } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import TableFilters, { getFilledFilters } from "../TableFilters/TableFilters";
-import TableSettings from "../TableSettings";
 import { StyledMUIFilterButton, StyledTeaButton } from "../StyledComponents";
 import { useRouter } from "next/navigation";
 
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import SettingsIcon from "@mui/icons-material/Settings";
 import SyncIcon from "@mui/icons-material/Sync";
 import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
-import Constants from "../../../../constants/Constants";
 import { AnimeService } from "../../../../Services/AnimeServices";
 import Toastify from "toastify-js";
 import { useState, useRef, useEffect } from "react";
@@ -20,17 +17,19 @@ export default function TableHeaders(props: {
   genres: any;
   filterState: any;
   tableFilterProps: any;
-  settingsProps: any;
+  settingsProps?: any;
   outerColumns: any;
   setOuterColumns: any;
   setCreateModalData: any;
   handleClickFilters: any;
-  handleClickSettings: any;
+  handleClickSettings?: any;
   windowSize?: any;
   tableRerender?: TEATable.FetchData;
   user: any;
   // Toolbar'ın solunda (başlık/sayaç) ve aksiyonlardan önce (görünüm kontrolleri) gösterilecek içerik
   leading?: React.ReactNode;
+  // Filtre panelinin altında gösterilecek tablo görünümü ayarları
+  filterExtra?: React.ReactNode;
   trailing?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -227,14 +226,10 @@ export default function TableHeaders(props: {
         <TableFilters
           filterState={props.filterState}
           {...props.tableFilterProps}
+          extraSection={props.filterExtra}
+          extraSectionTitle={props.filterExtra ? "Tablo görünümü" : undefined}
         />
       )}
-      <TableSettings
-        {...props.settingsProps}
-        headers={props.outerColumns}
-        setHeaders={props.setOuterColumns}
-        headerOpts={Constants({ type: "headers" })}
-      />
       <Box
         sx={{
           display: "flex",
@@ -256,11 +251,6 @@ export default function TableHeaders(props: {
               <Badge badgeContent={activeFilterCount} color="primary" sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", height: 16, minWidth: 16, top: -4, right: -4 } }}>
                 <FilterAltIcon sx={{ fontSize: 20 }} />
               </Badge>
-            </StyledMUIFilterButton>
-          </Tooltip>
-          <Tooltip title="Tablo ayarları">
-            <StyledMUIFilterButton onClick={props.handleClickSettings} aria-label="Tablo ayarları">
-              <SettingsIcon sx={{ fontSize: 20 }} />
             </StyledMUIFilterButton>
           </Tooltip>
           {isAdmin &&

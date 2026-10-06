@@ -17,7 +17,7 @@ import axios from "axios";
 import Toastify from "toastify-js";
 import "toastify-js/src/toastify.css";
 import { theme } from "../../theme/customTheme";
-import { useTableSettings } from "../../components/CollapsibleTableV2/Components/TableSettings";
+import TableViewSettings, { columnId, ROWS_PER_PAGE_OPTIONS } from "../../components/CollapsibleTableV2/Components/TableFilters/TableViewSettings";
 import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
 import Constants from "../../constants/Constants";
 import { AnimeService } from "../../Services/AnimeServices";
@@ -34,6 +34,9 @@ const CreateAnimeModal = dynamic(() => import("../../components/Modals/CreateAni
 const UpdateDeleteAnimeModal = dynamic(() => import("../../components/Modals/UpdateDeleteAnimeModal"), { ssr: false });
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+
+const GRID_MIN_COLUMNS = 5;
+const GRID_MAX_COLUMNS = 10;
 
 function AnimePageContent() {
   const [windowSize, setWindowSize] = useState({
@@ -77,14 +80,23 @@ function AnimePageContent() {
     if (saved === "table" || saved === "grid") {
       setViewMode(saved);
     }
+    const savedSize = Number(localStorage.getItem("gridSize"));
+    if (savedSize >= GRID_MIN_COLUMNS && savedSize <= GRID_MAX_COLUMNS) {
+      setGridSize(savedSize);
+    }
     setViewModeReady(true);
   }, []);
-  
+
   const handleViewModeChange = (newView: "table" | "grid") => {
     setViewMode(newView);
     localStorage.setItem("viewMode", newView);
   };
-  const [gridSize, setGridSize] = useState<number>(5);
+  // Grid sütun sayısı tarayıcıda saklanır; her girişte yeniden ayarlamak gerekmesin
+  const [gridSize, setGridSize] = useState<number>(GRID_MIN_COLUMNS);
+  const handleGridSizeChange = (size: number) => {
+    setGridSize(size);
+    localStorage.setItem("gridSize", String(size));
+  };
   // Grid-specific cache: accumulates all loaded anime so column changes don't cause refetch
   const [gridCache, setGridCache] = useState<TEATable.IAnime[]>([]);
   const gridCachePage = useRef<number>(0); // last fetched page for grid
@@ -269,7 +281,33 @@ function AnimePageContent() {
 
   const { filterState, handleClickFilters, ...tableFilterProps } =
     useTableFilters(Constants({ type: "tableFilters", additionalData: { genres, series } })!, () => {});
-  const { handleClickSettings, ...settingsProps } = useTableSettings();
+  // Tablo görünümü (filtre panelinin altında): sayfa başına satır ve gizli sütunlar, tarayıcıda saklanır
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const rpp = Number(localStorage.getItem("tableRowsPerPage"));
+      if (ROWS_PER_PAGE_OPTIONS.includes(rpp)) setRowsPerPage(rpp);
+      const hidden = JSON.parse(localStorage.getItem("tableHiddenColumns") || "[]");
+      if (Array.isArray(hidden)) setHiddenColumns(hidden);
+    } catch {}
+  }, []);
+  const changeRowsPerPage = (n: number) => {
+    setRowsPerPage(n);
+    localStorage.setItem("tableRowsPerPage", String(n));
+  };
+  const changeHiddenColumns = (hidden: string[]) => {
+    setHiddenColumns(hidden);
+    localStorage.setItem("tableHiddenColumns", JSON.stringify(hidden));
+  };
+  const visibleColumns = outerColumns.filter((c) => !hiddenColumns.includes(columnId(c)));
+  // Tablo sütunları sürükleyerek sıralanınca gizli sütunlar kaybolmasın: yeni sıra + gizliler
+  const sortVisibleColumns: React.Dispatch<React.SetStateAction<TEATable.IColumnItems>> = (next) => {
+    setOuterColumns((prev) => {
+      const visibleNext = typeof next === "function" ? next(prev.filter((c) => !hiddenColumns.includes(columnId(c)))) : next;
+      return [...visibleNext, ...prev.filter((c) => hiddenColumns.includes(columnId(c)))];
+    });
+  };
   filterStateRef.current = filterState;
 
   // Grid görünümünde filtre değişince listeyi baştan yükle (tablo kendi isteğini atıyor)
@@ -708,7 +746,7 @@ function AnimePageContent() {
                     <MuiTypography variant="caption" sx={{ color: theme.secondary_text, whiteSpace: "nowrap" }}>
                       Sütun {gridSize}
                     </MuiTypography>
-                    <Slider value={gridSize} min={2} max={8} step={1} onChange={(e, val) => setGridSize(val as number)} size="small" />
+                    <Slider value={gridSize} min={GRID_MIN_COLUMNS} max={GRID_MAX_COLUMNS} step={1} marks onChange={(e, val) => handleGridSizeChange(val as number)} size="small" />
                   </Box>
                 )}
                 <ToggleButtonGroup
@@ -739,12 +777,15 @@ function AnimePageContent() {
             genres={genres}
             filterState={filterState}
             tableFilterProps={tableFilterProps}
-            settingsProps={settingsProps}
             outerColumns={outerColumns}
             setOuterColumns={setOuterColumns}
             setCreateModalData={setCreateModalData}
             handleClickFilters={handleClickFilters}
-            handleClickSettings={handleClickSettings}
+            filterExtra={
+              viewMode === "table" ? (
+                <TableViewSettings columns={outerColumns} hidden={hiddenColumns} onHiddenChange={changeHiddenColumns} rowsPerPage={rowsPerPage} onRowsPerPageChange={changeRowsPerPage} />
+              ) : undefined
+            }
             windowSize={windowSize}
             tableRerender={tableRerender}
             user={user}
@@ -787,8 +828,9 @@ function AnimePageContent() {
                   tableName="anime-table"
                   data={tableData}
                   setData={setTableData}
-                  header={outerColumns}
-                  sortHeader={setOuterColumns}
+                  header={visibleColumns}
+                  sortHeader={sortVisibleColumns}
+                  rowsPerPage={rowsPerPage}
                   collapsible={{
                     isCollapsible: true,
                     size: "xl",
