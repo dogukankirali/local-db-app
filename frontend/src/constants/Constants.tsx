@@ -279,14 +279,16 @@ export default function Constants({
 
       {
         key: "Genre",
-
         value: "Genre",
-
         width: isMobile ? "20%" : "15%",
-
         type: "pill",
-
-        hide: isMobile, // Mobil görünümde gizle
+        hide: isMobile,
+      },
+      {
+        key: additionalData?.SettingsButtons,
+        value: "Settings",
+        width: isMobile ? "15%" : "10%",
+        type: "button",
       },
     ];
   } else if (type === "innerColumns") {

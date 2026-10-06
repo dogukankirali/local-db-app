@@ -90,7 +90,7 @@ function AnimePageContent() {
   const gridCachePage = useRef<number>(0); // last fetched page for grid
   const gridTotalPages = useRef<number>(Infinity);
   const [gridLoadingMore, setGridLoadingMore] = useState<boolean>(false);
-  const GRID_PRE_FETCH = 64; // pre-fetch 64 at once (max 8 cols * 8 rows)
+  const GRID_PRE_FETCH = 24; // pre-fetch 64 at once (max 8 cols * 8 rows)
 
   // Initial grid load & when viewMode switches to grid
   useEffect(() => {

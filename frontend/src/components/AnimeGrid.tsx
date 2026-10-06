@@ -325,11 +325,16 @@ export default function AnimeGrid({
         }}
       >
         {allData.map((anime, index) => {
-          const imgSrc = anime.Cover
-            ? anime.Cover.startsWith("data:")
-              ? anime.Cover
-              : `data:image/jpeg;base64,${anime.Cover}`
-            : null;
+          let imgSrc = null;
+          if (anime.Cover) {
+            if (anime.Cover.startsWith("http")) {
+              imgSrc = anime.Cover;
+            } else if (anime.Cover.startsWith("data:")) {
+              imgSrc = anime.Cover;
+            } else {
+              imgSrc = `data:image/jpeg;base64,${anime.Cover}`;
+            }
+          }
           const status = getStatusInfo(anime);
 
           return (
