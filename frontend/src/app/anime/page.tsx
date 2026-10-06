@@ -14,8 +14,7 @@ import {
   useTableFilters,
 } from "../../components/CollapsibleTableV2/Components/TableFilters/TableFilters";
 import axios from "axios";
-import Toastify from "toastify-js";
-import "toastify-js/src/toastify.css";
+import { toast } from "sonner";
 import { theme } from "../../theme/customTheme";
 import TableViewSettings, { columnId, ROWS_PER_PAGE_OPTIONS } from "../../components/CollapsibleTableV2/Components/TableFilters/TableViewSettings";
 import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
@@ -30,8 +29,11 @@ import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 const TableTemp = dynamic(() => import("../../components/CollapsibleTableV2/TableTemp"), {
   ssr: false,
 }) as typeof import("../../components/CollapsibleTableV2/TableTemp").default;
-const CreateAnimeModal = dynamic(() => import("../../components/Modals/CreateAnimeModal"), { ssr: false });
-const UpdateDeleteAnimeModal = dynamic(() => import("../../components/Modals/UpdateDeleteAnimeModal"), { ssr: false });
+const AnimeCreateDialog = dynamic(() => import("../../components/anime/AnimeCreateDialog"), { ssr: false });
+const BulkImportDialog = dynamic(() => import("../../components/anime/BulkImportDialog"), { ssr: false });
+const AnimeEditorDialog = dynamic(() => import("../../components/anime/AnimeEditorDialog"), { ssr: false });
+const AnimeForm = dynamic(() => import("../../components/anime/AnimeForm"), { ssr: false });
+const ExportMenu = dynamic(() => import("../../components/anime/ExportMenu"), { ssr: false });
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
@@ -207,6 +209,17 @@ function AnimePageContent() {
     data?: TEATable.IAnime;
     status: boolean;
   }>({ status: false });
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  // Ctrl+K paletinden gelen kısayollar: /anime?new=1 (yeni anime) ve /anime?import=1 (CSV import)
+  const paletteNew = useSearchParams().get("new");
+  const paletteImport = useSearchParams().get("import");
+  const navRouter = useRouter();
+  useEffect(() => {
+    if (paletteNew !== "1" && paletteImport !== "1") return;
+    if (paletteNew === "1") setCreateModalData({ status: true });
+    if (paletteImport === "1") setBulkImportOpen(true);
+    navRouter.replace("/anime");
+  }, [paletteNew, paletteImport]);
   const [genres, setGenres] = useState<{ value: string; label: string }[]>();
   const [series, setSeries] = useState<{ value: string; label: string }[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -385,15 +398,7 @@ function AnimePageContent() {
       // Ensure modalData.data is defined
       if (!modalData.data) {
         console.error("Anime data not found");
-        Toastify({
-          text: "Anime data not found, update is not possible",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.error("Anime bilgisi bulunamadı, güncellenemedi");
         return;
       }
 
@@ -422,29 +427,13 @@ function AnimePageContent() {
 
       const res = await AnimeService.updateAnime(updatedData);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully updated",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.success("Anime güncellendi");
         setModalData({ status: false });
         refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error updating anime:", err);
-      Toastify({
-        text: "An error occurred while updating the anime",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Anime güncellenirken hata oluştu");
     }
   }
 
@@ -452,60 +441,29 @@ function AnimePageContent() {
     try {
       const res = await AnimeService.deleteAnime(modalData.data!);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully deleted",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.success("Anime silindi");
         setModalData({ status: false });
         refreshAfterMutation("delete", modalData.data);
       }
     } catch (err) {
       console.error(err);
-      Toastify({
-        text: "An error occurred while deleting the anime",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Anime silinirken hata oluştu");
     }
   }
 
-  async function createAnime() {
+  async function createAnime(draft: Record<string, any>): Promise<boolean> {
     try {
-      const res = await AnimeService.createAnime(createModalData.data!);
+      const res = await AnimeService.createAnime(draft as TEATable.IAnime);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully created",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
-        setCreateModalData({ status: false });
+        toast.success("Anime eklendi");
         refreshAfterMutation("create");
+        return true;
       }
     } catch (err) {
       console.error(err);
-      Toastify({
-        text: "An error occurred while creating the anime",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Anime eklenirken hata oluştu");
     }
+    return false;
   }
 
   const tableRerender: TEATable.FetchData = async (params) => {
@@ -615,27 +573,11 @@ function AnimePageContent() {
               "Anime not found or data structure not as expected, ID:",
               animeId
             );
-            Toastify({
-              text: "Anime to be edited not found or data structure not appropriate",
-              duration: 3000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-              stopOnFocus: true,
-            }).showToast();
+            toast.error("Düzenlenecek anime bulunamadı");
           }
         } catch (err) {
           console.error("Error getting anime information:", err);
-          Toastify({
-            text: "An error occurred while getting anime information",
-            duration: 3000,
-            close: true,
-            gravity: "top",
-            position: "right",
-            backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-            stopOnFocus: true,
-          }).showToast();
+          toast.error("Anime bilgisi alınamadı");
         }
       };
 
@@ -665,15 +607,7 @@ function AnimePageContent() {
       router.push("/login");
     } catch (error) {
       console.error("Error occurred during logout:", error);
-      Toastify({
-        text: "An error occurred while logging out",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Çıkış yapılırken hata oluştu");
     }
   };
 
@@ -691,28 +625,12 @@ function AnimePageContent() {
 
       const res = await AnimeService.updateAnime(updatedData);
       if (res.status === 200) {
-        Toastify({
-          text: "Anime successfully added to watchlist",
-          duration: 3000,
-          close: true,
-          gravity: "top",
-          position: "right",
-          backgroundColor: "linear-gradient(to right, #00b09b, #96c93d)",
-          stopOnFocus: true,
-        }).showToast();
+        toast.success("Watchlist'e eklendi");
         refreshAfterMutation("update", updatedData);
       }
     } catch (err) {
       console.error("Error adding anime to watchlist:", err);
-      Toastify({
-        text: "An error occurred while adding anime to watchlist",
-        duration: 3000,
-        close: true,
-        gravity: "top",
-        position: "right",
-        backgroundColor: "linear-gradient(to right, #ff5f6d, #ffc371)",
-        stopOnFocus: true,
-      }).showToast();
+      toast.error("Watchlist'e eklenirken hata oluştu");
     }
   }
 
@@ -781,6 +699,8 @@ function AnimePageContent() {
             setOuterColumns={setOuterColumns}
             setCreateModalData={setCreateModalData}
             handleClickFilters={handleClickFilters}
+            actions={<ExportMenu filters={getFilledFilters(filterState)} orderBy={lastFetchParams.current?.orderBy} order={lastFetchParams.current?.order} />}
+            onBulkImport={() => setBulkImportOpen(true)}
             filterExtra={
               viewMode === "table" ? (
                 <TableViewSettings columns={outerColumns} hidden={hiddenColumns} onHiddenChange={changeHiddenColumns} rowsPerPage={rowsPerPage} onRowsPerPageChange={changeRowsPerPage} />
@@ -858,22 +778,30 @@ function AnimePageContent() {
               </Box>
             )}
       </Box>
-      {modalData.status && (
-        <UpdateDeleteAnimeModal
-          modalData={modalData}
-          setModalData={setModalData}
-          updateAnime={updateAnime}
-          deleteAnime={deleteAnime}
-          genres={genres}
+      {modalData.status && modalData.type && (
+        <AnimeEditorDialog
+          open
+          mode={modalData.type}
+          data={modalData.data}
+          onClose={() => setModalData({ status: false })}
+          onChange={(patch) => setModalData((m) => ({ ...m, data: { ...(m.data as TEATable.IAnime), ...patch } }))}
+          onSave={updateAnime}
+          onDelete={deleteAnime}
+          onRequestDelete={() => setModalData((m) => ({ ...m, type: "delete" }))}
+          form={
+            <AnimeForm
+              value={modalData.data ?? {}}
+              genres={genres ?? []}
+              onChange={(patch) => setModalData((m) => ({ ...m, data: { ...(m.data as TEATable.IAnime), ...patch } }))}
+            />
+          }
         />
       )}
       {createModalData.status && (
-        <CreateAnimeModal
-          genres={genres}
-          createModalData={createModalData}
-          setCreateModalData={setCreateModalData}
-          handleCreate={createAnime}
-        />
+        <AnimeCreateDialog open genres={genres ?? []} onClose={() => setCreateModalData({ status: false })} onCreate={createAnime} />
+      )}
+      {bulkImportOpen && (
+        <BulkImportDialog open onClose={() => setBulkImportOpen(false)} onDone={() => refreshAfterMutation("create")} />
       )}
     </div>
   );

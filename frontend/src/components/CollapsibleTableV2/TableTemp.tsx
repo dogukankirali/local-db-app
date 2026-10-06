@@ -177,26 +177,20 @@ export default function TableTemp<T extends {}>(
       }}
     >
       {props.collapsible.isCollapsible && (
-        <TableCell height="73">
-          <Skeleton
-            variant="circular"
-            width={34}
-            height={34}
-            animation="wave"
-            sx={{
-              my: "2px",
-            }}
-          />
+        <TableCell height="72">
+          <Skeleton variant="rounded" width={24} height={24} animation="wave" sx={{ bgcolor: "rgba(255,255,255,0.05)" }} />
         </TableCell>
       )}
-      {props.header.map((_, index) => {
+      {props.header.map((h, index) => {
+        const isCover = h.type === "base64";
         return (
-          <TableCell key={index} height="73">
+          <TableCell key={index} height="72">
             <Skeleton
-              variant="text"
-              width="100%"
-              height={32}
+              variant="rounded"
+              width={isCover ? 40 : "80%"}
+              height={isCover ? 56 : 14}
               animation="wave"
+              sx={{ mx: "auto", borderRadius: isCover ? "6px" : "4px", bgcolor: "rgba(255,255,255,0.05)" }}
             />
           </TableCell>
         );
@@ -209,17 +203,14 @@ export default function TableTemp<T extends {}>(
       className="custom-table-scroll"
       sx={{
         width: "100%",
-        // borderTop: "1px solid #515151",
-        borderTop: "1px solid gray",
-        borderBottom: "1px solid gray",
-        borderRadius: 5,
+        // Tek dış çerçeve; iç hücrelerde yalnızca ince satır ayırıcıları (üst üste binen gri çizgiler kaldırıldı)
+        border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: "12px",
         boxShadow: "none",
-        overflowY: "hidden",
+        overflow: "hidden",
         position: "relative",
-        "& *": {
-          // borderColor: "#515151 !important",
-          borderColor: "gray !important",
-        },
+        backgroundColor: `${theme.background_light} !important`,
+        "& .MuiTableCell-root": { borderColor: "rgba(255,255,255,0.05)" },
       }}
     >
       <TableContainer
@@ -284,20 +275,22 @@ export default function TableTemp<T extends {}>(
                       backgroundColor: theme.table_row_dark,
                     }}
                   >
-                    <TableCell colSpan={100} rowSpan={6}>
+                    <TableCell colSpan={100} rowSpan={6} sx={{ borderBottom: 0 }}>
                       <Box
                         sx={{
-                          height: "378px",
+                          height: "320px",
                           width: "100%",
                           display: "flex",
                           justifyContent: "center",
                           alignItems: "center",
                           flexDirection: "column",
-                          gap: 0.5,
+                          gap: 0.75,
+                          color: theme.secondary_text,
                         }}
                       >
-                        <CrisisAlertIcon style={{ color: theme.input_text }} />
-                        <b style={{ color: theme.input_text }}>No Data</b>
+                        <CrisisAlertIcon />
+                        <b style={{ color: theme.primary_text }}>Sonuç yok</b>
+                        <span style={{ fontSize: "0.85rem" }}>Filtreleri değiştirip tekrar dene.</span>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -310,49 +303,63 @@ export default function TableTemp<T extends {}>(
           </Table>
         </Scrollbars>
       </TableContainer>
-      {props.data !== undefined && (
-        <Box
-          sx={{
-            width: "100%",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: "40px",
-            backgroundColor: theme.table_header,
-            borderTop: "1px solid",
-            padding: isMobile ? "8px 0" : "0",
-          }}
-        >
-          <Pagination
+      {props.data !== undefined && (() => {
+        const p = props.data.pagination;
+        const current = p.currentPage || page;
+        const per = p.itemsPerPage || props.rowsPerPage || 10;
+        const from = p.totalItemCount ? (current - 1) * per + 1 : 0;
+        const to = Math.min(current * per, p.totalItemCount);
+        return (
+          <Box
             sx={{
-              // Aşağıdaki stil özellikleri, Pagination bileşeninin alt bileşenlerine uygulanır
-              "& .MuiPaginationItem-root": {
-                color: theme.primary_text, // Normal yazı rengi
-                fontSize: isMobile ? "0.75rem" : "inherit",
-              },
-              "& .MuiPaginationItem-page": {
-                "&.Mui-selected": {
-                  backgroundColor: theme.primary25,
-                  color: theme.primary_text, // Seçili yazı rengi
-                },
-              },
-              "& .MuiPaginationItem-ellipsis": {
-                color: theme.primary_text, // "..." yazı rengi
-              },
-              "& .MuiPaginationItem-icon": {
-                color: theme.primary_text, // İlk ve Son butonlarındaki ikonların rengi
-              },
+              width: "100%",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 1,
+              px: 2,
+              py: 1,
+              borderTop: "1px solid rgba(255,255,255,0.06)",
             }}
-            count={props.data.pagination.totalPageCount}
-            page={props.data.pagination.currentPage || page}
-            siblingCount={isMobile ? 0 : 1}
-            showFirstButton={!isMobile}
-            showLastButton={!isMobile}
-            size={isMobile ? "small" : "medium"}
-            onChange={handleChange}
-          />
-        </Box>
-      )}
+          >
+            <Box sx={{ fontSize: "0.8rem", color: theme.secondary_text }}>
+              {p.totalItemCount ? `${from}–${to} / ${p.totalItemCount} anime` : "Kayıt yok"}
+            </Box>
+            <Pagination
+              shape="rounded"
+              size="small"
+              sx={{
+                "& .MuiPaginationItem-root": {
+                  color: theme.secondary_text,
+                  borderRadius: "8px",
+                  minWidth: 30,
+                  height: 30,
+                  fontSize: "0.8rem",
+                  fontWeight: 500,
+                  border: "1px solid transparent",
+                  "&:hover": { backgroundColor: "rgba(255,255,255,0.06)", color: theme.primary_text },
+                },
+                "& .MuiPaginationItem-page.Mui-selected": {
+                  backgroundColor: "rgba(124,92,255,0.18)",
+                  borderColor: "rgba(124,92,255,0.45)",
+                  color: theme.primary_text,
+                  fontWeight: 700,
+                  "&:hover": { backgroundColor: "rgba(124,92,255,0.26)" },
+                },
+                "& .MuiPaginationItem-ellipsis": { border: 0 },
+              }}
+              count={p.totalPageCount}
+              page={current}
+              siblingCount={isMobile ? 0 : 1}
+              boundaryCount={1}
+              showFirstButton={!isMobile}
+              showLastButton={!isMobile}
+              onChange={handleChange}
+            />
+          </Box>
+        );
+      })()}
     </Paper>
   );
 }
