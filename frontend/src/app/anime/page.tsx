@@ -19,7 +19,6 @@ import "toastify-js/src/toastify.css";
 import { theme } from "../../theme/customTheme";
 import { useTableSettings } from "../../components/CollapsibleTableV2/Components/TableSettings";
 import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
-import "../../assets/custom.css";
 import Constants from "../../constants/Constants";
 import { AnimeService } from "../../Services/AnimeServices";
 import TableHeaders from "../../components/CollapsibleTableV2/Components/Headers/Headers";
