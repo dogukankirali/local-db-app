@@ -90,7 +90,7 @@ REACT_APP_PATH=
 JWT_SECRET_KEY=your-secret-key
 ```
 
-`ENV=development` iken uygulama `backend/server.crt` ve `backend/server.key` sertifikalarını kullanarak HTTPS üzerinden ayağa kalkar (üretimde `/etc/ssl/certs/` altındaki sertifikalar kullanılır).
+`ENV=development` iken backend sertifika gerektirmeden HTTP üzerinden ayağa kalkar. HTTPS gerekiyorsa `DEV_TLS=true` verip `backend/server.crt` ve `backend/server.key` sağlayın. `ENV=production` da HTTP ile çalışır (TLS'i Cloud Run sonlandırır).
 
 ### Frontend
 
@@ -100,13 +100,25 @@ npm install
 npm run dev
 ```
 
-`frontend/.env` içinde backend adresini gösteren değişken bulunmalı:
+Frontend backend adresini `NEXT_PUBLIC_API_URL` değişkeninden okur. Next.js `npm run dev` sırasında `.env.development.local` dosyasını `.env.local`'a tercih eder. Böylece prod adresi `.env.local`'da kalırken lokalde şu değer kullanılır:
 
 ```
-NEXT_PUBLIC_API_URL=https://localhost:8080
+# frontend/.env.development.local
+NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
 Uygulama varsayılan olarak [http://localhost:3000](http://localhost:3000) adresinde çalışır.
+
+### Lokal geliştirme (tek komut)
+
+`scripts/dev.ps1` sırasıyla PostgreSQL'i, Go backend'i (`:8080`) ve Next.js'i (`:3000`) başlatır:
+
+```powershell
+./scripts/dev.ps1          # DB + backend + frontend
+./scripts/dev.ps1 -Seed    # önce lokal DB'yi prod API'deki verilerle doldurur (ID'ler korunur)
+```
+
+Script, Go ve PostgreSQL ikililerini PATH'te ya da `%LOCALAPPDATA%\devtools` altında (`go/`, `pgsql/`, `pgdata/`) arar. Lokal DB yalnızca `ENV=development` iken `go run ./cmd/devseed -source <api-url>` ile doldurulabilir. Bu işlem lokal anime tablolarını silip yeniden yazar; kaynak API'ye yalnızca okuma isteği atılır.
 
 ### Docker ile çalıştırma
 
