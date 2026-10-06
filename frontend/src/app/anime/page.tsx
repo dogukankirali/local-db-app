@@ -478,12 +478,12 @@ function AnimePageContent() {
     getGenres();
     getSeries();
     setOuterColumns((prev) => {
-      if (!prev.some((column) => column.value === "Settings")) {
+      if (!prev.some((column) => column.type === "button")) {
         return [
           ...prev,
           {
             key: SettingsButtons,
-            value: "Settings",
+            value: "İşlemler",
             width: "5%",
             type: "button",
           },

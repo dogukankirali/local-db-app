@@ -1,6 +1,7 @@
 import React, { JSX } from "react";
 
 import { FilterStateProp } from "../components/CollapsibleTableV2/Components/TableFilters/TableFilters";
+import { genreLabel } from "../components/Common/GenreChip";
 
 // API URL
 export const API_URL =
@@ -16,141 +17,71 @@ export default function Constants({
   additionalData?: any | ((id: string, i: number, data?: any) => JSX.Element);
 }): FilterStateProp[] | TEATable.IColumnItems[] | any {
   if (type === "tableFilters") {
+    // Not: backend AnimeStatus filtresini tek değerle ILIKE '%değer%' olarak uyguluyor;
+    // bu yüzden durum filtresi tek seçimli ve değerler DB'deki metinlerin parçaları.
     return [
+      { label: "İsim", key: "Name", type: "input" },
       {
-        label: "Name",
-
-        key: "Name",
-
-        type: "input",
-      },
-
-      {
-        label: "AnimeStatus",
-
+        label: "Yayın durumu",
         key: "AnimeStatus",
-
-        type: "multi-select",
-
+        type: "chips",
+        exclusive: true,
         options: [
-          {
-            value: "OnAir",
-
-            label: "On Air",
-          },
-
-          {
-            value: "Finished",
-
-            label: "Finished",
-          },
+          { value: "Finished", label: "Tamamlandı" },
+          { value: "Currently", label: "Yayında" },
+          { value: "Not yet", label: "Henüz yayınlanmadı" },
         ],
       },
-
       {
-        label: "WatchStatus",
-
-        key: "WatchStatus",
-
-        type: "string",
-      },
-
-      {
-        label: "TotalNumberOfEpisodes",
-
-        key: "TotalNumberOfEpisodes",
-
-        type: "number",
-
-        options: {
-          min: 0,
-
-          max: 10000,
-        },
-      },
-
-      {
-        label: "IsMovie",
-
+        label: "Format",
         key: "IsMovie",
-
-        type: "multi-select",
-
+        type: "chips",
+        exclusive: true,
+        half: true,
         options: [
-          {
-            value: "true",
-
-            label: "Movie",
-          },
-
-          {
-            value: "false",
-
-            label: "TV Series",
-          },
+          { value: "false", label: "TV" },
+          { value: "true", label: "Film" },
         ],
       },
-
       {
-        label: "PlanToWatch",
-
+        label: "Watchlist",
         key: "PlanToWatch",
-
-        type: "multi-select",
-
+        type: "chips",
+        exclusive: true,
+        half: true,
         options: [
-          {
-            value: "true",
-
-            label: "Plan To Watch",
-          },
-
-          {
-            value: "false",
-
-            label: "Not Planned",
-          },
+          { value: "true", label: "Listede" },
+          { value: "false", label: "Listede değil" },
         ],
       },
-
       {
-        label: "Genre",
-
-        key: "Genre",
-
-        type: "multi-select",
-
-        options: additionalData.genres!,
-      },
-
-      {
-        label: "Series",
-
-        key: "Series",
-
-        type: "multi-select",
-
-        options: additionalData.series || [],
-
-        style: {
-          minWidth: "250px",
-
-          width: "auto",
-        },
-      },
-
-      {
-        label: "Score",
-
+        label: "Puan",
         key: "Score",
-
         type: "number",
-
-        options: {
-          min: 0,
-
-          max: 100,
-        },
+        half: true,
+        options: { min: 0, max: 100 },
+      },
+      {
+        label: "Bölüm sayısı",
+        key: "TotalNumberOfEpisodes",
+        type: "number",
+        half: true,
+        options: { min: 0, max: 10000 },
+      },
+      {
+        label: "Türler",
+        key: "Genre",
+        type: "multi-select",
+        options: (additionalData.genres || []).map((g: { value: string; label: string }) => ({
+          ...g,
+          label: genreLabel(g.value),
+        })),
+      },
+      {
+        label: "Seri",
+        key: "Series",
+        type: "multi-select",
+        options: additionalData.series || [],
       },
     ];
   } else if (type === "headers") {
@@ -211,22 +142,22 @@ export default function Constants({
     return [
       {
         key: "Cover",
-        value: "Cover",
+        value: "Kapak",
         width: isMobile ? "5%" : "2%",
         type: "base64",
       },
 
       {
         key: "Name",
-        value: "Name",
-        width: isMobile ? "45%" : "40%",
+        value: "İsim",
+        width: isMobile ? "45%" : "28%",
         type: "string",
       },
 
       {
         key: "AnimeStatus",
 
-        value: "Anime Status",
+        value: "Durum",
 
         width: isMobile ? "15%" : "10%",
 
@@ -236,7 +167,7 @@ export default function Constants({
       {
         key: "WatchStatus",
 
-        value: "Watch Status",
+        value: "İlerleme",
 
         width: isMobile ? "15%" : "10%",
 
@@ -246,7 +177,7 @@ export default function Constants({
       {
         key: "TotalNumberOfEpisodes",
 
-        value: "Episodes",
+        value: "Bölüm",
 
         width: isMobile ? "15%" : "10%",
 
@@ -258,7 +189,7 @@ export default function Constants({
       {
         key: "Score",
 
-        value: "Score",
+        value: "Puan",
 
         width: isMobile ? "15%" : "5%",
 
@@ -268,7 +199,7 @@ export default function Constants({
       {
         key: "IsMovie",
 
-        value: "TV/Movie",
+        value: "Format",
 
         width: isMobile ? "10%" : "5%",
 
@@ -279,14 +210,14 @@ export default function Constants({
 
       {
         key: "Genre",
-        value: "Genre",
-        width: isMobile ? "20%" : "15%",
+        value: "Türler",
+        width: isMobile ? "20%" : "24%",
         type: "pill",
         hide: isMobile,
       },
       {
         key: additionalData?.SettingsButtons,
-        value: "Settings",
+        value: "İşlemler",
         width: isMobile ? "15%" : "10%",
         type: "button",
       },

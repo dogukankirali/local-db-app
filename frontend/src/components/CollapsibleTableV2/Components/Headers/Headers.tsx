@@ -1,6 +1,6 @@
-import { Box, Tooltip } from "@mui/material";
+import { Badge, Box, Tooltip } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import TableFilters from "../TableFilters/TableFilters";
+import TableFilters, { getFilledFilters } from "../TableFilters/TableFilters";
 import TableSettings from "../TableSettings";
 import { StyledMUIFilterButton, StyledTeaButton } from "../StyledComponents";
 import { useRouter } from "next/navigation";
@@ -53,6 +53,7 @@ export default function TableHeaders(props: {
 
   // Render sırasında localStorage okumak hydration hatası veriyordu; auth context mount sonrası doluyor
   const { isAdmin } = useAuth();
+  const activeFilterCount = getFilledFilters(props.filterState ?? []).length;
 
   // Synchronize all anime
   const handleSyncAllAnime = async () => {
@@ -262,8 +263,14 @@ export default function TableHeaders(props: {
         {props.trailing}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Tooltip title="Filtreler">
-            <StyledMUIFilterButton onClick={props.handleClickFilters} aria-label="Filtreler">
-              <FilterAltIcon sx={{ fontSize: 20 }} />
+            <StyledMUIFilterButton
+              onClick={props.handleClickFilters}
+              aria-label="Filtreler"
+              sx={activeFilterCount > 0 ? { color: "primary.main", borderColor: "rgba(124,92,255,0.5)" } : undefined}
+            >
+              <Badge badgeContent={activeFilterCount} color="primary" sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", height: 16, minWidth: 16, top: -4, right: -4 } }}>
+                <FilterAltIcon sx={{ fontSize: 20 }} />
+              </Badge>
             </StyledMUIFilterButton>
           </Tooltip>
           <Tooltip title="Tablo ayarları">

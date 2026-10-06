@@ -25,7 +25,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import React from "react";
 import LocalMoviesIcon from "@mui/icons-material/LocalMovies";
 import TvIcon from "@mui/icons-material/Tv";
-import { genreColors } from "../../../constants/Constants";
+import { GenreChips } from "../../Common/GenreChip";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
@@ -369,18 +369,25 @@ export default function CustomTableRowV2(
                   align="center"
                   style={colStyle}
                 >
-                  <Chip
-                    icon={isMovie ? <LocalMoviesIcon style={{fontSize:'14px', marginLeft: 6}} /> : <TvIcon style={{fontSize:'14px', marginLeft: 6}} />}
-                    label={isMovie ? "Movie" : "TV"}
-                    size="small"
+                  <Box
+                    component="span"
                     sx={{
-                      height: "22px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                      height: 22,
+                      px: 1,
+                      borderRadius: "6px",
                       fontSize: "0.7rem",
-                      fontWeight: "bold",
-                      backgroundColor: isMovie ? "rgba(76, 175, 80, 0.15)" : "rgba(244, 67, 54, 0.15)",
-                      color: isMovie ? "#4CAF50" : "#F44336",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      backgroundColor: isMovie ? "rgba(34,211,238,0.12)" : "rgba(124,92,255,0.14)",
+                      color: isMovie ? "#22D3EE" : "#A895FF",
                     }}
-                  />
+                  >
+                    {isMovie ? <LocalMoviesIcon sx={{ fontSize: 14 }} /> : <TvIcon sx={{ fontSize: 14 }} />}
+                    {isMovie ? "Film" : "TV"}
+                  </Box>
                 </TableCell>
               );
             } else if (header.type === "number") {
@@ -639,54 +646,25 @@ export default function CustomTableRowV2(
                   style={colStyle}
                   id={header.key}
                 >
-                  <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        justifyContent: "center",
-                        gap: 0.5,
-                        maxWidth: "200px",
-                        margin: "0 auto",
-                      }}
-                    >
-                    {props.singleData[header.key].length !== 0 &&
-                      props.singleData[header.key]
-                        .split(", ")
-                        .map((pill: string, idx: number) => (
-                          <Chip
-                            key={`chip-${rowIndex}-${pill}-${idx}`}
-                            label={pill}
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              props.setFilterState((prevState: any) => {
-                                const newState = prevState;
-                                newState.filter((item: any) => {
-                                  if (item.key === "Genre") {
-                                    if (item.value.includes(pill)) {
-                                      item.value = item.value.filter(
-                                        (genre: any) => genre !== pill
-                                      );
-                                    } else {
-                                      item.value = item.value.concat([pill]);
-                                    }
-                                  }
-                                  return item;
-                                });
-                                return newState;
-                              });
-                            }}
-                            sx={{
-                              backgroundColor: genreColors[pill] || theme.primary25,
-                              color: "#fff",
-                              fontSize: "0.65rem",
-                              height: "20px",
-                              cursor: "pointer",
-                              "&:hover": { opacity: 0.8 }
-                            }}
-                          />
-                        ))}
-                  </Box>
+                  <GenreChips
+                    genres={props.singleData[header.key]}
+                    max={3}
+                    // Türe tıklamak Genre filtresine ekler/çıkarır (state değişmeden mutasyon yapılmıyor)
+                    onGenreClick={(pill) =>
+                      props.setFilterState((prevState: any[]) =>
+                        prevState.map((item: any) =>
+                          item.key !== "Genre"
+                            ? item
+                            : {
+                                ...item,
+                                value: item.value.includes(pill)
+                                  ? item.value.filter((genre: string) => genre !== pill)
+                                  : [...item.value, pill],
+                              }
+                        )
+                      )
+                    }
+                  />
                 </TableCell>
               );
             } else {
