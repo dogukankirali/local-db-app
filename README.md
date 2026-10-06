@@ -35,7 +35,8 @@ local-db-app/
 ├── extension/            # AniTracker Pro + AniSyncer birleşik eklentisi (Chrome & Firefox - Manifest V3)
 ├── chrome-extension/     # Eski Chrome eklentisi (arşiv)
 ├── firefox-extension/    # Eski Firefox eklentisi (arşiv)
-└── docker-compose.yaml   # Backend + frontend için Docker Compose tanımı
+├── db/seed/             # docker compose ilk açılışta buradaki .sql dump'larını yükler
+└── docker-compose.yaml   # PostgreSQL + backend + frontend için Docker Compose tanımı
 ```
 
 ## Teknolojiler
@@ -123,10 +124,13 @@ Script, Go ve PostgreSQL ikililerini PATH'te ya da `%LOCALAPPDATA%\devtools` alt
 ### Docker ile çalıştırma
 
 ```bash
+cp .env.example .env        # gerekirse şifre, JWT ve SMTP ayarlarını düzenle
 docker compose up --build
 ```
 
-`docker-compose.yaml`, backend'i `8080` ve frontend'i `3000` portunda ayağa kaldırır. (Docker ile çalıştırmadan önce PostgreSQL'e ayrıca erişim sağlanmalıdır.)
+Tek komutla PostgreSQL (`5432`), backend (`8080`) ve frontend (`3000`) ayağa kalkar. Backend, DB hazır olmadan başlamaz; boş bir DB'de şemayı kendisi oluşturur.
+
+Mevcut verilerle başlamak için `pg_dump` çıktısını `db/seed/` altına `.sql` olarak koy; DB ilk kez oluşturulurken otomatik yüklenir. Dump'lar git'e girmez. Yeniden yüklemek için `docker compose down -v` ile volume'ü sil.
 
 ### Tarayıcı eklentisini yükleme
 

@@ -1,18 +1,73 @@
-# docker-compose.yml
-version: "3.8"
+# Tek komutla DB + backend + frontend:
+#   cp .env.example .env   # gerekirse değerleri düzenle
+#   docker compose up --build
+# Frontend: http://localhost:3000  Backend: http://localhost:8080
+# İlk açılışta db/seed/ altındaki .sql dump'ları (ör. pg_dump çıktısı) veritabanına yüklenir.
 
 services:
-  frontend:
-    build: ./frontend
-    container_name: local-db-app-fe
+  db:
+    image: postgres:17-alpine
+    container_name: local-db-app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-localdb}
     ports:
-      - "3000:3000"
-    stdin_open: true
-    tty: true
+      - "${DB_PORT_HOST:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/seed:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   backend:
     build: ./backend
     container_name: local-db-app-be
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # "production" = sertifikasız HTTP; TLS'i compose'un önündeki proxy/host üstlenir
+      ENV: production
+      PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-localdb}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-env}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     ports:
       - "8080:8080"
-    stdin_open: true
-    tty: true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Tarayıcı backend'e host üzerinden gider
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    container_name: local-db-app-fe
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:
