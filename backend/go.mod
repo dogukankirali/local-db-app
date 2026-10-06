@@ -1,29 +1,26 @@
 module local-db-app
 
-go 1.23.0
-
-toolchain go1.24.2
+go 1.26.0
 
 require (
 	github.com/darenliang/jikan-go v1.2.3
-	github.com/golang-jwt/jwt/v5 v5.2.2
-	github.com/gorilla/mux v1.8.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
-	github.com/lib/pq v1.10.9
-	github.com/rs/cors v1.11.0
-	golang.org/x/crypto v0.35.0
-	gorm.io/driver/postgres v1.5.2
-	gorm.io/gorm v1.25.12
+	github.com/lib/pq v1.12.3
+	github.com/rs/cors v1.11.1
+	golang.org/x/crypto v0.57.0
+	gorm.io/driver/postgres v1.6.3
+	gorm.io/gorm v1.31.2
 )
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/pgx/v5 v5.5.4 // indirect
-	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.11.0 // indirect
+	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 )

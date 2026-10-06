@@ -175,11 +175,15 @@ export const StyledFormInput = React.forwardRef<
   <input
     ref={ref}
     {...props}
-    className={`bg-transparent text-primary-text border border-secondary-text rounded px-3 py-2 focus:border-[${
-      customTheme.scondary_button
-    }] focus:ring-1 focus:ring-[${
-      customTheme.scondary_button
-    }] focus:outline-none ${className || ""}`}
+    className={className}
+    style={{
+      background: "transparent",
+      color: customTheme.primary_text,
+      border: `1px solid ${customTheme.input_border}`,
+      borderRadius: 10,
+      padding: "8px 12px",
+      ...props.style,
+    }}
     placeholder="..."
     onKeyDown={(e) => {
       if (e.key === "Enter") {
