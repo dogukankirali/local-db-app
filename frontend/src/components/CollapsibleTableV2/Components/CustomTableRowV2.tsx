@@ -658,9 +658,9 @@ export default function CustomTableRowV2(
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              props.setFilterState((prevState) => {
+                              props.setFilterState((prevState: any) => {
                                 const newState = prevState;
-                                newState.filter((item) => {
+                                newState.filter((item: any) => {
                                   if (item.key === "Genre") {
                                     if (item.value.includes(pill)) {
                                       item.value = item.value.filter(
