@@ -121,6 +121,18 @@ Uygulama varsayılan olarak [http://localhost:3000](http://localhost:3000) adres
 
 Script, Go ve PostgreSQL ikililerini PATH'te ya da `%LOCALAPPDATA%\devtools` altında (`go/`, `pgsql/`, `pgdata/`) arar. Lokal DB yalnızca `ENV=development` iken `go run ./cmd/devseed -source <api-url>` ile doldurulabilir. Bu işlem lokal anime tablolarını silip yeniden yazar; kaynak API'ye yalnızca okuma isteği atılır.
 
+### Şifre sıfırlama ve şifre değiştirme
+
+- `POST /auth/forgot-password` (`{ "email": "..." }`) e-postaya 1 saat geçerli, tek kullanımlık bir bağlantı gönderir (`APP_URL/reset-password/<token>`); DB'de token'ın yalnızca SHA-256 özeti tutulur. `POST /auth/reset-password` (`{ "token", "password" }`) yeni şifreyi kaydeder.
+- Gönderim için backend'de `SMTP_HOST`, `SMTP_PORT` (587 STARTTLS / 465 TLS), `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` tanımlı olmalı (Cloud Run ortam değişkenleri). `ENV=development` iken SMTP boşsa bağlantı backend loguna yazılır.
+- Mail olmadan doğrudan şifre belirlemek için (şifre stdin'den okunur, hiçbir yere yazılmaz):
+
+  ```bash
+  cd backend
+  go run ./cmd/setpassword -user <kullanici>            # .env'deki DB, ENV=development
+  go run ./cmd/setpassword -user <kullanici> -confirm   # development dışı (ör. prod) DB'de
+  ```
+
 ### Docker ile çalıştırma
 
 ```bash

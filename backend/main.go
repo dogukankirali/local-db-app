@@ -255,6 +255,8 @@ func main() {
 	// Kullanıcı API uçları
 	router.HandleFunc("/auth/register", anime_functions.Register(db))
 	router.HandleFunc("/auth/login", anime_functions.Login(db))
+	router.HandleFunc("/auth/forgot-password", anime_functions.ForgotPassword(db)).Methods("POST")
+	router.HandleFunc("/auth/reset-password", anime_functions.ResetPassword(db)).Methods("POST")
 
 	// Watch List API uçları
 	router.HandleFunc("/watchlist", anime_functions.GetWatchList(db)).Methods("GET", "OPTIONS")
