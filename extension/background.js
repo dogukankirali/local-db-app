@@ -268,6 +268,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 episodes
                                 status
                                 coverImage {
+                                    extraLarge
                                     large
                                 }
                                 genres
@@ -300,7 +301,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         Notes: "",
                         Genre: (media.genres || []).join(", "),
                         MALAnimeLink: media.idMal ? `https://myanimelist.net/anime/${media.idMal}` : "",
-                        Cover: media.coverImage?.large || "",
+                        Cover: media.coverImage?.extraLarge || media.coverImage?.large || "",
                         AnimeLink: pageUrl,
                         Series: 0,
                         PlanToWatch: true

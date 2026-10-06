@@ -32,7 +32,8 @@ const LIST_COLUMNS = `a.id, a.name, a.anime_status, a.watch_status, a.total_numb
   (SELECT group_concat(g.genre_name, ', ') FROM animes_genres ag JOIN genres g ON g.id = ag.genre_id WHERE ag.anime_id = a.id) AS genre,
   s.name AS series_name`;
 
-export const coverUrl = (c: Ctx, id: number) => `${new URL(c.req.url).origin}/api/animeCover?id=${id}`;
+// Site ve API her ortamda aynı origin'de; göreli adres wrangler dev'in custom domain'e çevirdiği host'tan etkilenmez
+export const coverUrl = (_c: Ctx, id: number) => `/api/animeCover?id=${id}`;
 
 export function toAnime(c: Ctx, r: AnimeRow) {
   const cover = r.cover ?? "";
