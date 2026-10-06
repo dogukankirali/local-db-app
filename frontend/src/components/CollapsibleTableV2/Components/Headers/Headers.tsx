@@ -10,7 +10,6 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import SyncIcon from "@mui/icons-material/Sync";
 import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
 import Constants from "../../../../constants/Constants";
-import FileUpload from "../../../Common/FileUpload";
 import { AnimeService } from "../../../../Services/AnimeServices";
 import Toastify from "toastify-js";
 import { useState, useRef, useEffect } from "react";

@@ -1,18 +1,8 @@
 "use client";
 
 import React, { JSX, Suspense, useCallback } from "react";
-import {
-  Box,
-  Container,
-  Typography,
-  IconButton,
-  Avatar,
-  Tooltip,
-  Menu,
-  MenuItem,
-  Divider,
-} from "@mui/material";
-import TableTemp from "../../components/CollapsibleTableV2/TableTemp";
+import dynamic from "next/dynamic";
+import { Box, IconButton, Tooltip } from "@mui/material";
 import AnimeGrid from "../../components/AnimeGrid";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import ViewListIcon from "@mui/icons-material/ViewList";
@@ -30,16 +20,19 @@ import { theme } from "../../theme/customTheme";
 import { useTableSettings } from "../../components/CollapsibleTableV2/Components/TableSettings";
 import { StyledTeaButton } from "../../components/CollapsibleTableV2/Components/StyledComponents";
 import "../../assets/custom.css";
-import CreateAnimeModal from "../../components/Modals/CreateAnimeModal";
 import Constants from "../../constants/Constants";
 import { AnimeService } from "../../Services/AnimeServices";
 import TableHeaders from "../../components/CollapsibleTableV2/Components/Headers/Headers";
-import UpdateDeleteAnimeModal from "../../components/Modals/UpdateDeleteAnimeModal";
 import { useRouter, useSearchParams } from "next/navigation";
-import PersonIcon from "@mui/icons-material/Person";
-import SettingsIcon from "@mui/icons-material/Settings";
-import LogoutIcon from "@mui/icons-material/Logout";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+
+// Grid varsayılan görünüm: tablo (moment-timezone vb. ağır bağımlılıklarıyla) ve
+// modallar yalnızca gerektiğinde yüklenir, ilk açılış paketine girmez.
+const TableTemp = dynamic(() => import("../../components/CollapsibleTableV2/TableTemp"), {
+  ssr: false,
+}) as typeof import("../../components/CollapsibleTableV2/TableTemp").default;
+const CreateAnimeModal = dynamic(() => import("../../components/Modals/CreateAnimeModal"), { ssr: false });
+const UpdateDeleteAnimeModal = dynamic(() => import("../../components/Modals/UpdateDeleteAnimeModal"), { ssr: false });
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
@@ -824,19 +817,23 @@ function AnimePageContent() {
               </Box>
             )}
       </Box>
-      <UpdateDeleteAnimeModal
-        modalData={modalData}
-        setModalData={setModalData}
-        updateAnime={updateAnime}
-        deleteAnime={deleteAnime}
-        genres={genres}
-      />
-      <CreateAnimeModal
-        genres={genres}
-        createModalData={createModalData}
-        setCreateModalData={setCreateModalData}
-        handleCreate={createAnime}
-      />
+      {modalData.status && (
+        <UpdateDeleteAnimeModal
+          modalData={modalData}
+          setModalData={setModalData}
+          updateAnime={updateAnime}
+          deleteAnime={deleteAnime}
+          genres={genres}
+        />
+      )}
+      {createModalData.status && (
+        <CreateAnimeModal
+          genres={genres}
+          createModalData={createModalData}
+          setCreateModalData={setCreateModalData}
+          handleCreate={createAnime}
+        />
+      )}
     </div>
   );
 }
