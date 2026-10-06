@@ -141,15 +141,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
     }
 
-    // 3. AniSyncer Backend API Proxy
+    // 3. AniSyncer Backend API Proxy (Kiroku #26: istekler eklentiden alınan anahtarla Bearer token taşır)
     if (request.action === "addToWatchlist") {
-        chrome.storage.local.get("service_url", async (result) => {
+        chrome.storage.local.get(["service_url", "auth_token"], async (result) => {
             const raw = result.service_url || "https://localhost:8080";
             const serviceUrl = raw.trim().replace(/\/+$/, "");
             try {
                 const res = await fetch(`${serviceUrl}/createAnime`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", ...authHeader(result.auth_token) },
                     body: JSON.stringify(request.data),
                     credentials: "omit",
                     mode: "cors"
@@ -168,7 +168,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return sendResponse({ success: false, error: text || `Hata (${res.status})` });
                 }
                 if (!res.ok) {
-                    return sendResponse({ success: false, error: data?.error || data?.message || `Hata (${res.status})` });
+                    return sendResponse({ success: false, error: res.status === 401 ? LOGIN_REQUIRED : data?.error || data?.message || `Hata (${res.status})` });
                 }
                 sendResponse({ success: true, data });
             } catch (err) {
@@ -179,7 +179,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "updateAnimeStatus") {
-        chrome.storage.local.get("service_url", async (result) => {
+        chrome.storage.local.get(["service_url", "auth_token"], async (result) => {
             const raw = result.service_url || "https://localhost:8080";
             const serviceUrl = raw.trim().replace(/\/+$/, "");
             try {
@@ -215,7 +215,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 const res = await fetch(`${serviceUrl}/api/anime/update-episode`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", ...authHeader(result.auth_token) },
                     body: JSON.stringify(request.data),
                     credentials: "omit",
                     mode: "cors"
@@ -234,7 +234,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return sendResponse({ success: false, error: text || `Hata (${res.status})` });
                 }
                 if (!res.ok) {
-                    return sendResponse({ success: false, error: data?.error || data?.message || `Hata (${res.status})` });
+                    return sendResponse({ success: false, error: res.status === 401 ? LOGIN_REQUIRED : data?.error || data?.message || `Hata (${res.status})` });
                 }
                 sendResponse({ success: true, data });
             } catch (err) {
@@ -247,7 +247,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "addFromTitle") {
         const title = request.title;
         const pageUrl = request.pageUrl || "";
-        chrome.storage.local.get("service_url", async (result) => {
+        chrome.storage.local.get(["service_url", "auth_token"], async (result) => {
             const raw = result.service_url || "https://localhost:8080";
             const serviceUrl = raw.trim().replace(/\/+$/, "");
 
@@ -328,7 +328,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // 2. Backend'e kaydet
                 const res = await fetch(`${serviceUrl}/createAnime`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", ...authHeader(result.auth_token) },
                     body: JSON.stringify(animeData),
                     credentials: "omit",
                     mode: "cors"
@@ -349,7 +349,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
 
                 if (!res.ok) {
-                    return sendResponse({ success: false, error: data?.error || data?.message || `Hata (${res.status})` });
+                    return sendResponse({ success: false, error: res.status === 401 ? LOGIN_REQUIRED : data?.error || data?.message || `Hata (${res.status})` });
                 }
 
                 sendResponse({ success: true, animeName: animeData.Name, data });
@@ -373,3 +373,9 @@ chrome.webRequest.onCompleted.addListener(
     },
     { urls: ['*://api.anizium.co/anime/watched*'] }
 );
+
+// Kiroku hesabı: Configs sekmesinden giriş yapınca alınan eklenti anahtarı
+function authHeader(token) {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+const LOGIN_REQUIRED = "Kiroku hesabına giriş yapılmamış ya da anahtar iptal edilmiş. Eklentide Configs sekmesinden giriş yap.";

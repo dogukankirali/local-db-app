@@ -171,6 +171,22 @@
             </div>
         </div>
 
+        <!-- 2b. Kiroku hesabı (#26) -->
+        <div class="mat-card mb-3" id="syncer-account-card">
+            <div class="syncer-section-label">🔐 Kiroku Hesabı</div>
+            <div id="syncer-account-display" style="display:none;">
+                <div class="syncer-url-text" id="syncer-account-text"></div>
+                <div class="syncer-url-actions">
+                    <button class="mat-btn btn-outline" id="syncer-logout-btn" style="font-size:11px; padding:4px 8px;">Çıkış yap</button>
+                </div>
+            </div>
+            <div id="syncer-login-wrap">
+                <input type="text" id="syncer-login-user" class="mat-input" placeholder="Kullanıcı adı ya da e-posta" autocomplete="username" style="margin-bottom:6px;">
+                <input type="password" id="syncer-login-pass" class="mat-input" placeholder="Şifre" autocomplete="current-password" style="margin-bottom:6px;">
+                <button class="mat-btn btn-primary w-100" id="syncer-login-btn">Giriş yap</button>
+            </div>
+        </div>
+
         <!-- 3. Dashboard URL -->
         <div class="mat-card mb-3" id="syncer-dashboard-card">
             <div class="syncer-section-label">🌐 Dashboard URL</div>

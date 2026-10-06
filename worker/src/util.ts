@@ -11,6 +11,8 @@ export type Env = {
   /** Google ile giriş (ikisi de secret); yoksa Google butonu gizlenir */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  /** Yayın takibi (#19): GitHub Actions'taki zamanlanmış işin kullandığı paylaşılan anahtar */
+  CRON_SECRET?: string;
   /** "development" olduğunda mail gönderilmez, bağlantı loga yazılır */
   ENVIRONMENT?: string;
 };

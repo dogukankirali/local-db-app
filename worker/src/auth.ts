@@ -1,6 +1,6 @@
 import { sign, verify } from "hono/jwt";
 import type { MiddlewareHandler } from "hono";
-import type { AppEnv, AuthUser, Env } from "./util";
+import type { AppEnv, AuthUser, Ctx, Env } from "./util";
 
 // Şifreler PBKDF2-SHA256 ile saklanır (Workers'ın yerleşik WebCrypto'su).
 // Biçim: pbkdf2$sha256$<iterasyon>$<tuz-base64>$<özet-base64>
@@ -58,11 +58,27 @@ export async function generateToken(env: Env, user: { id: number; username: stri
   );
 }
 
+// Eklenti anahtarları "kk_" ile başlar ve api_tokens tablosunda (SHA-256 özetiyle) aranır; diğerleri JWT'dir
+export const API_TOKEN_PREFIX = "kk_";
+
 async function readUser(env: Env, header: string | undefined): Promise<AuthUser | null> {
   const parts = (header ?? "").split(" ");
-  if (parts.length !== 2 || parts[0] !== "Bearer" || !env.JWT_SECRET_KEY) return null;
+  if (parts.length !== 2 || parts[0] !== "Bearer") return null;
+  const token = parts[1];
+  if (token.startsWith(API_TOKEN_PREFIX)) {
+    const row = await env.DB.prepare(
+      `SELECT t.id AS token_id, u.id, u.username, u.is_admin FROM api_tokens t JOIN users u ON u.id = t.user_id
+       WHERE t.token_hash = ? AND u.is_active = 1`
+    )
+      .bind(await hashResetToken(token))
+      .first<{ token_id: number; id: number; username: string; is_admin: number }>();
+    if (!row) return null;
+    await env.DB.prepare("UPDATE api_tokens SET last_used_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").bind(row.token_id).run();
+    return { userId: row.id, username: row.username, isAdmin: Boolean(row.is_admin) };
+  }
+  if (!env.JWT_SECRET_KEY) return null;
   try {
-    const p = await verify(parts[1], env.JWT_SECRET_KEY, "HS256");
+    const p = await verify(token, env.JWT_SECRET_KEY, "HS256");
     return { userId: Number(p.userId), username: String(p.username), isAdmin: Boolean(p.isAdmin) };
   } catch {
     return null;
@@ -78,6 +94,13 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
 };
 
+// Giriş yoksa da devam eder; listeler girişsiz açıldığında site sahibinin (ilk admin) verisi gösterilir
+export const optionalAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const user = await readUser(c.env, c.req.header("Authorization"));
+  if (user) c.set("user", user);
+  await next();
+};
+
 export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   const user = await readUser(c.env, c.req.header("Authorization"));
   if (!user) return c.json({ error: "Bu işlem için giriş yapmalısın" }, 401);
@@ -85,6 +108,14 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.set("user", user);
   await next();
 };
+
+/** Listelerde verisi gösterilecek kullanıcı: giriş yapan kullanıcı, yoksa site sahibi (ilk admin) */
+export async function viewerId(c: Ctx): Promise<number> {
+  const user = c.get("user");
+  if (user) return user.userId;
+  const owner = await c.env.DB.prepare("SELECT id FROM users WHERE is_admin = 1 ORDER BY id LIMIT 1").first<{ id: number }>();
+  return owner?.id ?? 0;
+}
 
 // Şifre sıfırlama token'ı: bağlantıda ham değer, DB'de SHA-256 özeti tutulur
 export function generateResetToken(): string {
@@ -94,4 +125,16 @@ export function generateResetToken(): string {
 export async function hashResetToken(token: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", enc.encode(token));
   return [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+/** Kullanıcı adı ya da e-posta + şifreyi doğrular (eklenti girişi için) */
+export async function checkPasswordFor(env: Env, login: string, password: string) {
+  if (!login || !password) return null;
+  const user = await env.DB.prepare(
+    "SELECT id, username, password, is_admin FROM users WHERE (username = ?1 OR LOWER(email) = LOWER(?1)) AND is_active = 1"
+  )
+    .bind(login)
+    .first<{ id: number; username: string; password: string; is_admin: number }>();
+  if (!user || !(await checkPassword(password, user.password))) return null;
+  return user;
 }

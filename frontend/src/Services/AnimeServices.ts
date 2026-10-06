@@ -139,6 +139,18 @@ export module AnimeService {
     }
   }
 
+  // Tek anime sync (#20, admin): AniList'teki güncel durum, bölüm sayısı, MAL puanı, kapak, türler ve seri
+  // yazılır; kullanıcıların puan, bölüm ve notları değişmez. Güncellenmiş animeyi döner.
+  export async function syncSingleAnime(anime: Pick<TEATable.IAnime, "ID" | "Name" | "MALAnimeLink">, signal?: AbortSignal) {
+    const idMal = Number(/myanimelist\.net\/anime\/(\d+)/.exec(anime.MALAnimeLink ?? "")?.[1]) || null;
+    const media = await AniList.mediaForSingleSync(anime.Name, idMal, signal);
+    if (!media.length) throw new Error("AniList'te bulunamadı");
+    const res = await axios.post(`${path}/sync/batch`, { force: true, items: [{ id: anime.ID, media }] }, { signal });
+    if (!res.data.updated) throw new Error(res.data.errors?.[0] ?? "Güncellenemedi");
+    const fresh = await axios.get(`${path}/getAnimeById`, { params: { id: anime.ID }, signal });
+    return { anime: fresh.data.data as TEATable.IAnime, message: (res.data.messages ?? [])[0] as string | undefined };
+  }
+
   // Sync, Worker'ın ücretsiz plan sınırlarına sığması için küçük gruplar halinde yürütülür:
   // eksik bilgili animelerin listesi alınır, her grup tarayıcıdan AniList'te aranır (tek istek)
   // ve sonuçlar /sync/batch ile Worker'a yazdırılır.

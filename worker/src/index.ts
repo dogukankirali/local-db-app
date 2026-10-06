@@ -1,9 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { airingRoutes } from "./airing";
 import { anilistRoutes } from "./anilist";
 import { anime, createAnime } from "./anime";
+import { requireAuth } from "./auth";
 import { coverRoutes } from "./covers";
 import { googleRoutes } from "./google";
+import { profileRoutes } from "./profile";
 import { users } from "./users";
 import type { AppEnv } from "./util";
 import { watchlist } from "./watchlist";
@@ -22,11 +25,13 @@ api.route("/", users);
 api.route("/", anilistRoutes);
 api.route("/", coverRoutes);
 api.route("/", googleRoutes);
+api.route("/", profileRoutes);
+api.route("/", airingRoutes);
 
 const app = new Hono<AppEnv>();
 app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "Authorization"], allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] }));
 app.route("/api", api);
-app.post("/createAnime", createAnime);
+app.post("/createAnime", requireAuth, createAnime);
 
 app.notFound((c) => (c.req.path.startsWith("/api/") ? c.json({ message: "Bulunamadı" }, 404) : c.env.ASSETS.fetch(c.req.raw)));
 app.onError((err, c) => {

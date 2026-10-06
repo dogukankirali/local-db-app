@@ -94,28 +94,47 @@ npm run deploy                             # frontend'i derler ve Worker'ı yay�
 
 **Firefox**: `about:debugging#/runtime/this-firefox` → "Geçici Eklenti Yükle" → `extension/manifest.json`.
 
-Eklenti sunucu adresini popup'taki ayarlardan alır; buraya sitenin adresini yazın (ör. `https://kiroku.<hesap>.workers.dev`).
+Eklenti sunucu adresini popup'taki ayarlardan alır; buraya sitenin adresini yazın (ör. `https://app.dogukankirali.com`). Aynı sekmedeki **Kiroku Hesabı** kartından kullanıcı adı/e-posta ve şifreyle giriş yapılır: eklenti kendine özel bir anahtar alır (şifre saklanmaz) ve isteklerde `Authorization: Bearer` olarak gönderir. Anahtarlar Kiroku'da Profil sayfasından görülüp iptal edilebilir.
+
+## Kullanıcıya özel liste
+
+Anime kataloğu (ad, durum, bölüm sayısı, kapak, türler, MAL puanı) herkes için ortaktır ve yalnızca admin değiştirir. Puan, izlenen bölüm, Plan to Watch, notlar ve watchlist her kullanıcı için ayrıdır (`user_anime`, `watch_lists.user_id`). Giriş yapmadan açılan listeler site sahibinin (ilk admin) verisini gösterir.
+
+## Yayın takibi ve yeni bölüm maili
+
+`.github/workflows/airing.yml` her 3 saatte bir yayındaki animeleri AniList'ten kontrol eder (AniList Workers'ı engellediği için GitHub Actions'ta çalışır): durum, bölüm sayısı, MAL puanı ve sıradaki bölüm güncellenir; yeni bölüm çıkınca, profilinde bildirimi açan ve animeyi listesinde tutan kullanıcılara mail atılır (Resend). Kurulum:
+
+1. Rastgele bir değer üret ve iki yere aynısını yaz: `cd worker && npx wrangler secret put CRON_SECRET`, GitHub → Settings → Secrets and variables → Actions → `KIROKU_CRON_SECRET`.
+2. Site Cloudflare Access arkasındaysa `/api` için Bypass kuralı olmalı ya da bir service token oluşturup `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` secret'larını ekle.
+3. Mail için Worker'da `RESEND_API_KEY` tanımlı olmalı.
+
+İlk çalıştırma yalnızca başlangıç değerlerini yazar; mail sonraki çalıştırmalarda yeni bölüm çıkınca gelir.
 
 ## API (özet)
 
-Tüm uçlar `/api` altındadır. 🔒 işaretliler admin girişi (JWT) ister.
+Tüm uçlar `/api` altındadır. 🔑 giriş (JWT ya da eklenti anahtarı), 🔒 admin girişi ister.
 
 | Yöntem              | Yol                                             | Açıklama                                           |
 | ------------------- | ----------------------------------------------- | -------------------------------------------------- |
-| POST                | `/getAnimeTable?page&count&orderBy&order`       | Filtrelenmiş ve sayfalanmış anime listesi          |
+| POST                | `/getAnimeTable?page&count&orderBy&order`       | Filtrelenmiş ve sayfalanmış anime listesi (giriş yapan kullanıcının puan/bölüm verisiyle) |
 | GET                 | `/getAnimeById?id`                              | Tek anime                                          |
 | GET                 | `/animeCover?id`                                | DB'de base64 saklanan kapağı cache'lenebilir döner |
-| POST                | `/createAnime`                                  | Anime ekleme (aynı isim varsa günceller); eklenti `/createAnime` adresini de kullanabilir |
+| POST 🔑             | `/createAnime`                                  | Anime ekleme (aynı isim varsa günceller); eklenti `/createAnime` adresini de kullanabilir |
 | POST 🔒             | `/createAnimeWithFile`                          | CSV ile toplu ekleme                               |
-| POST 🔒             | `/updateAnimeTable`                             | Anime güncelleme                                   |
+| POST 🔑             | `/updateAnimeTable`                             | Kendi puan/bölüm/PTW/notlarını günceller; admin katalog alanlarını da |
 | DELETE 🔒           | `/deleteAnime?id`                               | Anime silme                                        |
-| POST                | `/anime/update-episode`                         | Eklentiden bölüm ilerlemesi                        |
+| POST 🔑             | `/anime/update-episode`                         | Eklentiden bölüm ilerlemesi                        |
 | GET/POST            | `/getGenres`, `/getSeries`                      | Tür ve seri listeleri                              |
-| GET 🔒 / POST 🔒    | `/sync/pending`, `/sync/batch`                  | Eksik bilgileri doldurma: tarayıcı AniList'te arar, Worker sonuçları yazar |
-| GET, POST/PUT/DELETE 🔒 | `/watchlist`, `/watchlist/order`            | Watchlist (PTW ile otomatik senkron)               |
+| GET 🔒 / POST 🔒    | `/sync/pending`, `/sync/batch`                  | Eksik bilgileri doldurma: tarayıcı AniList'te arar, Worker sonuçları yazar. `force: true` tek animeyi baştan yeniler |
+| GET, POST/PUT/DELETE 🔑 | `/watchlist`, `/watchlist/order`            | Kullanıcının watchlist'i (PTW ile otomatik senkron) |
 | POST                | `/auth/register`, `/auth/login`                 | Kayıt ve giriş                                     |
+| POST                | `/auth/extension-token`                         | Eklenti girişi: kullanıcı adı/şifre ile eklenti anahtarı |
 | POST                | `/auth/forgot-password`, `/auth/reset-password` | Şifre sıfırlama                                    |
-| GET/PUT             | `/auth/profile`                                 | Profil (JWT); şifre değişikliği mevcut şifre ister |
+| GET/PUT 🔑          | `/profile` (`/auth/profile`)                    | Profil: ad, kullanıcı adı, e-posta, avatar, bio, öneri ve bildirim tercihleri; şifre değişikliği mevcut şifre ister |
+| GET 🔑              | `/profile/top-anime?limit=10`                   | En yüksek puanlı animeler                          |
+| GET 🔑              | `/profile/recommendations`                      | Tür tabanlı öneriler (profilde açıksa)             |
+| GET/POST/DELETE 🔑  | `/profile/tokens`                               | Eklenti anahtarlarını listele, oluştur, iptal et   |
+| GET/POST            | `/cron/airing`                                  | Yayın takibi (CRON_SECRET ile)                     |
 | GET                 | `/healthcheck`                                  | Durum kontrolü                                     |
 
 ## Lisans

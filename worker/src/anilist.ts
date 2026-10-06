@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { requireAdmin } from "./auth";
-import { field, int, readJson, type AppEnv } from "./util";
+import { bool, field, int, readJson, type AppEnv } from "./util";
 
 // AniList sync'i. AniList, Cloudflare Workers'ın çıkış IP'lerini engellediği için arama
 // tarayıcıda yapılır (frontend/src/Services/anilist.ts); bu uç yalnızca gelen sonuçlardan
@@ -90,9 +90,16 @@ anilistRoutes.get("/sync/pending", requireAdmin, async (c) => {
   return c.json({ items: results, batchSize: SYNC_BATCH });
 });
 
-// Gövde: { items: [{ id, media: [AniList Media, ...] }] } (tarayıcının AniList'ten aldığı arama sonuçları)
+export const statusLabel = (s: string | null | undefined) =>
+  s === "FINISHED" ? "Finished" : s === "NOT_YET_RELEASED" ? "Not yet aired" : s ? "Currently Airing" : "";
+
+// Gövde: { items: [{ id, media: [AniList Media, ...] }], force? } (tarayıcının AniList'ten aldığı arama sonuçları).
+// force (#20, tek anime sync): yalnızca boş alanları değil durum, bölüm, MAL puanı, kapak, türler ve seriyi de
+// AniList'teki değerle yeniler. Kullanıcıların puan, bölüm ve notlarına dokunulmaz (user_anime).
 anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
-  const raw = field(await readJson(c), "items");
+  const body = await readJson(c);
+  const force = bool(field(body, "force"));
+  const raw = field(body, "items");
   const media = new Map<number, Media[]>();
   for (const it of (Array.isArray(raw) ? raw : []).slice(0, SYNC_BATCH) as Record<string, unknown>[]) {
     const id = int(it?.id, -1);
@@ -132,12 +139,13 @@ anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
       continue;
     }
     const sets: Record<string, unknown> = { is_movie: m.format === "MOVIE" ? 1 : 0 };
-    if (!anime.mal_anime_link && m.idMal) sets.mal_anime_link = `https://myanimelist.net/anime/${m.idMal}`;
-    if (!(anime.mal_score! > 0) && m.averageScore) sets.mal_score = m.averageScore / 10;
-    if (!(anime.total_number_of_episodes! > 0) && m.episodes) sets.total_number_of_episodes = m.episodes;
-    if (!anime.anime_status && m.status) sets.anime_status = m.status === "FINISHED" ? "Finished" : "Currently Airing";
+    if (Number.isInteger(m.id)) sets.anilist_id = m.id;
+    if ((force || !anime.mal_anime_link) && m.idMal) sets.mal_anime_link = `https://myanimelist.net/anime/${m.idMal}`;
+    if ((force || !(anime.mal_score! > 0)) && m.averageScore) sets.mal_score = m.averageScore / 10;
+    if ((force || !(anime.total_number_of_episodes! > 0)) && m.episodes) sets.total_number_of_episodes = m.episodes;
+    if ((force || !anime.anime_status) && m.status) sets.anime_status = statusLabel(m.status);
     const cover = m.coverImage?.extraLarge ?? m.coverImage?.large;
-    if (!anime.cover && cover) sets.cover = cover;
+    if ((force || !anime.cover) && cover) sets.cover = cover;
 
     const stmts: D1PreparedStatement[] = [];
     const seriesName = seriesNameFor(m);
@@ -153,7 +161,7 @@ anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
         .bind(...Object.values(sets), ...(seriesName ? [seriesName] : []), anime.id)
     );
 
-    if (m.genres.length && anime.genre_count < m.genres.length) {
+    if (m.genres.length && (force || anime.genre_count < m.genres.length)) {
       for (const g of m.genres) {
         if (!genres.has(lower(g))) {
           const created = await db.prepare("INSERT INTO genres (genre_name) VALUES (?) RETURNING id").bind(g).first<{ id: number }>();

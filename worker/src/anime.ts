@@ -1,8 +1,10 @@
 import { Hono } from "hono";
-import { requireAdmin } from "./auth";
+import { optionalAuth, requireAdmin, requireAuth, viewerId } from "./auth";
 import { bool, field, int, message, num, readJson, str, type AppEnv, type Ctx } from "./util";
 
 // Yanıt biçimi Go backend'iyle aynı tutuldu (alan adları büyük harfle başlıyor), frontend ve eklenti değişmeden çalışsın.
+// Katalog alanları (ad, durum, bölüm, kapak, türler, MAL puanı) ortaktır; Score, WatchStatus, PlanToWatch ve
+// Notes kullanıcıya özeldir (user_anime). Listeler giriş yapan kullanıcının, girişsizse site sahibinin verisini gösterir.
 
 type AnimeRow = {
   id: number;
@@ -19,6 +21,11 @@ type AnimeRow = {
   cover: string | null;
   series: number | null;
   plan_to_watch: number;
+  in_list?: number | null;
+  anilist_id?: number | null;
+  next_episode?: number | null;
+  next_episode_at?: string | null;
+  aired_episodes?: number | null;
   genre?: string | null;
   series_name?: string | null;
 };
@@ -26,11 +33,16 @@ type AnimeRow = {
 const INLINE_COVER = "__inline__";
 
 // Liste sorgularında base64 kapaklar taşınmaz; yerine /api/animeCover adresi verilir
-const LIST_COLUMNS = `a.id, a.name, a.anime_status, a.watch_status, a.total_number_of_episodes, a.is_movie,
-  a.score, a.mal_score, a.notes, a.anime_link, a.mal_anime_link, a.series, a.plan_to_watch,
+export const LIST_COLUMNS = `a.id, a.name, a.anime_status, COALESCE(u.watch_status, 0) AS watch_status, a.total_number_of_episodes, a.is_movie,
+  u.score, a.mal_score, u.notes, a.anime_link, a.mal_anime_link, a.series, COALESCE(u.plan_to_watch, 0) AS plan_to_watch,
+  u.user_id IS NOT NULL AS in_list, a.anilist_id, a.next_episode, a.next_episode_at, a.aired_episodes,
   CASE WHEN a.cover LIKE 'data:%' THEN '${INLINE_COVER}' ELSE a.cover END AS cover,
   (SELECT group_concat(g.genre_name, ', ') FROM animes_genres ag JOIN genres g ON g.id = ag.genre_id WHERE ag.anime_id = a.id) AS genre,
   s.name AS series_name`;
+
+// Liste sorgularının FROM kısmı; ilk parametre verisi gösterilecek kullanıcının id'si
+export const LIST_FROM = `animes a LEFT JOIN anime_series s ON a.series = s.id
+  LEFT JOIN user_anime u ON u.anime_id = a.id AND u.user_id = ?`;
 
 // Site ve API her ortamda aynı origin'de; göreli adres wrangler dev'in custom domain'e çevirdiği host'tan etkilenmez
 export const coverUrl = (_c: Ctx, id: number) => `/api/animeCover?id=${id}`;
@@ -54,6 +66,11 @@ export function toAnime(c: Ctx, r: AnimeRow) {
     Series: r.series ?? 0,
     SeriesName: r.series_name ?? "",
     PlanToWatch: Boolean(r.plan_to_watch),
+    InMyList: Boolean(r.in_list),
+    AnilistID: r.anilist_id ?? 0,
+    NextEpisode: r.next_episode ?? 0,
+    NextEpisodeAt: r.next_episode_at ?? "",
+    AiredEpisodes: r.aired_episodes ?? 0,
   };
 }
 
@@ -61,16 +78,17 @@ const ORDER_COLUMNS: Record<string, string> = {
   ID: "a.id",
   Name: "LOWER(a.name)",
   AnimeStatus: "a.anime_status",
-  WatchStatus: "a.watch_status",
+  WatchStatus: "u.watch_status",
   TotalNumberOfEpisodes: "a.total_number_of_episodes",
   IsMovie: "a.is_movie",
-  Score: "a.score",
+  Score: "u.score",
   MALScore: "a.mal_score",
   Genre: "genre",
   Series: "s.name",
   SeriesName: "s.name",
-  PlanToWatch: "a.plan_to_watch",
-  Notes: "a.notes",
+  PlanToWatch: "plan_to_watch",
+  Notes: "u.notes",
+  NextEpisodeAt: "a.next_episode_at",
 };
 const OPERANDS = new Set(["<", ">", "=", "<=", ">=", "!=", "<>"]);
 
@@ -108,7 +126,7 @@ function buildWhere(filters: unknown[]): { sql: string; params: unknown[] } {
       case "PlanToWatch": {
         const values = asArray(value).map((v) => (bool(v) ? 1 : 0));
         if (values.length) {
-          where.push(`a.${key === "IsMovie" ? "is_movie" : "plan_to_watch"} IN (${placeholders(values.length)})`);
+          where.push(`${key === "IsMovie" ? "a.is_movie" : "COALESCE(u.plan_to_watch, 0)"} IN (${placeholders(values.length)})`);
           params.push(...values);
         }
         break;
@@ -117,14 +135,14 @@ function buildWhere(filters: unknown[]): { sql: string; params: unknown[] } {
       case "TotalNumberOfEpisodes": {
         const n = num(value);
         if (n !== 0 && OPERANDS.has(operand)) {
-          where.push(`a.${key === "Score" ? "score" : "total_number_of_episodes"} ${operand} ?`);
+          where.push(`${key === "Score" ? "COALESCE(u.score, 0)" : "a.total_number_of_episodes"} ${operand} ?`);
           params.push(n);
         }
         break;
       }
       case "WatchStatus": {
         if (str(value) !== "") {
-          where.push("a.watch_status = ?");
+          where.push("COALESCE(u.watch_status, 0) = ?");
           params.push(int(value));
         }
         break;
@@ -168,28 +186,55 @@ async function setGenres(db: D1Database, animeId: number, genre: string) {
   await db.batch(stmts);
 }
 
-// İstek gövdesindeki anime alanları (Go'daki models.Anime çözümlemesiyle aynı, büyük/küçük harf duyarsız)
+// İstek gövdesindeki katalog alanları (Go'daki models.Anime çözümlemesiyle aynı, büyük/küçük harf duyarsız)
 function animeFields(body: Record<string, unknown>) {
   return {
     name: str(field(body, "Name")),
     anime_status: str(field(body, "AnimeStatus")),
-    watch_status: int(field(body, "WatchStatus")),
     total_number_of_episodes: int(field(body, "TotalNumberOfEpisodes")),
     is_movie: bool(field(body, "IsMovie")) ? 1 : 0,
-    score: num(field(body, "Score")),
     mal_score: num(field(body, "MALScore")),
-    notes: str(field(body, "Notes")),
     anime_link: str(field(body, "AnimeLink")),
     mal_anime_link: str(field(body, "MALAnimeLink")),
     cover: str(field(body, "Cover")),
     series: int(field(body, "Series")),
-    plan_to_watch: bool(field(body, "PlanToWatch")) ? 1 : 0,
   };
+}
+
+// Kullanıcıya özel alanlar
+function userFields(body: Record<string, unknown>) {
+  return {
+    score: num(field(body, "Score")),
+    watch_status: int(field(body, "WatchStatus")),
+    plan_to_watch: bool(field(body, "PlanToWatch")) ? 1 : 0,
+    notes: str(field(body, "Notes")),
+  };
+}
+
+type UserFields = Partial<ReturnType<typeof userFields>>;
+
+/**
+ * Kullanıcının bir animeye ait kaydını ekler ya da günceller. Yalnızca verilen alanlar yazılır;
+ * plan_to_watch değişince trigger'lar watchlist'i günceller.
+ */
+export function upsertUserAnime(db: D1Database, userId: number, animeId: number, f: UserFields) {
+  const cols = Object.keys(f);
+  const vals = Object.values(f);
+  const update = cols.length
+    ? `DO UPDATE SET ${cols.map((k) => `${k} = excluded.${k}`).join(", ")}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`
+    : "DO NOTHING";
+  return db
+    .prepare(
+      `INSERT INTO user_anime (user_id, anime_id${cols.map((k) => `, ${k}`).join("")})
+       VALUES (?, ?${cols.map(() => ", ?").join("")})
+       ON CONFLICT (user_id, anime_id) ${update}`
+    )
+    .bind(userId, animeId, ...vals);
 }
 
 export const anime = new Hono<AppEnv>();
 
-anime.all("/getAnimeTable", async (c) => {
+anime.all("/getAnimeTable", optionalAuth, async (c) => {
   const q = c.req.query();
   const count = Math.min(Math.max(int(q.count) || 10, 1), 1000);
   const page = Math.max(int(q.page) || 1, 1);
@@ -198,13 +243,14 @@ anime.all("/getAnimeTable", async (c) => {
 
   const body = await readJson(c);
   const { sql: where, params } = buildWhere(asArray(field(body, "filterArray")));
+  const viewer = await viewerId(c);
 
   const [list, total] = await c.env.DB.batch([
     c.env.DB.prepare(
-      `SELECT ${LIST_COLUMNS} FROM animes a LEFT JOIN anime_series s ON a.series = s.id ${where}
+      `SELECT ${LIST_COLUMNS} FROM ${LIST_FROM} ${where}
        ORDER BY ${orderBy} ${order}, a.id ASC LIMIT ? OFFSET ?`
-    ).bind(...params, count, (page - 1) * count),
-    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM animes a LEFT JOIN anime_series s ON a.series = s.id ${where}`).bind(...params),
+    ).bind(viewer, ...params, count, (page - 1) * count),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM ${LIST_FROM} ${where}`).bind(viewer, ...params),
   ]);
   const rows = (list.results ?? []) as AnimeRow[];
   const totalItemCount = Number((total.results?.[0] as { n: number } | undefined)?.n ?? 0);
@@ -260,27 +306,29 @@ anime.all("/getSeries", async (c) => {
   return c.json(results.map((s) => ({ id: s.id, name: s.name, value: s.name, label: s.name })));
 });
 
-anime.get("/getAnimeById", async (c) => {
+anime.get("/getAnimeById", optionalAuth, async (c) => {
   const id = int(c.req.query("id"), -1);
   if (id < 0) return c.json({ error: "Geçersiz anime ID'si" }, 400);
-  const row = await c.env.DB.prepare(
-    `SELECT ${LIST_COLUMNS} FROM animes a LEFT JOIN anime_series s ON a.series = s.id WHERE a.id = ?`
-  )
-    .bind(id)
+  const row = await c.env.DB.prepare(`SELECT ${LIST_COLUMNS} FROM ${LIST_FROM} WHERE a.id = ?`)
+    .bind(await viewerId(c), id)
     .first<AnimeRow>();
   if (!row) return c.json({ error: "Anime bulunamadı" }, 404);
   return c.json({ status: "success", data: toAnime(c, row) });
 });
 
-// Eklenti de bu uca yazıyor; aynı isimde anime varsa günceller (Go'daki gibi yalnızca dolu alanlar)
+// Eklenti de bu uca yazıyor (#26: Bearer token zorunlu). Aynı isimde anime varsa günceller (Go'daki gibi
+// yalnızca dolu alanlar). Katalogdaki mevcut bir animeyi yalnızca admin değiştirebilir; puan, bölüm,
+// Plan to Watch ve notlar her zaman isteği yapan kullanıcının kendi kaydına yazılır.
 export async function createAnime(c: Ctx) {
   const body = await readJson(c);
   const a = animeFields(body);
   if (!a.name.trim()) return message(c, "Anime adı boş olamaz", 400);
   const db = c.env.DB;
+  const user = c.get("user")!;
 
   const existing = await db.prepare("SELECT id FROM animes WHERE name = ?").bind(a.name).first<{ id: number }>();
   let animeId: number;
+  let isNew = false;
   if (existing) {
     animeId = existing.id;
     const sets: string[] = [];
@@ -290,10 +338,11 @@ export async function createAnime(c: Ctx) {
       sets.push(`${col} = ?`);
       params.push(val);
     }
-    if (sets.length) {
+    if (sets.length && user.isAdmin) {
       await db.prepare(`UPDATE animes SET ${sets.join(", ")} WHERE id = ?`).bind(...params, animeId).run();
     }
   } else {
+    isNew = true;
     const cols = Object.keys(a);
     const res = await db
       .prepare(`INSERT INTO animes (${cols.join(", ")}) VALUES (${placeholders(cols.length)})`)
@@ -301,32 +350,45 @@ export async function createAnime(c: Ctx) {
       .run();
     animeId = Number(res.meta.last_row_id);
   }
-  await setGenres(db, animeId, str(field(body, "Genre")));
+  if (isNew || user.isAdmin) await setGenres(db, animeId, str(field(body, "Genre")));
+
+  // Kullanıcı alanlarından yalnızca dolu olanlar yazılır; hiçbiri yoksa da anime kullanıcının listesine eklenir
+  const filled = Object.fromEntries(Object.entries(userFields(body)).filter(([, v]) => v !== "" && v !== 0)) as UserFields;
+  await upsertUserAnime(db, user.userId, animeId, filled).run();
   return message(c, "OK");
 }
 
-anime.post("/createAnime", createAnime);
+anime.post("/createAnime", requireAuth, createAnime);
 
-anime.post("/updateAnimeTable", requireAdmin, async (c) => {
+// Admin katalog alanlarını da günceller; diğer kullanıcılar yalnızca kendi puan/bölüm/PTW/notlarını
+anime.post("/updateAnimeTable", requireAuth, async (c) => {
   const body = await readJson(c);
   const id = int(field(body, "ID"), -1);
   if (id < 0) return message(c, "Geçersiz anime ID'si", 400);
-  const a = animeFields(body);
-  // İstemci listede gördüğü /animeCover adresini geri yollarsa DB'deki orijinal kapak korunur
-  const keepCover = a.cover.includes("/animeCover?id=") ? 1 : 0;
-  await c.env.DB.prepare(
-    `UPDATE animes SET name = ?, anime_status = ?, watch_status = ?, total_number_of_episodes = ?, is_movie = ?,
-       score = ?, mal_score = ?, notes = ?, anime_link = ?, mal_anime_link = ?,
-       cover = CASE WHEN ? THEN cover ELSE ? END, series = ?, plan_to_watch = ?
-     WHERE id = ?`
-  )
-    .bind(
-      a.name, a.anime_status, a.watch_status, a.total_number_of_episodes, a.is_movie,
-      a.score, a.mal_score, a.notes, a.anime_link, a.mal_anime_link,
-      keepCover, a.cover, a.series, a.plan_to_watch, id
-    )
-    .run();
-  await setGenres(c.env.DB, id, str(field(body, "Genre")));
+  const db = c.env.DB;
+  const user = c.get("user")!;
+  if (!(await db.prepare("SELECT id FROM animes WHERE id = ?").bind(id).first())) return message(c, "Anime bulunamadı", 404);
+
+  if (user.isAdmin) {
+    const a = animeFields(body);
+    // İstemci listede gördüğü /animeCover adresini geri yollarsa DB'deki orijinal kapak korunur
+    const keepCover = a.cover.includes("/animeCover?id=") ? 1 : 0;
+    await db
+      .prepare(
+        `UPDATE animes SET name = ?, anime_status = ?, total_number_of_episodes = ?, is_movie = ?,
+           mal_score = ?, anime_link = ?, mal_anime_link = ?,
+           cover = CASE WHEN ? THEN cover ELSE ? END, series = ?
+         WHERE id = ?`
+      )
+      .bind(
+        a.name, a.anime_status, a.total_number_of_episodes, a.is_movie,
+        a.mal_score, a.anime_link, a.mal_anime_link,
+        keepCover, a.cover, a.series, id
+      )
+      .run();
+    await setGenres(db, id, str(field(body, "Genre")));
+  }
+  await upsertUserAnime(db, user.userId, id, userFields(body)).run();
   return message(c, "OK");
 });
 
@@ -338,8 +400,13 @@ anime.all("/deleteAnime", requireAdmin, async (c) => {
   return message(c, "OK");
 });
 
-anime.all("/updateFinishedAnimeStatus", requireAdmin, async (c) => {
-  const res = await c.env.DB.prepare("UPDATE animes SET watch_status = total_number_of_episodes WHERE watch_status = -1").run();
+anime.all("/updateFinishedAnimeStatus", requireAuth, async (c) => {
+  const res = await c.env.DB.prepare(
+    `UPDATE user_anime SET watch_status = (SELECT total_number_of_episodes FROM animes WHERE id = user_anime.anime_id)
+     WHERE user_id = ? AND watch_status = -1`
+  )
+    .bind(c.get("user")!.userId)
+    .run();
   return message(c, `Güncellenen anime sayısı: ${res.meta.changes ?? 0}`);
 });
 
@@ -365,13 +432,13 @@ export async function updateEpisode(c: Ctx) {
     );
   }
   const watchStatus = episode > 0 ? episode : int(field(body, "watchStatus"));
-  await db.prepare("UPDATE animes SET watch_status = ? WHERE id = ?").bind(watchStatus, found.id).run();
+  await upsertUserAnime(db, c.get("user")!.userId, found.id, { watch_status: watchStatus }).run();
   return c.json({ id: found.id, name: found.name, watchStatus });
 }
 
-anime.all("/api/anime/update-episode", updateEpisode);
-anime.all("/anime/update-episode", updateEpisode);
-anime.all("/updateAnimeStatus", updateEpisode);
+anime.all("/api/anime/update-episode", requireAuth, updateEpisode);
+anime.all("/anime/update-episode", requireAuth, updateEpisode);
+anime.all("/updateAnimeStatus", requireAuth, updateEpisode);
 
 // Basit CSV ayrıştırıcı (tırnaklı alanları destekler)
 function parseCsv(text: string): string[][] {
@@ -411,18 +478,20 @@ anime.post("/createAnimeWithFile", requireAdmin, async (c) => {
   const file = form.file;
   if (!(file instanceof File)) return c.text("file alanı eksik", 400);
   const db = c.env.DB;
+  const userId = c.get("user")!.userId;
   let added = 0;
   // Sütunlar: name, status, watch, episodes, score, mal_score, is_movie, genre-id'leri (1-2-3), mal_link, link, notes
   for (const r of parseCsv(await file.text())) {
     if (r.length !== 11) continue;
     const res = await db
       .prepare(
-        `INSERT INTO animes (name, anime_status, watch_status, total_number_of_episodes, score, mal_score, is_movie, mal_anime_link, anime_link, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO animes (name, anime_status, total_number_of_episodes, mal_score, is_movie, mal_anime_link, anime_link)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(r[0], r[1], int(r[2]), int(r[3]), num(r[4]), num(r[5]), bool(r[6]) ? 1 : 0, r[8], r[9], r[10])
+      .bind(r[0], r[1], int(r[3]), num(r[5]), bool(r[6]) ? 1 : 0, r[8], r[9])
       .run();
     const animeId = Number(res.meta.last_row_id);
+    await upsertUserAnime(db, userId, animeId, { watch_status: int(r[2]), score: num(r[4]), notes: r[10] }).run();
     const genreIds = r[7].split("-").map((x) => int(x, -1)).filter((x) => x >= 0);
     if (genreIds.length) {
       await db

@@ -104,3 +104,16 @@ export async function coversByMalIds(ids: number[], signal?: AbortSignal): Promi
   }
   return out;
 }
+
+// Tek anime sync (#20): MAL id biliniyorsa birebir, yoksa adla aranır; sonuç /sync/batch'e force ile yollanır
+export async function mediaForSingleSync(name: string, idMal: number | null, signal?: AbortSignal): Promise<unknown[]> {
+  if (idMal) {
+    const data = await anilistQuery<{ Media: unknown | null }>(
+      `query ($idMal: Int) { Media(idMal: $idMal, type: ANIME) { ${SYNC_FIELDS} } }`,
+      { idMal },
+      signal
+    ).catch(() => ({ Media: null }));
+    if (data.Media) return [data.Media];
+  }
+  return (await searchForSync([name], signal))[0];
+}
