@@ -651,7 +651,7 @@ export default function CustomTableRowV2(
                     {props.singleData[header.key].length !== 0 &&
                       props.singleData[header.key]
                         .split(", ")
-                        .map((pill, idx) => (
+                        .map((pill: string, idx: number) => (
                           <Chip
                             key={`chip-${rowIndex}-${pill}-${idx}`}
                             label={pill}
