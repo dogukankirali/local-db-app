@@ -169,7 +169,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const raw = result.service_url || "https://localhost:8080";
             const serviceUrl = raw.trim().replace(/\/+$/, "");
             try {
-                const res = await fetch(`${serviceUrl}/api/createAnime`, {
+                const res = await fetch(`${serviceUrl}/api/create-anime`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", ...authHeader(result.auth_token) },
                     body: JSON.stringify(request.data),
@@ -348,7 +348,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
 
                 // 2. Backend'e kaydet
-                const res = await fetch(`${serviceUrl}/api/createAnime`, {
+                const res = await fetch(`${serviceUrl}/api/create-anime`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", ...authHeader(result.auth_token) },
                     body: JSON.stringify(animeData),

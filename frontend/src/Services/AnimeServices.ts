@@ -6,15 +6,11 @@ import * as AniList from "./anilist";
 const path = API_BASE;
 
 
-/* router.HandleFunc("/getAnimeTable", allfunctions.GetAnimeTableData(db));
-router.HandleFunc("/getGenres", allfunctions.GetGenres(db));
-router.HandleFunc("/updateAnimeTable", allfunctions.UpdateAnimeTableData(db));
-router.HandleFunc("/createAnime", allfunctions.CreateAnimeTableData(db)); */
 
 export module AnimeService {
   export async function createAnime(data: TEATable.IAnime): Promise<any> {
     try {
-      return axios.post(`${path}/createAnime`, data);
+      return axios.post(`${path}/create-anime`, data);
     } catch (err) {
       console.error(err);
       return Promise.reject(err);
@@ -23,7 +19,7 @@ export module AnimeService {
 
   export function updateAnime(data: TEATable.IAnime): Promise<any> {
     try {
-      return axios.post(`${path}/updateAnimeTable`, data);
+      return axios.post(`${path}/update-anime-table`, data);
     } catch (err) {
       console.error(err);
       return Promise.reject(err);
@@ -33,7 +29,7 @@ export module AnimeService {
   export function deleteAnime(data: TEATable.IAnime): Promise<any> {
     try {
       console.log(data);
-      return axios.delete(`${path}/deleteAnime?id=${data.ID}`);
+      return axios.delete(`${path}/delete-anime?id=${data.ID}`);
     } catch (err) {
       console.error(err);
       return Promise.reject(err);
@@ -42,7 +38,7 @@ export module AnimeService {
 
   export function createAniemWithFile(formData: FormData): Promise<any> {
     try {
-      return axios.post(`${path}/createAnimeWithFile`, formData, {
+      return axios.post(`${path}/create-anime-with-file`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -57,13 +53,13 @@ export module AnimeService {
     try {
       let uri = "";
       if (params.order !== undefined && params.orderBy) {
-        uri = `${path}/getAnimeTable?page=${params.page}&count=${params.count}&order=${params.order}&orderBy=${params.orderBy}`;
+        uri = `${path}/get-anime-table?page=${params.page}&count=${params.count}&order=${params.order}&orderBy=${params.orderBy}`;
         console.log("Sıralama parametreleri:", {
           order: params.order,
           orderBy: params.orderBy,
         });
       } else {
-        uri = `${path}/getAnimeTable?page=${params.page}&count=${params.count}`;
+        uri = `${path}/get-anime-table?page=${params.page}&count=${params.count}`;
       }
 
       const filters = params.filters || [];
@@ -81,7 +77,7 @@ export module AnimeService {
 
   export async function getGenres() {
     try {
-      const res = await axios.post(`${path}/getGenres`, {
+      const res = await axios.post(`${path}/get-genres`, {
         filterArray: [],
       });
       return res.data.map((item: { name: string }) => ({
@@ -97,7 +93,7 @@ export module AnimeService {
   export async function getSeries() {
     try {
       console.log("getSeries API çağrılıyor...");
-      const res = await axios.get(`${path}/getSeries`);
+      const res = await axios.get(`${path}/get-series`);
       console.log("getSeries API yanıtı:", res.data);
       return res.data;
     } catch (err) {
@@ -119,7 +115,7 @@ export module AnimeService {
     try {
       console.log(`Anime ID ${id} için detaylar alınıyor...`);
       // Belirli ID'ye sahip animeyi alma
-      const res = await axios.get(`${path}/getAnimeById?id=${id}`);
+      const res = await axios.get(`${path}/get-anime-by-id?id=${id}`);
 
       // Backend yanıtı içindeki veriyi logla
       console.log(`GetAnime ham yanıt:`, JSON.stringify(res.data, null, 2));
@@ -147,7 +143,7 @@ export module AnimeService {
     if (!media.length) throw new Error("AniList'te bulunamadı");
     const res = await axios.post(`${path}/sync/batch`, { force: true, items: [{ id: anime.ID, media }] }, { signal });
     if (!res.data.updated) throw new Error(res.data.errors?.[0] ?? "Güncellenemedi");
-    const fresh = await axios.get(`${path}/getAnimeById`, { params: { id: anime.ID }, signal });
+    const fresh = await axios.get(`${path}/get-anime-by-id`, { params: { id: anime.ID }, signal });
     return { anime: fresh.data.data as TEATable.IAnime, message: (res.data.messages ?? [])[0] as string | undefined };
   }
 

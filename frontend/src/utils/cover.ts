@@ -3,7 +3,7 @@ import { palette } from "../theme/customTheme";
 // Kapaklar en büyük boyutta saklanır (AniList extraLarge ≈ 460 px); küçük gösterilen yerlerde
 // aynı görselin CDN'deki küçük sürümü istenir, böylece tablo ve kalabalık grid çok daha hızlı yüklenir.
 // AniList aynı dosyayı /cover/small/ (~100 px), /cover/medium/ (~230 px) ve /cover/large/ altında sunar;
-// MAL'da "...l.jpg" büyük, ".jpg" orta boydur. Diğer adresler (ör. /api/animeCover) olduğu gibi döner.
+// MAL'da "...l.jpg" büyük, ".jpg" orta boydur. Diğer adresler (ör. /api/anime-cover) olduğu gibi döner.
 
 export type CoverSize = "small" | "medium" | "large";
 

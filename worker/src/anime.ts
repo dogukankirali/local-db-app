@@ -35,7 +35,7 @@ type AnimeRow = {
 
 const INLINE_COVER = "__inline__";
 
-// Liste sorgularında base64 kapaklar taşınmaz; yerine /api/animeCover adresi verilir
+// Liste sorgularında base64 kapaklar taşınmaz; yerine /api/anime-cover adresi verilir
 export const LIST_COLUMNS = `a.id, a.name, a.english_name, a.anime_status, COALESCE(u.watch_status, 0) AS watch_status, a.total_number_of_episodes, a.is_movie,
   u.score, a.mal_score, u.notes, a.anime_link, a.mal_anime_link, a.series, COALESCE(u.plan_to_watch, 0) AS plan_to_watch,
   u.user_id IS NOT NULL AS in_list, u.started_at, u.finished_at, a.anilist_id, a.next_episode, a.next_episode_at, a.aired_episodes,
@@ -48,7 +48,7 @@ export const LIST_FROM = `animes a LEFT JOIN anime_series s ON a.series = s.id
   LEFT JOIN user_anime u ON u.anime_id = a.id AND u.user_id = ?`;
 
 // Site ve API her ortamda aynı origin'de; göreli adres wrangler dev'in custom domain'e çevirdiği host'tan etkilenmez
-export const coverUrl = (_c: Ctx, id: number) => `/api/animeCover?id=${id}`;
+export const coverUrl = (_c: Ctx, id: number) => `/api/anime-cover?id=${id}`;
 
 export function toAnime(c: Ctx, r: AnimeRow) {
   const cover = r.cover ?? "";
@@ -242,7 +242,7 @@ export function upsertUserAnime(db: D1Database, userId: number, animeId: number,
 
 export const anime = new Hono<AppEnv>();
 
-anime.all("/getAnimeTable", requireAuth, async (c) => {
+anime.all("/get-anime-table", requireAuth, async (c) => {
   const q = c.req.query();
   const count = Math.min(Math.max(int(q.count) || 10, 1), 1000);
   const page = Math.max(int(q.page) || 1, 1);
@@ -276,7 +276,7 @@ anime.all("/getAnimeTable", requireAuth, async (c) => {
 });
 
 // Base64 saklanan kapağı ikili resim olarak, cache'lenebilir şekilde döner
-anime.get("/animeCover", async (c) => {
+anime.get("/anime-cover", async (c) => {
   const id = int(c.req.query("id"), -1);
   if (id < 0) return c.text("invalid id", 400);
   const row = await c.env.DB.prepare("SELECT cover FROM animes WHERE id = ?").bind(id).first<{ cover: string | null }>();
@@ -298,7 +298,7 @@ anime.get("/animeCover", async (c) => {
   return new Response(img, { headers: { ...headers, "Content-Type": contentType } });
 });
 
-anime.all("/getGenres", async (c) => {
+anime.all("/get-genres", async (c) => {
   const { results } = await c.env.DB.prepare("SELECT id, genre_name FROM genres ORDER BY id").all<{
     id: number;
     genre_name: string;
@@ -306,7 +306,7 @@ anime.all("/getGenres", async (c) => {
   return c.json(results.map((g) => ({ ID: g.id, name: g.genre_name })));
 });
 
-anime.all("/getSeries", async (c) => {
+anime.all("/get-series", async (c) => {
   const { results } = await c.env.DB.prepare("SELECT id, name FROM anime_series ORDER BY name ASC").all<{
     id: number;
     name: string;
@@ -314,7 +314,7 @@ anime.all("/getSeries", async (c) => {
   return c.json(results.map((s) => ({ id: s.id, name: s.name, value: s.name, label: s.name })));
 });
 
-anime.get("/getAnimeById", requireAuth, async (c) => {
+anime.get("/get-anime-by-id", requireAuth, async (c) => {
   const id = int(c.req.query("id"), -1);
   if (id < 0) return c.json({ error: "Geçersiz anime ID'si" }, 400);
   const row = await c.env.DB.prepare(`SELECT ${LIST_COLUMNS} FROM ${LIST_FROM} WHERE a.id = ?`)
@@ -366,11 +366,11 @@ export async function createAnime(c: Ctx) {
   return message(c, "OK");
 }
 
-anime.post("/createAnime", requireAuth, createAnime);
+anime.post("/create-anime", requireAuth, createAnime);
 
 // Kullanıcının izlemeye başlama/bitirme tarihi ("YYYY-MM-DD" ya da boş = sil). Kayıt yoksa listeye eklenir.
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-anime.post("/myAnime/dates", requireAuth, async (c) => {
+anime.post("/my-anime/dates", requireAuth, async (c) => {
   const body = await readJson(c);
   const id = int(field(body, "ID"), -1);
   const started = str(field(body, "StartedAt")).trim();
@@ -385,7 +385,7 @@ anime.post("/myAnime/dates", requireAuth, async (c) => {
 });
 
 // Admin katalog alanlarını da günceller; diğer kullanıcılar yalnızca kendi puan/bölüm/PTW/notlarını
-anime.post("/updateAnimeTable", requireAuth, async (c) => {
+anime.post("/update-anime-table", requireAuth, async (c) => {
   const body = await readJson(c);
   const id = int(field(body, "ID"), -1);
   if (id < 0) return message(c, "Geçersiz anime ID'si", 400);
@@ -395,8 +395,8 @@ anime.post("/updateAnimeTable", requireAuth, async (c) => {
 
   if (user.isAdmin) {
     const a = animeFields(body);
-    // İstemci listede gördüğü /animeCover adresini geri yollarsa DB'deki orijinal kapak korunur
-    const keepCover = a.cover.includes("/animeCover?id=") ? 1 : 0;
+    // İstemci listede gördüğü /anime-cover adresini geri yollarsa DB'deki orijinal kapak korunur
+    const keepCover = /\/(anime-cover|animeCover)\?id=/.test(a.cover) ? 1 : 0;
     await db
       .prepare(
         `UPDATE animes SET name = ?, english_name = CASE WHEN ? = '' THEN english_name ELSE ? END,
@@ -429,7 +429,7 @@ anime.post("/updateAnimeTable", requireAuth, async (c) => {
   return message(c, "OK");
 });
 
-anime.all("/deleteAnime", requireAdmin, async (c) => {
+anime.all("/delete-anime", requireAdmin, async (c) => {
   const id = int(c.req.query("id"), -1);
   if (id < 0) return message(c, "Geçersiz anime ID'si", 400);
   // animes_genres ve watch_lists kayıtları FK cascade ile silinir
@@ -437,7 +437,7 @@ anime.all("/deleteAnime", requireAdmin, async (c) => {
   return message(c, "OK");
 });
 
-anime.all("/updateFinishedAnimeStatus", requireAuth, async (c) => {
+anime.all("/update-finished-anime-status", requireAuth, async (c) => {
   const res = await c.env.DB.prepare(
     `UPDATE user_anime SET watch_status = (SELECT total_number_of_episodes FROM animes WHERE id = user_anime.anime_id)
      WHERE user_id = ? AND watch_status = -1`
@@ -474,7 +474,6 @@ export async function updateEpisode(c: Ctx) {
 }
 
 anime.all("/anime/update-episode", requireAuth, updateEpisode);
-anime.all("/updateAnimeStatus", requireAuth, updateEpisode);
 
 // Basit CSV ayrıştırıcı (tırnaklı alanları destekler)
 function parseCsv(text: string): string[][] {
@@ -509,7 +508,7 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
-anime.post("/createAnimeWithFile", requireAdmin, async (c) => {
+anime.post("/create-anime-with-file", requireAdmin, async (c) => {
   const form = await c.req.parseBody();
   const file = form.file;
   if (!(file instanceof File)) return c.text("file alanı eksik", 400);

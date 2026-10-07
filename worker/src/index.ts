@@ -39,4 +39,30 @@ app.onError((err, c) => {
   return c.json({ message: "Sunucu hatası oluştu" }, 500);
 });
 
-export default app;
+// Eski camelCase yollar (yüklü eski eklenti sürümleri, önbellekteki istemciler) kebab-case karşılıklarına yönlenir
+const LEGACY_PATHS: Record<string, string> = {
+  "/api/getAnimeTable": "/api/get-anime-table",
+  "/api/getAnimeById": "/api/get-anime-by-id",
+  "/api/animeCover": "/api/anime-cover",
+  "/api/createAnime": "/api/create-anime",
+  "/api/createAnimeWithFile": "/api/create-anime-with-file",
+  "/api/updateAnimeTable": "/api/update-anime-table",
+  "/api/myAnime/dates": "/api/my-anime/dates",
+  "/api/deleteAnime": "/api/delete-anime",
+  "/api/getGenres": "/api/get-genres",
+  "/api/getSeries": "/api/get-series",
+  "/api/updateFinishedAnimeStatus": "/api/update-finished-anime-status",
+  "/api/updateAnimeStatus": "/api/anime/update-episode",
+};
+
+export default {
+  fetch(req: Request, env: AppEnv["Bindings"], ctx: ExecutionContext) {
+    const url = new URL(req.url);
+    const target = LEGACY_PATHS[url.pathname];
+    if (target) {
+      url.pathname = target;
+      req = new Request(url, req);
+    }
+    return app.fetch(req, env, ctx);
+  },
+};
