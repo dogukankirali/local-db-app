@@ -206,7 +206,7 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 10px;
-    background: rgba(255, 120, 73, 0.12);
+    background: rgba(124, 92, 255, 0.12);
     color: var(--primary);
     border: 1px solid var(--primary);
     margin-bottom: 8px;
@@ -218,14 +218,14 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
    ============================================================ */
 :root {
     --bg: #F4F5F8; --surface: #FFFFFF; --text: #12161E; --text-secondary: #5B6478;
-    --primary: #FF7849; --primary-hover: #F2622F; --primary-soft: rgba(255, 120, 73, 0.15);
+    --primary: #7C5CFF; --primary-hover: #6A48F5; --primary-soft: rgba(124, 92, 255, 0.15);
     --secondary: #22D3EE; --secondary-hover: #06B6D4;
     --success: #22C55E; --danger: #EF4444;
     --border: #E2E5EC; --card-shadow: none;
 }
 [data-theme='dark'] {
     --bg: #0B0D12; --surface: #12161E; --text: #E7E9EE; --text-secondary: #8A93A6;
-    --primary: #FF7849; --primary-hover: #F2622F; --primary-soft: rgba(255, 120, 73, 0.15);
+    --primary: #7C5CFF; --primary-hover: #6A48F5; --primary-soft: rgba(124, 92, 255, 0.15);
     --secondary: #22D3EE; --secondary-hover: #06B6D4;
     --success: #22C55E; --danger: #EF4444;
     --border: #232938; --card-shadow: none;

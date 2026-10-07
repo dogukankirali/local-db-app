@@ -1,5 +1,8 @@
 "use client";
 
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../theme/customTheme";
+
 import React, { JSX, Suspense, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Box, CircularProgress, IconButton, Tooltip } from "@mui/material";
@@ -717,12 +720,12 @@ function AnimePageContent() {
                   size="small"
                   sx={{
                     height: 38,
-                    backgroundColor: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    backgroundColor: alpha(palette.overlay, 0.04),
+                    border: `1px solid ${alpha(palette.overlay, 0.06)}`,
                     borderRadius: "10px",
                     p: "3px",
                     "& .MuiToggleButton-root": { border: 0, borderRadius: "7px !important", px: 1, color: theme.secondary_text },
-                    "& .Mui-selected": { backgroundColor: "rgba(255, 120, 73,0.18) !important", color: `${theme.primary} !important` },
+                    "& .Mui-selected": { backgroundColor: `${alpha(palette.primary, 0.18)} !important`, color: `${theme.primary} !important` },
                   }}
                 >
                   <ToggleButton value="table" aria-label="Tablo görünümü">
@@ -772,17 +775,17 @@ function AnimePageContent() {
                 minHeight: 0,
                 "& .MuiPaper-root": { backgroundColor: "transparent", boxShadow: "none", border: "none" },
                 "& .MuiTableHead-root": { 
-                   "& .MuiTableCell-root": { backgroundColor: "transparent", color: theme.primary, borderBottom: "2px solid rgba(255,255,255,0.05)", fontSize: "0.85rem", fontWeight: "bold", padding: "8px 12px" }
+                   "& .MuiTableCell-root": { backgroundColor: "transparent", color: theme.primary, borderBottom: `2px solid ${alpha(palette.overlay, 0.05)}`, fontSize: "0.85rem", fontWeight: "bold", padding: "8px 12px" }
                 },
                 "& .MuiTableBody-root .MuiTableRow-root": {
                    transition: "background-color 0.2s ease",
                    backgroundColor: "transparent",
                    display: "table-row",
                    "&:hover": {
-                      backgroundColor: "rgba(255,255,255,0.03)",
+                      backgroundColor: alpha(palette.overlay, 0.03),
                    },
                    "& .MuiTableCell-root": { 
-                      borderBottom: "1px solid rgba(255,255,255,0.03)", 
+                      borderBottom: `1px solid ${alpha(palette.overlay, 0.03)}`, 
                       backgroundColor: "transparent !important", // Fix crazy column colors
                       padding: "8px 12px" // More compact
                    }

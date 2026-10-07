@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../../theme/customTheme";
 import { Badge, Box, Tooltip } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
@@ -219,7 +221,7 @@ export default function TableHeaders(props: {
             <StyledMUIFilterButton
               onClick={props.handleClickFilters}
               aria-label="Filtreler"
-              sx={activeFilterCount > 0 ? { color: "primary.main", borderColor: "rgba(255, 120, 73,0.5)" } : undefined}
+              sx={activeFilterCount > 0 ? { color: "primary.main", borderColor: alpha(palette.primary, 0.5) } : undefined}
             >
               <Badge badgeContent={activeFilterCount} color="primary" sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", height: 16, minWidth: 16, top: -4, right: -4 } }}>
                 <FilterAltIcon sx={{ fontSize: 20 }} />
@@ -255,8 +257,8 @@ export default function TableHeaders(props: {
           sx={{
             backgroundColor: "transparent",
             color: "text.primary",
-            border: "1px solid rgba(255,255,255,0.1)",
-            "&:hover": { backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.16)" },
+            border: `1px solid ${alpha(palette.overlay, 0.1)}`,
+            "&:hover": { backgroundColor: alpha(palette.overlay, 0.06), border: `1px solid ${alpha(palette.overlay, 0.16)}` },
           }}
           startIcon={<PlaylistAddCheckIcon />}
         >

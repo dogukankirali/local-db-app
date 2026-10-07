@@ -14,7 +14,7 @@ export const dialogPaperSx = {
   borderRadius: "14px",
   backgroundColor: palette.surface,
   backgroundImage: "none",
-  border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
+  border: `1px solid ${alpha(palette.overlay, 0.08)}`,
   boxShadow: "0 32px 80px rgba(0,0,0,0.55)",
   display: "flex",
   flexDirection: "column" as const,
@@ -43,7 +43,7 @@ export function DialogShell({
 }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth={false} slotProps={{ paper: { sx: { ...dialogPaperSx, maxWidth } } }}>
-      <Box sx={{ px: { xs: 2, sm: 3 }, pt: 2.25, pb: headerExtra ? 0 : 2, borderBottom: `1px solid ${alpha("#FFFFFF", 0.06)}` }}>
+      <Box sx={{ px: { xs: 2, sm: 3 }, pt: 2.25, pb: headerExtra ? 0 : 2, borderBottom: `1px solid ${alpha(palette.overlay, 0.06)}` }}>
         <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
           <Box sx={{ minWidth: 0 }}>
             <Typography noWrap sx={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em" }}>
@@ -66,7 +66,7 @@ export function DialogShell({
             gap: 1,
             px: { xs: 2, sm: 3 },
             py: 1.5,
-            borderTop: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+            borderTop: `1px solid ${alpha(palette.overlay, 0.06)}`,
             backgroundColor: alpha(palette.ink, 0.35),
           }}
         >

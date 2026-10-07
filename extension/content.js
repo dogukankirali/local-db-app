@@ -89,7 +89,7 @@ function createIndicator() {
         .at-details img { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; }
         .at-info { display: flex; flex-direction: column; justify-content: center; max-width: 160px; }
         .at-info strong { font-size: 13px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; }
-        .at-info small { font-size: 11px; color: #FF7849; margin-bottom: 6px; }
+        .at-info small { font-size: 11px; color: #7C5CFF; margin-bottom: 6px; }
         .at-info span { font-size: 12px; color: #aaa; font-weight: 400; }
         .at-info span b { color: #ef4444; font-weight: 600; font-size: 14px; }
     `;
@@ -427,7 +427,7 @@ function addMALWatchlistButton() {
         }
 
         anisyncBtn.textContent = "Adding to Kiroku...";
-        anisyncBtn.style.color = "#FF9A73";
+        anisyncBtn.style.color = "#9B82FF";
 
         chrome.runtime.sendMessage({ action: "addToWatchlist", data }, (response) => {
             if (response && response.success) {
@@ -510,7 +510,7 @@ function addAniziumDetailWatchlistButton() {
         align-items: center;
         gap: 6px;
         padding: 6px 14px;
-        background-color: #FF7849;
+        background-color: #7C5CFF;
         color: #ffffff;
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 4px;
@@ -523,10 +523,10 @@ function addAniziumDetailWatchlistButton() {
     `;
 
     btn.addEventListener("mouseover", () => {
-        if (!btn.dataset.done) btn.style.backgroundColor = "#F2622F";
+        if (!btn.dataset.done) btn.style.backgroundColor = "#6A48F5";
     });
     btn.addEventListener("mouseout", () => {
-        if (!btn.dataset.done) btn.style.backgroundColor = "#FF7849";
+        if (!btn.dataset.done) btn.style.backgroundColor = "#7C5CFF";
     });
 
     btn.addEventListener("click", (e) => {
@@ -539,7 +539,7 @@ function addAniziumDetailWatchlistButton() {
         }
 
         btn.textContent = "AniList'te aranıyor...";
-        btn.style.backgroundColor = "#FF9A73";
+        btn.style.backgroundColor = "#9B82FF";
 
         chrome.runtime.sendMessage({
             action: "addFromTitle",
@@ -637,7 +637,7 @@ function addStreamingUpdateButton() {
                 align-items: center;
                 gap: 6px;
                 padding: 6px 14px;
-                background-color: #FF7849;
+                background-color: #7C5CFF;
                 color: #ffffff;
                 border: 1px solid rgba(255,255,255,0.2);
                 border-radius: 4px;
@@ -662,7 +662,7 @@ function addStreamingUpdateButton() {
             playlistTitle.style.alignItems = "center";
             playlistTitle.style.flexWrap = "wrap";
             button.style.cssText = `
-                display: inline-block; padding: 6px 14px; background-color: #FF7849;
+                display: inline-block; padding: 6px 14px; background-color: #7C5CFF;
                 color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px;
                 font-weight: 500; cursor: pointer; transition: all 0.2s; border: none;
             `;
@@ -740,13 +740,13 @@ function bindUpdateButtonEvent(button) {
 
 function attachFloatingButton(button) {
     button.style.cssText = `
-        display: inline-block; padding: 8px 16px; background-color: #FF7849;
+        display: inline-block; padding: 8px 16px; background-color: #7C5CFF;
         color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px;
         font-weight: 500; cursor: pointer; position: fixed; bottom: 20px; left: 20px;
         border: none; z-index: 2147483646; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s;
     `;
-    button.addEventListener("mouseover", () => button.style.backgroundColor = "#F2622F");
-    button.addEventListener("mouseout", () => button.style.backgroundColor = "#FF7849");
+    button.addEventListener("mouseover", () => button.style.backgroundColor = "#6A48F5");
+    button.addEventListener("mouseout", () => button.style.backgroundColor = "#7C5CFF");
     document.body.appendChild(button);
 }
 

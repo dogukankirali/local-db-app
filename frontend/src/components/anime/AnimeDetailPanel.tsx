@@ -8,14 +8,14 @@ import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import { GenreChips } from "../Common/GenreChip";
 import { useCoverColor } from "../../hooks/useCoverColor";
-import { palette } from "../../theme/customTheme";
+import { hexToRgbTriplet, palette } from "../../theme/customTheme";
 import { ANIME_STATUS_TR, Pill, Stat, formatNextEpisode, getCoverSrc, getStatusInfo } from "./AnimeDetailModal";
 
 /** Tabloda satır genişletilince görünen özet paneli */
 export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; update?: unknown }) {
   const a = data as TEATable.IAnime & Record<string, any>;
   const imgSrc = getCoverSrc(a.Cover);
-  const rgb = useCoverColor(imgSrc) ?? "255, 120, 73";
+  const rgb = useCoverColor(imgSrc) ?? hexToRgbTriplet(palette.primary);
   const status = getStatusInfo(data);
   const watched = Number(a.WatchStatus) || 0;
   const total = parseInt(String(a.TotalNumberOfEpisodes)) || 0;
@@ -36,8 +36,8 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
           gap: { xs: 2, sm: 2.5 },
           p: 2,
           borderRadius: "10px",
-          border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
-          backgroundColor: alpha("#FFFFFF", 0.02),
+          border: `1px solid ${alpha(palette.overlay, 0.06)}`,
+          backgroundColor: alpha(palette.overlay, 0.02),
           backgroundImage: `radial-gradient(80% 120% at 0% 0%, rgba(${rgb}, 0.16) 0%, transparent 60%)`,
           textAlign: "left",
         }}
@@ -93,7 +93,7 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
                   {watched} / {total} bölüm
                 </Typography>
               </Box>
-              <Box sx={{ height: 5, borderRadius: 3, backgroundColor: alpha("#FFFFFF", 0.08), overflow: "hidden" }}>
+              <Box sx={{ height: 5, borderRadius: 3, backgroundColor: alpha(palette.overlay, 0.08), overflow: "hidden" }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
@@ -132,9 +132,9 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
                     fontWeight: 600,
                     color: palette.text,
                     textDecoration: "none",
-                    backgroundColor: alpha("#FFFFFF", 0.05),
-                    border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
-                    "&:hover": { backgroundColor: alpha("#FFFFFF", 0.09) },
+                    backgroundColor: alpha(palette.overlay, 0.05),
+                    border: `1px solid ${alpha(palette.overlay, 0.08)}`,
+                    "&:hover": { backgroundColor: alpha(palette.overlay, 0.09) },
                   }}
                 >
                   {l.label}

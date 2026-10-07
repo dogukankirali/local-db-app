@@ -31,7 +31,7 @@ function DiscoveryCard({ d, added, onAdd, onWatched, onHide }: { d: Discovery; a
           borderRadius: "10px",
           overflow: "hidden",
           backgroundColor: palette.surfaceRaised,
-          boxShadow: `0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px ${alpha("#FFFFFF", 0.06)}`,
+          boxShadow: `0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px ${alpha(palette.overlay, 0.06)}`,
           "&:hover .disc-actions": { opacity: 1 },
         }}
       >
@@ -61,7 +61,7 @@ function DiscoveryCard({ d, added, onAdd, onWatched, onHide }: { d: Discovery; a
           </Box>
         )}
         {d.kind === "sequel" && (
-          <Box sx={{ position: "absolute", left: 6, top: 6, px: 0.75, py: 0.25, borderRadius: "6px", fontSize: "0.68rem", fontWeight: 700, color: "#0B0D12", backgroundColor: palette.accent }}>
+          <Box sx={{ position: "absolute", left: 6, top: 6, px: 0.75, py: 0.25, borderRadius: "6px", fontSize: "0.68rem", fontWeight: 700, color: palette.ink, backgroundColor: palette.accent }}>
             Devamı
           </Box>
         )}
@@ -231,7 +231,7 @@ export default function DiscoverRecommendations({ catalog }: { catalog: TEATable
       {!items ? (
         <Box sx={coverGrid}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} variant="rounded" sx={{ aspectRatio: "2 / 3", height: "auto", borderRadius: "10px", bgcolor: alpha("#FFFFFF", 0.04) }} />
+            <Skeleton key={i} variant="rounded" sx={{ aspectRatio: "2 / 3", height: "auto", borderRadius: "10px", bgcolor: alpha(palette.overlay, 0.04) }} />
           ))}
         </Box>
       ) : items.length === 0 ? (

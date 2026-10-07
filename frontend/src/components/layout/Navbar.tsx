@@ -62,12 +62,12 @@ function SearchBox() {
         height: 40,
         px: 1.5,
         borderRadius: "10px",
-        backgroundColor: alpha("#FFFFFF", 0.04),
-        border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        backgroundColor: alpha(palette.overlay, 0.04),
+        border: `1px solid ${alpha(palette.overlay, 0.06)}`,
         transition: "border-color .15s ease, background-color .15s ease",
         "&:focus-within": {
           borderColor: alpha(palette.primary, 0.6),
-          backgroundColor: alpha("#FFFFFF", 0.06),
+          backgroundColor: alpha(palette.overlay, 0.06),
         },
       }}
     >
@@ -91,7 +91,7 @@ function SearchBox() {
           px: 0.75,
           py: 0.1,
           borderRadius: "6px",
-          border: `1px solid ${alpha("#FFFFFF", 0.1)}`,
+          border: `1px solid ${alpha(palette.overlay, 0.1)}`,
           fontSize: "0.7rem",
           fontFamily: "inherit",
           color: palette.textMuted,
@@ -126,7 +126,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         px: { xs: 1.5, md: 3 },
         backgroundColor: alpha(palette.ink, 0.72),
         backdropFilter: "saturate(160%) blur(14px)",
-        borderBottom: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        borderBottom: `1px solid ${alpha(palette.overlay, 0.06)}`,
       }}
     >
       <IconButton onClick={onMenuClick} aria-label="Menüyü aç" sx={{ display: { md: "none" }, color: palette.textMuted }}>

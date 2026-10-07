@@ -148,7 +148,7 @@ export default function AnimeForm({
               variant="outlined"
               startIcon={<UploadRoundedIcon />}
               onClick={() => fileRef.current?.click()}
-              sx={{ borderColor: alpha("#FFFFFF", 0.12), color: palette.text }}
+              sx={{ borderColor: alpha(palette.overlay, 0.12), color: palette.text }}
             >
               Görsel yükle
             </Button>

@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../theme/customTheme";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import Table from "@mui/material/Table";
@@ -177,7 +179,7 @@ export default function TableTemp<T extends {}>(
     >
       {props.collapsible.isCollapsible && (
         <TableCell height="72">
-          <Skeleton variant="rounded" width={24} height={24} animation="wave" sx={{ bgcolor: "rgba(255,255,255,0.05)" }} />
+          <Skeleton variant="rounded" width={24} height={24} animation="wave" sx={{ bgcolor: alpha(palette.overlay, 0.05) }} />
         </TableCell>
       )}
       {props.header.map((h, index) => {
@@ -189,7 +191,7 @@ export default function TableTemp<T extends {}>(
               width={isCover ? 40 : "80%"}
               height={isCover ? 56 : 14}
               animation="wave"
-              sx={{ mx: "auto", borderRadius: isCover ? "6px" : "4px", bgcolor: "rgba(255,255,255,0.05)" }}
+              sx={{ mx: "auto", borderRadius: isCover ? "6px" : "4px", bgcolor: alpha(palette.overlay, 0.05) }}
             />
           </TableCell>
         );
@@ -203,7 +205,7 @@ export default function TableTemp<T extends {}>(
       sx={{
         width: "100%",
         // Tek dış çerçeve; iç hücrelerde yalnızca ince satır ayırıcıları (üst üste binen gri çizgiler kaldırıldı)
-        border: "1px solid rgba(255,255,255,0.07)",
+        border: `1px solid ${alpha(palette.overlay, 0.07)}`,
         borderRadius: "12px",
         boxShadow: "none",
         overflow: "hidden",
@@ -213,7 +215,7 @@ export default function TableTemp<T extends {}>(
         display: "flex",
         flexDirection: "column",
         backgroundColor: `${theme.background_light} !important`,
-        "& .MuiTableCell-root": { borderColor: "rgba(255,255,255,0.05)" },
+        "& .MuiTableCell-root": { borderColor: alpha(palette.overlay, 0.05) },
       }}
     >
       <TableContainer
@@ -226,7 +228,7 @@ export default function TableTemp<T extends {}>(
           color: theme.primary_text,
           borderRadius: 0,
           scrollbarWidth: "thin",
-          scrollbarColor: "rgba(255,255,255,0.18) transparent",
+          scrollbarColor: `${alpha(palette.overlay, 0.18)} transparent`,
         }}
         component={Paper}
       >
@@ -319,7 +321,7 @@ export default function TableTemp<T extends {}>(
               gap: 1,
               px: 2,
               py: 1,
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+              borderTop: `1px solid ${alpha(palette.overlay, 0.06)}`,
             }}
           >
             <Box sx={{ fontSize: "0.8rem", color: theme.secondary_text }}>
@@ -337,14 +339,14 @@ export default function TableTemp<T extends {}>(
                   fontSize: "0.8rem",
                   fontWeight: 500,
                   border: "1px solid transparent",
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.06)", color: theme.primary_text },
+                  "&:hover": { backgroundColor: alpha(palette.overlay, 0.06), color: theme.primary_text },
                 },
                 "& .MuiPaginationItem-page.Mui-selected": {
-                  backgroundColor: "rgba(255, 120, 73,0.18)",
-                  borderColor: "rgba(255, 120, 73,0.45)",
+                  backgroundColor: alpha(palette.primary, 0.18),
+                  borderColor: alpha(palette.primary, 0.45),
                   color: theme.primary_text,
                   fontWeight: 700,
-                  "&:hover": { backgroundColor: "rgba(255, 120, 73,0.26)" },
+                  "&:hover": { backgroundColor: alpha(palette.primary, 0.26) },
                 },
                 "& .MuiPaginationItem-ellipsis": { border: 0 },
               }}

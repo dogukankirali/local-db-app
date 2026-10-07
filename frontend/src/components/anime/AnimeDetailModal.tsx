@@ -11,7 +11,7 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import { GenreChips } from "../Common/GenreChip";
 import { useCoverColor } from "../../hooks/useCoverColor";
-import { palette } from "../../theme/customTheme";
+import { hexToRgbTriplet, palette } from "../../theme/customTheme";
 
 /** Grid kartı ile modal posteri arasında View Transition için kullanılan ortak isim */
 export const COVER_TRANSITION_NAME = "kiroku-cover";
@@ -110,7 +110,7 @@ export default function AnimeDetailModal({
   const a = anime as TEATable.IAnime & Record<string, any>;
   const imgSrc = getCoverSrc(a.Cover);
   const rgb = useCoverColor(imgSrc);
-  const glow = rgb ?? "255, 120, 73";
+  const glow = rgb ?? hexToRgbTriplet(palette.primary);
   const status = getStatusInfo(anime);
   const watched = Number(a.WatchStatus) || 0;
   const total = parseInt(String(a.TotalNumberOfEpisodes)) || 0;
@@ -167,7 +167,7 @@ export default function AnimeDetailModal({
             maxHeight: { xs: "92vh", sm: "min(640px, calc(100vh - 48px))" },
             overflow: "auto",
             borderRadius: { xs: "14px 14px 0 0", sm: "14px" },
-            border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
+            border: `1px solid ${alpha(palette.overlay, 0.08)}`,
             backgroundColor: palette.surface,
             boxShadow: `0 30px 80px rgba(0,0,0,0.6), 0 0 120px -20px rgba(${glow}, 0.35)`,
             // Kapağın baskın renginden ortam ışığı
@@ -202,7 +202,7 @@ export default function AnimeDetailModal({
                 borderRadius: "10px",
                 overflow: "hidden",
                 backgroundColor: palette.surfaceRaised,
-                boxShadow: `0 18px 40px rgba(0,0,0,0.55), 0 0 0 1px ${alpha("#FFFFFF", 0.06)}`,
+                boxShadow: `0 18px 40px rgba(0,0,0,0.55), 0 0 0 1px ${alpha(palette.overlay, 0.06)}`,
                 viewTransitionName: COVER_TRANSITION_NAME,
               }}
             >
@@ -249,7 +249,7 @@ export default function AnimeDetailModal({
                       {watched} / {total} bölüm
                     </Typography>
                   </Box>
-                  <Box sx={{ height: 6, borderRadius: 3, backgroundColor: alpha("#FFFFFF", 0.08), overflow: "hidden" }}>
+                  <Box sx={{ height: 6, borderRadius: 3, backgroundColor: alpha(palette.overlay, 0.08), overflow: "hidden" }}>
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
@@ -276,7 +276,7 @@ export default function AnimeDetailModal({
 
               {a.Notes && (
                 <motion.div variants={item}>
-                  <Box sx={{ p: 1.5, borderRadius: "8px", backgroundColor: alpha("#FFFFFF", 0.035), border: `1px solid ${alpha("#FFFFFF", 0.05)}` }}>
+                  <Box sx={{ p: 1.5, borderRadius: "8px", backgroundColor: alpha(palette.overlay, 0.035), border: `1px solid ${alpha(palette.overlay, 0.05)}` }}>
                     <Typography sx={{ fontSize: "0.68rem", color: palette.textFaint, textTransform: "uppercase", letterSpacing: "0.06em", mb: 0.5 }}>Notlar</Typography>
                     <Typography sx={{ fontSize: "0.85rem", color: palette.textMuted, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{a.Notes}</Typography>
                   </Box>
@@ -304,9 +304,9 @@ export default function AnimeDetailModal({
                             fontWeight: 600,
                             color: palette.text,
                             textDecoration: "none",
-                            backgroundColor: alpha("#FFFFFF", 0.05),
-                            border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
-                            "&:hover": { backgroundColor: alpha("#FFFFFF", 0.09) },
+                            backgroundColor: alpha(palette.overlay, 0.05),
+                            border: `1px solid ${alpha(palette.overlay, 0.08)}`,
+                            "&:hover": { backgroundColor: alpha(palette.overlay, 0.09) },
                           }}
                         >
                           {l.label}

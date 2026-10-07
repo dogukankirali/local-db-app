@@ -149,7 +149,7 @@ export default function RewatchWheel({ catalog }: { catalog: TEATable.IAnime[] |
           style={{ position: "absolute", top: 14, left: 0, width: SIZE, height: SIZE }}
         >
           <svg viewBox={`${-SIZE / 2} ${-SIZE / 2} ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} role="img" aria-label="Rewatch çarkı">
-            <circle r={R + 6} fill={palette.surfaceRaised} stroke={alpha("#FFFFFF", 0.08)} />
+            <circle r={R + 6} fill={palette.surfaceRaised} stroke={alpha(palette.overlay, 0.08)} />
             {shown.map((a, i) => {
               const hue = HUES[i % HUES.length];
               const mid = ((i + 0.5) / n) * 360;

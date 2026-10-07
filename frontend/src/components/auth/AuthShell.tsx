@@ -40,7 +40,7 @@ function CoverColumn({ covers, duration, reverse }: { covers: string[]; duration
         {doubled.map((src, i) => (
           <Box
             key={i}
-            sx={{ aspectRatio: "2 / 3", borderRadius: "8px", overflow: "hidden", backgroundColor: alpha("#FFFFFF", 0.04) }}
+            sx={{ aspectRatio: "2 / 3", borderRadius: "8px", overflow: "hidden", backgroundColor: alpha(palette.overlay, 0.04) }}
           >
             <img src={src} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </Box>
@@ -61,7 +61,7 @@ function Showcase() {
         display: { xs: "none", md: "block" },
         flex: "1 1 55%",
         overflow: "hidden",
-        borderRight: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        borderRight: `1px solid ${alpha(palette.overlay, 0.06)}`,
         background: `radial-gradient(90% 70% at 20% 10%, ${alpha(palette.primary, 0.35)} 0%, transparent 60%),
           radial-gradient(70% 60% at 90% 90%, ${alpha(palette.accent, 0.25)} 0%, transparent 60%), ${palette.ink}`,
       }}

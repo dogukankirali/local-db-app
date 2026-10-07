@@ -93,7 +93,7 @@ function WatchlistRow({
         pr: 2,
         borderRadius: "14px",
         backgroundColor: isDragging ? palette.surfaceRaised : palette.surface,
-        border: `1px solid ${isDragging ? alpha(palette.primary, 0.5) : alpha("#FFFFFF", 0.06)}`,
+        border: `1px solid ${isDragging ? alpha(palette.primary, 0.5) : alpha(palette.overlay, 0.06)}`,
         boxShadow: isDragging ? "0 18px 40px rgba(0,0,0,0.45)" : "none",
         position: "relative",
         zIndex: isDragging ? 2 : "auto",
@@ -142,9 +142,9 @@ function WatchlistRow({
           {anime?.Name ?? "İsimsiz anime"}
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
-          <Chip size="small" label={anime?.IsMovie ? "Film" : `${total || "?"} bölüm`} sx={{ height: 22, fontSize: "0.7rem", backgroundColor: alpha("#FFFFFF", 0.06) }} />
+          <Chip size="small" label={anime?.IsMovie ? "Film" : `${total || "?"} bölüm`} sx={{ height: 22, fontSize: "0.7rem", backgroundColor: alpha(palette.overlay, 0.06) }} />
           {anime?.AnimeStatus && (
-            <Chip size="small" label={anime.AnimeStatus} sx={{ height: 22, fontSize: "0.7rem", backgroundColor: alpha("#FFFFFF", 0.06) }} />
+            <Chip size="small" label={anime.AnimeStatus} sx={{ height: 22, fontSize: "0.7rem", backgroundColor: alpha(palette.overlay, 0.06) }} />
           )}
           {anime?.MALScore > 0 && (
             <Chip
@@ -160,7 +160,7 @@ function WatchlistRow({
             <LinearProgress
               variant="determinate"
               value={Math.min(100, (watched / total) * 100)}
-              sx={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: alpha("#FFFFFF", 0.06) }}
+              sx={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: alpha(palette.overlay, 0.06) }}
             />
             <Typography sx={{ fontSize: "0.7rem", color: palette.textMuted }}>
               {watched}/{total}
@@ -272,7 +272,7 @@ export default function WatchListPage() {
             {loading ? "Yükleniyor…" : `${watchList.length} anime sırada · sürükleyerek sıralayabilirsin`}
           </Typography>
         </Box>
-        <Button variant="outlined" onClick={() => router.push("/anime")} sx={{ borderColor: alpha("#FFFFFF", 0.12), color: palette.text }}>
+        <Button variant="outlined" onClick={() => router.push("/anime")} sx={{ borderColor: alpha(palette.overlay, 0.12), color: palette.text }}>
           Anime arşivine git
         </Button>
       </Box>
@@ -286,7 +286,7 @@ export default function WatchListPage() {
       {loading ? (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} variant="rounded" height={96} sx={{ borderRadius: "14px", bgcolor: alpha("#FFFFFF", 0.04) }} />
+            <Skeleton key={i} variant="rounded" height={96} sx={{ borderRadius: "14px", bgcolor: alpha(palette.overlay, 0.04) }} />
           ))}
         </Box>
       ) : watchList.length === 0 && !loadError ? (
@@ -296,7 +296,7 @@ export default function WatchListPage() {
             py: 8,
             px: 3,
             borderRadius: "16px",
-            border: `1px dashed ${alpha("#FFFFFF", 0.12)}`,
+            border: `1px dashed ${alpha(palette.overlay, 0.12)}`,
             backgroundColor: alpha(palette.surface, 0.6),
           }}
         >

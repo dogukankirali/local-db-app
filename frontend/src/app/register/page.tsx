@@ -1,5 +1,7 @@
 "use client";
 
+import { alpha } from "@mui/material/styles";
+
 import React, { useState } from "react";
 import { Alert, Box, Button, CircularProgress, IconButton } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -135,7 +137,7 @@ export default function RegisterPage() {
                 sx={{
                   height: 3,
                   borderRadius: 2,
-                  backgroundColor: i <= strength ? STRENGTH[strength].color : "rgba(255,255,255,0.08)",
+                  backgroundColor: i <= strength ? STRENGTH[strength].color : alpha(palette.overlay, 0.08),
                   transition: "background-color .2s ease",
                 }}
               />

@@ -338,7 +338,7 @@ export default function NotesImportDialog({ open, onClose, source = "notes" }: {
             </Alert>
           )}
 
-          <Box sx={{ borderRadius: "10px", border: `1px solid ${alpha("#FFFFFF", 0.06)}`, overflow: "hidden" }}>
+          <Box sx={{ borderRadius: "10px", border: `1px solid ${alpha(palette.overlay, 0.06)}`, overflow: "hidden" }}>
             {rows.map((r, i) => {
               const ui = STATUS_UI[r.status];
               return (
@@ -352,7 +352,7 @@ export default function NotesImportDialog({ open, onClose, source = "notes" }: {
                     rowGap: 0.5,
                     px: 1.25,
                     py: 1,
-                    borderTop: i ? `1px solid ${alpha("#FFFFFF", 0.05)}` : 0,
+                    borderTop: i ? `1px solid ${alpha(palette.overlay, 0.05)}` : 0,
                     opacity: r.include || r.status === "pending" ? 1 : 0.55,
                   }}
                 >
@@ -436,8 +436,8 @@ export default function NotesImportDialog({ open, onClose, source = "notes" }: {
                         px: 1,
                         borderRadius: "8px",
                         fontSize: "0.85rem",
-                        border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
-                        backgroundColor: alpha("#FFFFFF", 0.03),
+                        border: `1px solid ${alpha(palette.overlay, 0.08)}`,
+                        backgroundColor: alpha(palette.overlay, 0.03),
                       }}
                     />
                   </Box>

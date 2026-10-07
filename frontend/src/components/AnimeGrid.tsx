@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { flushSync } from "react-dom";
 import { Box, Typography, Chip, Skeleton, Tooltip } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import { palette } from "../theme/customTheme";
 import StarIcon from "@mui/icons-material/Star";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
 import AnimeDetailModal, { COVER_TRANSITION_NAME, getCoverSrc, getStatusInfo } from "./anime/AnimeDetailModal";
@@ -120,7 +121,7 @@ const AnimeCard = memo(function AnimeCard({
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...coverImgStyle }}
             />
           ) : (
-            <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem" }}>
+            <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: alpha(palette.overlay, 0.3), fontSize: "0.75rem" }}>
               Kapak yok
             </Box>
           )}
@@ -136,7 +137,7 @@ const AnimeCard = memo(function AnimeCard({
             pointerEvents: "none",
             opacity: 0,
             transition: "opacity .25s ease",
-            background: "radial-gradient(circle at var(--gx) var(--gy), rgba(255,255,255,0.18), transparent 55%)",
+            background: `radial-gradient(circle at var(--gx) var(--gy), ${alpha(palette.overlay, 0.18)}, transparent 55%)`,
             mixBlendMode: "overlay",
             zIndex: 1,
           }}
@@ -256,7 +257,7 @@ function SkeletonCards({ count, gridSize }: { count: number; gridSize: number })
           <Skeleton
             variant="rounded"
             animation="wave"
-            sx={{ width: "100%", height: "auto", aspectRatio: "2/3", borderRadius: "10px", bgcolor: "rgba(255,255,255,0.05)" }}
+            sx={{ width: "100%", height: "auto", aspectRatio: "2/3", borderRadius: "10px", bgcolor: alpha(palette.overlay, 0.05) }}
           />
         </Box>
       ))}
@@ -339,8 +340,8 @@ export default function AnimeGrid({
 
   if (!initialLoading && (!allData || allData.length === 0)) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, justifyContent: "center", alignItems: "center", height: "100%", color: "rgba(255,255,255,0.4)" }}>
-        <Typography sx={{ color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>Sonuç yok</Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, justifyContent: "center", alignItems: "center", height: "100%", color: alpha(palette.overlay, 0.4) }}>
+        <Typography sx={{ color: alpha(palette.overlay, 0.8), fontWeight: 600 }}>Sonuç yok</Typography>
         <Typography sx={{ fontSize: "0.85rem" }}>Filtreleri değiştirip tekrar dene.</Typography>
       </Box>
     );
@@ -355,7 +356,7 @@ export default function AnimeGrid({
         p: 2,
         "&::-webkit-scrollbar": { width: "6px" },
         "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
-        "&::-webkit-scrollbar-thumb": { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "4px" },
+        "&::-webkit-scrollbar-thumb": { backgroundColor: alpha(palette.overlay, 0.1), borderRadius: "4px" },
       }}
     >
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0, mx: -1 }}>

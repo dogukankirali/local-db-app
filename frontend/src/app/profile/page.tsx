@@ -1,5 +1,6 @@
 "use client";
 
+import AppearanceSettings from "../../components/profile/AppearanceSettings";
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -38,7 +39,7 @@ const card = {
   p: { xs: 2, md: 3 },
   borderRadius: "16px",
   backgroundColor: palette.surface,
-  border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+  border: `1px solid ${alpha(palette.overlay, 0.06)}`,
 };
 
 function Field({
@@ -79,8 +80,8 @@ function Field({
           borderRadius: "10px",
           fontSize: "0.9rem",
           color: palette.text,
-          border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
-          backgroundColor: alpha("#FFFFFF", 0.03),
+          border: `1px solid ${alpha(palette.overlay, 0.08)}`,
+          backgroundColor: alpha(palette.overlay, 0.03),
           "&.Mui-focused": { borderColor: alpha(palette.primary, 0.6) },
           "&.Mui-disabled": { opacity: 0.6 },
         }}
@@ -156,7 +157,7 @@ function CoverCard({ anime, rank, caption }: { anime: TEATable.IAnime; rank?: nu
           borderRadius: "10px",
           overflow: "hidden",
           backgroundColor: palette.surfaceRaised,
-          boxShadow: `0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px ${alpha("#FFFFFF", 0.06)}`,
+          boxShadow: `0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px ${alpha(palette.overlay, 0.06)}`,
         }}
       >
         {anime.Cover && (
@@ -418,7 +419,7 @@ export default function ProfilePage() {
             ].map((s) => (
               <Box key={s.label} sx={{ textAlign: "center" }}>
                 {s.value === undefined ? (
-                  <Skeleton width={40} height={34} sx={{ mx: "auto", bgcolor: alpha("#FFFFFF", 0.06) }} />
+                  <Skeleton width={40} height={34} sx={{ mx: "auto", bgcolor: alpha(palette.overlay, 0.06) }} />
                 ) : (
                   <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em" }}>{s.value}</Typography>
                 )}
@@ -434,7 +435,7 @@ export default function ProfilePage() {
           {!top ? (
             <Box sx={coverGrid}>
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} variant="rounded" sx={{ aspectRatio: "2 / 3", height: "auto", borderRadius: "10px", bgcolor: alpha("#FFFFFF", 0.04) }} />
+                <Skeleton key={i} variant="rounded" sx={{ aspectRatio: "2 / 3", height: "auto", borderRadius: "10px", bgcolor: alpha(palette.overlay, 0.04) }} />
               ))}
             </Box>
           ) : top.length === 0 ? (
@@ -568,7 +569,7 @@ export default function ProfilePage() {
                 </Alert>
               )}
               {!tokens ? (
-                <Skeleton variant="rounded" height={48} sx={{ bgcolor: alpha("#FFFFFF", 0.04) }} />
+                <Skeleton variant="rounded" height={48} sx={{ bgcolor: alpha(palette.overlay, 0.04) }} />
               ) : tokens.length === 0 ? (
                 <Typography sx={{ color: palette.textMuted, fontSize: "0.85rem" }}>Henüz anahtar yok.</Typography>
               ) : (
@@ -576,7 +577,7 @@ export default function ProfilePage() {
                   {tokens.map((t) => (
                     <Box
                       key={t.id}
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.25, borderRadius: "10px", backgroundColor: alpha("#FFFFFF", 0.03), border: `1px solid ${alpha("#FFFFFF", 0.05)}` }}
+                      sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.25, borderRadius: "10px", backgroundColor: alpha(palette.overlay, 0.03), border: `1px solid ${alpha(palette.overlay, 0.05)}` }}
                     >
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography noWrap sx={{ fontWeight: 600, fontSize: "0.85rem" }}>{t.name}</Typography>
@@ -591,6 +592,12 @@ export default function ProfilePage() {
                   ))}
                 </Box>
               )}
+            </Box>
+
+            {/* Görünüm */}
+            <Box sx={card}>
+              <SectionTitle>Görünüm</SectionTitle>
+              <AppearanceSettings />
             </Box>
 
             {/* Şifre */}

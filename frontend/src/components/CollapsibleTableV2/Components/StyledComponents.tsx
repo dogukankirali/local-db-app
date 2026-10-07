@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../theme/customTheme";
 import { Utils } from "../Utils/Utilities";
 import { theme as customTheme } from "../../../theme/customTheme";
 import {
@@ -129,9 +131,9 @@ export const StyledMUIFilterButton = styled((props: ButtonProps) => (
   <Button variant="contained" {...props} />
 ))(() => {
   return {
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: alpha(palette.overlay, 0.04),
     color: customTheme.secondary_text,
-    border: "1px solid rgba(255,255,255,0.06)",
+    border: `1px solid ${alpha(palette.overlay, 0.06)}`,
     boxShadow: "none",
     borderRadius: 10,
     padding: 6,
@@ -139,7 +141,7 @@ export const StyledMUIFilterButton = styled((props: ButtonProps) => (
     width: 38,
     height: 38,
     "&:hover": {
-      backgroundColor: "rgba(255,255,255,0.08)",
+      backgroundColor: alpha(palette.overlay, 0.08),
       color: customTheme.primary_text,
       boxShadow: "none",
     },
