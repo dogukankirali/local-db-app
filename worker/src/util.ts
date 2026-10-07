@@ -15,6 +15,9 @@ export type Env = {
   CRON_SECRET?: string;
   /** Dizi/film ayrıntıları için OMDb (IMDb verisi) anahtarı; yoksa IMDb araması kapalıdır */
   OMDB_API_KEY?: string;
+  /** Tarayıcı bildirimleri (Web Push): ortak anahtar vars'ta, özel anahtar secret (P-256 "d", base64url) */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
   /** "development" olduğunda mail gönderilmez, bağlantı loga yazılır */
   ENVIRONMENT?: string;
 };

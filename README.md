@@ -110,15 +110,14 @@ Serving the library from a home server (Caddy + Cloudflare Tunnel): [docs/manga-
 
 The anime catalog (name, status, episode count, cover, genres, MAL score) is shared by everyone and only the admin changes it. Score, watched episodes, Plan to Watch, notes, watch dates and the watchlist are separate for each user (`user_anime`, `watch_lists.user_id`). Lists require sign-in; since the site bypasses Cloudflare Access for `/api`, the API is closed to anonymous reads.
 
-## Airing tracking and new-episode mail
+## Airing tracking and new-episode notifications
 
-**Currently off** (the schedule is commented out; it can be run manually from the Actions tab). When on, `.github/workflows/airing.yml` checks airing anime on AniList every 3 hours (it runs on GitHub Actions because AniList blocks Workers): status, episode count, MAL score and next episode are updated; when a new episode is out, users who enabled notifications in their profile and keep the anime on their list get an email (Resend). Setup:
+A Cloudflare Cron Trigger (`triggers.crons` in `worker/wrangler.jsonc`, every 3 hours) checks airing anime on [Kitsu](https://kitsu.docs.apiary.io/) (free, no key; AniList blocks Workers): status, episode count, rating and next episode are updated. Anime are matched to Kitsu by their MAL ID once. When a new episode is out, everyone who keeps the anime on their list gets an in-app notification (the bell in the top bar), and users who turned on **Yeni bölüm bildirimi** on their profile also get a browser notification (Web Push). No mail service or account is needed.
 
-1. Generate a random value and write the same value in two places: `cd worker && npx wrangler secret put CRON_SECRET`, and GitHub → Settings → Secrets and variables → Actions → `KIROKU_CRON_SECRET`.
-2. If the site is behind Cloudflare Access, there must be a Bypass rule for `/api`, or create a service token and add the `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` secrets.
-3. `RESEND_API_KEY` must be set on the Worker for mail.
-
-The first run only writes the initial values; mail arrives on later runs when a new episode is out.
+- Browser notifications are signed with a VAPID key pair: the public key is `VAPID_PUBLIC_KEY` in `wrangler.jsonc`, the private key is the `VAPID_PRIVATE_KEY` secret (locally in `worker/.dev.vars`). Each device is enabled separately; on iPhone, add Kiroku to the home screen first.
+- The first check only writes initial values; notifications start from the next new episode. To stay within the free plan's 50 outbound requests per run, shows that weren't checked the longest go first.
+- Run it locally: `npx wrangler dev --test-scheduled`, then open `http://127.0.0.1:8787/__scheduled`. Admins can also call `POST /api/airing/run`.
+- `.github/workflows/airing.yml` (AniList through GitHub Actions, manual only) stays as a fallback and needs `CRON_SECRET`.
 
 ## API (summary)
 
@@ -148,7 +147,9 @@ All endpoints are under `/api` and paths are kebab-case. 🔑 requires sign-in (
 | GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | IMDb search and details through OMDb (needs `OMDB_API_KEY`)                 |
 | GET 🔑                  | `/profile/recommendations`                      | Genre-based recommendations (if enabled in the profile)                    |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | List, create and revoke extension keys                                      |
-| GET/POST                | `/cron/airing`                                  | Airing tracking (with CRON_SECRET)                                          |
+| GET/POST                | `/cron/airing`                                  | Airing tracking fallback for GitHub Actions (with CRON_SECRET)              |
+| GET, POST 🔑            | `/notifications`, `/notifications/read`         | In-app notifications (new episodes) and marking them read                   |
+| GET, POST 🔑            | `/push/public-key`, `/push/subscribe`, `/push/unsubscribe`, `/push/test` | Browser notification subscriptions for this device                          |
 | GET                     | `/healthcheck`                                  | Health check                                                                |
 
 ## License
@@ -267,15 +268,14 @@ Kütüphaneyi ev sunucusundan sunmak (Caddy + Cloudflare Tunnel): [docs/manga-li
 
 Anime kataloğu (ad, durum, bölüm sayısı, kapak, türler, MAL puanı) herkes için ortaktır ve yalnızca admin değiştirir. Puan, izlenen bölüm, Plan to Watch, notlar, izleme tarihleri ve watchlist her kullanıcı için ayrıdır (`user_anime`, `watch_lists.user_id`). Listeler giriş ister; site Cloudflare Access'te `/api` için bypass edildiğinden API girişsiz okumaya kapalıdır.
 
-## Yayın takibi ve yeni bölüm maili
+## Yayın takibi ve yeni bölüm bildirimleri
 
-**Şu an kapalı** (zamanlama yorum satırında; Actions sekmesinden elle çalıştırılabilir). Açıldığında `.github/workflows/airing.yml` her 3 saatte bir yayındaki animeleri AniList'ten kontrol eder (AniList Workers'ı engellediği için GitHub Actions'ta çalışır): durum, bölüm sayısı, MAL puanı ve sıradaki bölüm güncellenir; yeni bölüm çıkınca, profilinde bildirimi açan ve animeyi listesinde tutan kullanıcılara mail atılır (Resend). Kurulum:
+Cloudflare Cron Trigger (`worker/wrangler.jsonc` içinde `triggers.crons`, 3 saatte bir) yayındaki animeleri [Kitsu](https://kitsu.docs.apiary.io/)'dan kontrol eder (ücretsiz, anahtarsız; AniList Workers'ı engelliyor): durum, bölüm sayısı, puan ve sıradaki bölüm güncellenir. Animeler Kitsu'yla MAL ID'si üzerinden bir kez eşlenir. Yeni bölüm çıkınca animeyi listesinde tutan herkese Kiroku içi bildirim (üst çubuktaki zil) yazılır; profilinde **Yeni bölüm bildirimi**'ni açanlara tarayıcı bildirimi (Web Push) de gider. Mail servisi ya da hesap gerekmez.
 
-1. Rastgele bir değer üret ve iki yere aynısını yaz: `cd worker && npx wrangler secret put CRON_SECRET`, GitHub → Settings → Secrets and variables → Actions → `KIROKU_CRON_SECRET`.
-2. Site Cloudflare Access arkasındaysa `/api` için Bypass kuralı olmalı ya da bir service token oluşturup `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` secret'larını ekle.
-3. Mail için Worker'da `RESEND_API_KEY` tanımlı olmalı.
-
-İlk çalıştırma yalnızca başlangıç değerlerini yazar; mail sonraki çalıştırmalarda yeni bölüm çıkınca gelir.
+- Tarayıcı bildirimleri VAPID anahtar çiftiyle imzalanır: ortak anahtar `wrangler.jsonc`'deki `VAPID_PUBLIC_KEY`, özel anahtar `VAPID_PRIVATE_KEY` secret'ı (yerelde `worker/.dev.vars`). Her cihaz ayrı açılır; iPhone'da önce Kiroku ana ekrana eklenmeli.
+- İlk kontrol yalnızca başlangıç değerlerini yazar; bildirimler bir sonraki yeni bölümden itibaren gelir. Ücretsiz plandaki çalıştırma başına 50 dış istek sınırı için en uzun süredir kontrol edilmeyen animeler önce gelir.
+- Yerelde denemek için: `npx wrangler dev --test-scheduled`, sonra `http://127.0.0.1:8787/__scheduled`. Admin `POST /api/airing/run` ile de çalıştırabilir.
+- `.github/workflows/airing.yml` (GitHub Actions üzerinden AniList, yalnızca elle) yedek olarak durur ve `CRON_SECRET` ister.
 
 ## API (özet)
 
@@ -305,7 +305,9 @@ Tüm uçlar `/api` altındadır ve yollar kebab-case'tir. 🔑 giriş (JWT ya da
 | GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | OMDb üzerinden IMDb araması ve ayrıntıları (`OMDB_API_KEY` gerekir)         |
 | GET 🔑                  | `/profile/recommendations`                      | Tür tabanlı öneriler (profilde açıksa)                                      |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | Eklenti anahtarlarını listele, oluştur, iptal et                            |
-| GET/POST                | `/cron/airing`                                  | Yayın takibi (CRON_SECRET ile)                                              |
+| GET/POST                | `/cron/airing`                                  | GitHub Actions için yayın takibi yedeği (CRON_SECRET ile)                   |
+| GET, POST 🔑            | `/notifications`, `/notifications/read`         | Kiroku içi bildirimler (yeni bölümler) ve okundu işaretleme                 |
+| GET, POST 🔑            | `/push/public-key`, `/push/subscribe`, `/push/unsubscribe`, `/push/test` | Bu cihazın tarayıcı bildirimi aboneliği                                     |
 | GET                     | `/healthcheck`                                  | Durum kontrolü                                                              |
 
 ## Lisans
