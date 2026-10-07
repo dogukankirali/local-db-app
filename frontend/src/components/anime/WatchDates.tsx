@@ -14,10 +14,11 @@ import axios from "axios";
 import { toast } from "sonner";
 import { API_BASE } from "../../Services/http";
 import { palette } from "../../theme/customTheme";
+import { ANIME_DATA_CHANGED } from "./notesEvents";
 
 export const OLD_RECORD_DATE = "2000-01-01";
 
-export default function WatchDates({ animeId, startedAt, finishedAt }: { animeId: number; startedAt?: string; finishedAt?: string }) {
+export default function WatchDates({ animeId, startedAt, finishedAt, row = false }: { animeId: number; startedAt?: string; finishedAt?: string; row?: boolean }) {
   const [started, setStarted] = useState(startedAt ?? "");
   const [finished, setFinished] = useState(finishedAt ?? "");
   const [saving, setSaving] = useState(false);
@@ -34,6 +35,8 @@ export default function WatchDates({ animeId, startedAt, finishedAt }: { animeId
     try {
       await axios.post(`${API_BASE}/myAnime/dates`, { ID: animeId, StartedAt: next.started, FinishedAt: next.finished });
       toast.success("Tarih kaydedildi");
+      // Grid/tablo verisi yenilensin (pencere kapanıp açılınca yeni tarih görünsün)
+      window.dispatchEvent(new Event(ANIME_DATA_CHANGED));
     } catch (err: any) {
       setStarted(prev.started);
       setFinished(prev.finished);
@@ -53,7 +56,7 @@ export default function WatchDates({ animeId, startedAt, finishedAt }: { animeId
         minDate={minDate && minDate !== OLD_RECORD_DATE ? dayjs(minDate) : undefined}
         format="DD.MM.YYYY"
         onAccept={(d: Dayjs | null) => onChange(d && d.isValid() ? d.format("YYYY-MM-DD") : "")}
-        slotProps={{ textField: { size: "small", fullWidth: true }, field: { clearable: true, onClear: () => onChange("") } as any }}
+        slotProps={{ popper: { sx: { zIndex: 1600 } }, textField: { size: "small", fullWidth: true }, field: { clearable: true, onClear: () => onChange("") } as any }}
       />
       {value === OLD_RECORD_DATE && <Typography sx={{ fontSize: "0.68rem", color: palette.textFaint, mt: 0.25 }}>Eski kayıt, tarih bilinmiyor</Typography>}
     </Box>
@@ -61,7 +64,7 @@ export default function WatchDates({ animeId, startedAt, finishedAt }: { animeId
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
-      <Box sx={{ display: "grid", gap: 1.5, mt: 2 }}>
+      <Box sx={{ display: "grid", gap: 1.5, mt: row ? 0 : 2, gridTemplateColumns: row ? { xs: "1fr", sm: "repeat(2, minmax(0, 220px))" } : "1fr" }}>
         {field("Başladım", started, (v) => save({ started: v, finished }))}
         {field("Bitirdim", finished, (v) => save({ started, finished: v }), started)}
       </Box>

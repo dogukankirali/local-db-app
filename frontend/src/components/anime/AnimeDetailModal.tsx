@@ -1,5 +1,6 @@
 "use client";
 
+import WatchDates from "./WatchDates";
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
@@ -274,6 +275,7 @@ export default function AnimeDetailModal({
                 </motion.div>
               )}
 
+              <WatchDates key={a.ID} animeId={a.ID} startedAt={a.StartedAt} finishedAt={a.FinishedAt} />
               {a.Notes && (
                 <motion.div variants={item}>
                   <Box sx={{ p: 1.5, borderRadius: "8px", backgroundColor: alpha(palette.overlay, 0.035), border: `1px solid ${alpha(palette.overlay, 0.05)}` }}>

@@ -1,5 +1,6 @@
 "use client";
 
+import WatchDates from "./WatchDates";
 import React from "react";
 import { motion } from "motion/react";
 import { Box, Typography } from "@mui/material";
@@ -108,6 +109,7 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
             <GenreChips genres={a.Genre} max={12} justify="flex-start" />
           )}
 
+          <WatchDates key={a.ID} animeId={a.ID} startedAt={a.StartedAt} finishedAt={a.FinishedAt} row />
           {a.Notes && (
             <Typography sx={{ fontSize: "0.82rem", color: palette.textMuted, lineHeight: 1.55, whiteSpace: "pre-wrap", maxWidth: 760 }}>{a.Notes}</Typography>
           )}
