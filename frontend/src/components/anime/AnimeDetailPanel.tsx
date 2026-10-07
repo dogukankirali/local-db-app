@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { motion } from "motion/react";
 import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
@@ -116,8 +115,15 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
           {true && (
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
               <Box
-                component={Link}
+                component="a"
                 href={`/anime/detail?id=${a.ID}`}
+                onClick={(e: React.MouseEvent) => {
+                  // Modal/satır tıklama işleyicileri istemci içi geçişi yutabiliyor; geçişi doğrudan yap
+                  if (e.metaKey || e.ctrlKey || e.button !== 0) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.assign(`/anime/detail?id=${a.ID}`);
+                }}
                 sx={{
                   display: "inline-flex",
                   alignItems: "center",

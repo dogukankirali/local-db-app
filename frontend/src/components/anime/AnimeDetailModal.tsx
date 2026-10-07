@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect } from "react";
-import Link from "next/link";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
@@ -288,8 +287,15 @@ export default function AnimeDetailModal({
                 <motion.div variants={item}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", pt: 0.5 }}>
                     <Box
-                      component={Link}
+                      component="a"
                       href={`/anime/detail?id=${a.ID}`}
+                      onClick={(e: React.MouseEvent) => {
+                        // Modal/satır tıklama işleyicileri istemci içi geçişi yutabiliyor; geçişi doğrudan yap
+                        if (e.metaKey || e.ctrlKey || e.button !== 0) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.location.assign(`/anime/detail?id=${a.ID}`);
+                      }}
                       sx={{
                         display: "inline-flex",
                         alignItems: "center",
