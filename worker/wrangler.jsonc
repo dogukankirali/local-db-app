@@ -29,6 +29,9 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Uploaded (CBZ) manga chapter pages as WebP; MangaDex chapters are never copied here.
+  // Create once with `npx wrangler r2 bucket create kiroku-manga`.
+  "r2_buckets": [{ "binding": "MANGA_BUCKET", "bucket_name": "kiroku-manga" }],
   "vars": {
     "MAIL_FROM": "Kiroku <onboarding@resend.dev>",
     "PASSWORD_ITERATIONS": "10000"

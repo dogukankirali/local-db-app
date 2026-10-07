@@ -20,6 +20,7 @@ export interface Manga {
   malLink: string;
   anilistLink: string;
   syncedAt: string;
+  mangadexId: string;
   score: number;
   readStatus: ReadStatus;
   chaptersRead: number;
@@ -31,7 +32,7 @@ export interface Manga {
   inMyList: boolean;
 }
 
-export type MangaInput = Partial<Omit<Manga, "id" | "syncedAt" | "inMyList">>;
+export type MangaInput = Partial<Omit<Manga, "id" | "syncedAt" | "inMyList" | "mangadexId">>;
 
 export interface MangaQuery {
   q?: string;
@@ -137,3 +138,48 @@ export const errorText = (e: unknown) =>
   (e as { response?: { data?: { error?: string } } })?.response?.data?.error ??
   (e as Error)?.message ??
   "Bilinmeyen hata";
+
+export interface Chapter {
+  id: number;
+  mangaId: number;
+  number: number;
+  volume: string;
+  title: string;
+  /** "mangadex" (live), "upload" (CBZ) or a source adapter's slug */
+  source: string;
+  externalId: string;
+  pageCount: number;
+  /** Pages live in R2 (served by the Worker) instead of being fetched from the source at read time */
+  stored: boolean;
+  lang: string;
+  groupName: string;
+  publishedAt: string;
+  createdAt: string;
+}
+
+export type MangaDexChapterInput = Pick<Chapter, "externalId" | "number" | "volume" | "title" | "pageCount" | "lang" | "groupName" | "publishedAt">;
+
+export const ChapterService = {
+  async list(mangaId: number): Promise<Chapter[]> {
+    return (await axios.get<Chapter[]>(`${base}/${mangaId}/chapters`)).data;
+  },
+  async get(id: number): Promise<Chapter> {
+    return (await axios.get<Chapter>(`${base}/chapters/${id}`)).data;
+  },
+  async linkMangaDex(mangaId: number, mangadexId: string) {
+    await axios.put(`${base}/${mangaId}/mangadex`, { mangadexId });
+  },
+  async saveMangaDex(mangaId: number, chapters: MangaDexChapterInput[]): Promise<{ saved: number }> {
+    return (await axios.post(`${base}/${mangaId}/chapters/mangadex`, { chapters })).data;
+  },
+  async createUpload(mangaId: number, data: { number: number; volume?: string; title: string; lang: string; pageCount: number; source?: string; externalId?: string; scanlator?: string }): Promise<Chapter> {
+    return (await axios.post<Chapter>(`${base}/${mangaId}/chapters/upload`, data)).data;
+  },
+  async uploadPage(chapterId: number, n: number, webp: Blob) {
+    await axios.put(`${base}/chapters/${chapterId}/pages/${n}`, webp, { headers: { "Content-Type": "image/webp" } });
+  },
+  pageUrl: (chapterId: number, n: number) => `${base}/chapters/${chapterId}/pages/${n}`,
+  async remove(chapterId: number) {
+    await axios.delete(`${base}/chapters/${chapterId}`);
+  },
+};

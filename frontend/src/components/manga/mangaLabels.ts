@@ -1,5 +1,5 @@
 import { palette } from "../../theme/customTheme";
-import type { ReadStatus } from "../../Services/MangaService";
+import type { Chapter, ReadStatus } from "../../Services/MangaService";
 
 export const READ_STATUS_LABEL: Record<Exclude<ReadStatus, "">, string> = {
   READING: "Okuyorum",
@@ -28,3 +28,6 @@ export const PUB_STATUS_LABEL: Record<string, string> = {
 export const FORMAT_LABEL: Record<string, string> = { MANGA: "Manga", NOVEL: "Light novel", ONE_SHOT: "One-shot" };
 
 export const progressText = (read: number, total: number) => `${read}/${total || "?"}`;
+
+export const chapterLabel = (ch: Pick<Chapter, "number" | "title" | "volume">) =>
+  `${ch.volume ? `Cilt ${ch.volume} · ` : ""}Bölüm ${ch.number}${ch.title ? ` — ${ch.title}` : ""}`;

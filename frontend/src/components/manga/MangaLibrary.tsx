@@ -3,6 +3,7 @@
 // Manga library (/manga): grid and table views over the same filtered, paginated list.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Alert,
   Box,
@@ -52,7 +53,6 @@ type Toast = { severity: "success" | "error" | "info"; text: string } | null;
 const VIEW_KEY = "kirokuMangaView";
 const PAGE_SIZE = 48;
 
-/** Where a manga card links to; the detail page arrives in a later step, until then it opens the editor. */
 export type MangaOpen = (m: Manga) => void;
 
 function ReadStatusChip({ status }: { status: Manga["readStatus"] }) {
@@ -113,7 +113,8 @@ const COLUMNS: { key: string; label: string; sort?: string; align?: "right" }[] 
   { key: "genres", label: "Türler" },
 ];
 
-export default function MangaLibrary({ onOpen }: { onOpen?: MangaOpen }) {
+export default function MangaLibrary() {
+  const router = useRouter();
   const { isAdmin, isAuthenticated } = useAuth();
   const [view, setView] = useState<View>("grid");
   const [query, setQuery] = useState<MangaQuery>({ sort: "name", order: "asc", page: 1 });
@@ -227,7 +228,7 @@ export default function MangaLibrary({ onOpen }: { onOpen?: MangaOpen }) {
     }
   };
 
-  const open = onOpen ?? ((m: Manga) => setEditing(m));
+  const open = (m: Manga) => router.push(`/manga/detail?id=${m.id}`);
   const sortLabel = (col: (typeof COLUMNS)[number]) =>
     col.sort ? (
       <TableSortLabel active={query.sort === col.sort} direction={query.sort === col.sort ? query.order : "asc"}
