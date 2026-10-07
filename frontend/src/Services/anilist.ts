@@ -129,3 +129,60 @@ export async function mediaForSingleSync(name: string, idMal: number | null, sig
   }
   return (await searchForSync([name], signal))[0];
 }
+
+// ---- Manga ----
+
+export type AniListManga = {
+  id: number;
+  idMal: number | null;
+  title: { romaji: string | null; english: string | null; native: string | null };
+  chapters: number | null;
+  volumes: number | null;
+  status: string | null;
+  format: string | null;
+  averageScore: number | null;
+  genres: string[];
+  coverImage: { extraLarge: string | null; large: string | null } | null;
+  siteUrl: string;
+};
+
+const MANGA_FIELDS = `id idMal title { romaji english native } chapters volumes status format averageScore genres
+  coverImage { extraLarge large } siteUrl`;
+
+export async function searchManga(search: string, signal?: AbortSignal): Promise<AniListManga[]> {
+  const data = await anilistQuery<{ Page: { media: AniListManga[] } }>(
+    `query ($search: String) { Page(perPage: 12) { media(search: $search, type: MANGA) { ${MANGA_FIELDS} } } }`,
+    { search },
+    signal
+  );
+  return data.Page.media;
+}
+
+/**
+ * Manga sync: one GraphQL request per group. Each entry is looked up by AniList id, else MAL id
+ * (idMal), else by name; the first match is returned (null when nothing is found).
+ */
+export async function mangaForSync(
+  entries: { anilistId?: number; malId?: number; name: string }[],
+  signal?: AbortSignal
+): Promise<(AniListManga | null)[]> {
+  const vars: string[] = [];
+  const values: Record<string, unknown> = {};
+  const parts = entries.map((e, i) => {
+    if (e.anilistId) {
+      vars.push(`$v${i}: Int`);
+      values[`v${i}`] = e.anilistId;
+      return `m${i}: Page(perPage: 1) { media(id: $v${i}, type: MANGA) { ${MANGA_FIELDS} } }`;
+    }
+    if (e.malId) {
+      vars.push(`$v${i}: Int`);
+      values[`v${i}`] = e.malId;
+      return `m${i}: Page(perPage: 1) { media(idMal: $v${i}, type: MANGA) { ${MANGA_FIELDS} } }`;
+    }
+    vars.push(`$v${i}: String`);
+    values[`v${i}`] = e.name;
+    return `m${i}: Page(perPage: 1) { media(search: $v${i}, type: MANGA) { ${MANGA_FIELDS} } }`;
+  });
+  const data = await anilistQuery<Record<string, { media: AniListManga[] }>>(`query (${vars.join(", ")}) { ${parts.join("\n")} }`, values, signal);
+  return entries.map((_, i) => data[`m${i}`]?.media?.[0] ?? null);
+}

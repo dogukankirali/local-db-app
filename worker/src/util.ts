@@ -13,6 +13,8 @@ export type Env = {
   GOOGLE_CLIENT_SECRET?: string;
   /** Yayın takibi (#19): GitHub Actions'taki zamanlanmış işin kullandığı paylaşılan anahtar */
   CRON_SECRET?: string;
+  /** Dizi/film ayrıntıları için OMDb (IMDb verisi) anahtarı; yoksa IMDb araması kapalıdır */
+  OMDB_API_KEY?: string;
   /** "development" olduğunda mail gönderilmez, bağlantı loga yazılır */
   ENVIRONMENT?: string;
 };

@@ -5,7 +5,7 @@ import { palette } from "../../theme/customTheme";
 
 import React, { JSX, Suspense, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Box, CircularProgress, IconButton, Tooltip } from "@mui/material";
+import { Box, CircularProgress, IconButton, Tooltip, useMediaQuery } from "@mui/material";
 import SyncRoundedIcon from "@mui/icons-material/SyncRounded";
 import AnimeGrid from "../../components/AnimeGrid";
 import AnimeDetailPanel from "../../components/anime/AnimeDetailPanel";
@@ -105,6 +105,11 @@ function AnimePageContent() {
     setGridSize(size);
     localStorage.setItem("gridSize", String(size));
   };
+  // Sütun ayarı (kaydırıcı) yalnızca geniş ekranda görünür; dar ekranlarda kartlar okunur kalsın diye sütun sayısı sınırlanır
+  const isPhone = useMediaQuery("(max-width:599.95px)");
+  const isTablet = useMediaQuery("(max-width:899.95px)");
+  const isSmallDesktop = useMediaQuery("(max-width:1199.95px)");
+  const effectiveGridSize = isPhone ? 2 : isTablet ? 3 : isSmallDesktop ? Math.min(gridSize, 4) : gridSize;
   // Grid-specific cache: accumulates all loaded anime so column changes don't cause refetch
   const [gridCache, setGridCache] = useState<TEATable.IAnime[]>([]);
   const gridCachePage = useRef<number>(0); // last fetched page for grid
@@ -762,7 +767,7 @@ function AnimePageContent() {
                   allData={gridCache}
                   loading={dataLoading}
                   loadingMore={gridLoadingMore}
-                  gridSize={gridSize}
+                  gridSize={effectiveGridSize}
                   onLoadMore={handleGridLoadMore}
                   renderActions={renderGridActions}
                 />

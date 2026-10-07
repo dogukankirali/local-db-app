@@ -12,6 +12,7 @@
 - **Profile**: stats (archive, completed, average score), top 10 rated anime, profile and password editing. Personalized recommendations are on the way ([#39](https://github.com/dogukankirali/local-db-app/issues/39)).
 - **Accounts**: sign-up/sign-in with JWT, password reset by email (single-use link, valid for 1 hour).
 - **AniList sync**: fills in missing details, scores and series relations of archived anime in bulk.
+- **TV series & movies** (`/series`, `/movies`): same grid/table, filters and per-user score, status, episode progress, Plan to Watch, notes and dates. Details (year, rating, genres, cast, plot, poster, seasons) come from IMDb via [OMDb](https://www.omdbapi.com/); set the free key with `npx wrangler secret put OMDB_API_KEY` (locally `OMDB_API_KEY=` in `worker/.dev.vars`). Without a key, titles are entered manually.
 - **Browser extension** (`extension/`, Manifest V3, Chrome & Firefox):
   - **Kiroku Tracker**: pick an anime from AniList, skip counter in the player, season rating, stats and history.
   - **Kiroku Sync**: writes episode progress to Kiroku on MyAnimeList, Anizium, TürkAnime and TRAnimeİzle pages and adds an "Add to Kiroku Watchlist" button.
@@ -96,6 +97,15 @@ npm run deploy                             # builds the frontend and publishes t
 
 The extension reads the server address from the popup settings; enter the site address there (e.g. `https://app.dogukankirali.com`). Sign in from the **Kiroku Account** card on the same tab with username/email and password: the extension gets its own key (the password is not stored) and sends it as `Authorization: Bearer` with requests. Keys can be viewed and revoked from the Profile page in Kiroku.
 
+## Manga downloader (extension)
+
+The extension's **Manga İndirici** page (popup → Ayarlar → 📚 Manga İndirici) searches several sources, merges their chapter lists by language preference ("Turkish if available, otherwise English", Turkish only, English only) and saves each chapter as a CBZ with `ComicInfo.xml`; the series folder also gets `series.json` and `cover.jpg` (metadata from AniList, with the MAL ID). Images are stored as they are, without conversion. It runs in the browser so sites see a normal visitor; if a site asks for a bot check, open it once in the same browser.
+
+- **Sources** (`extension/manga/sources.js`): MangaDex (official API, tr/en), Tempest (JuraTempest), Tortuga Çeviri, and the experimental Manga-TR and SadScans. Site logic is adapted from the Keiyoushi extensions (Apache-2.0).
+- **Where files go**: straight to this computer, `Downloads/Kiroku/Manga/<Series>/` (folder configurable). Nothing is uploaded or kept anywhere else; moving the files to a server is up to the user.
+
+Serving the library from a home server (Caddy + Cloudflare Tunnel): [docs/manga-library-server.md](docs/manga-library-server.md).
+
 ## Per-user list
 
 The anime catalog (name, status, episode count, cover, genres, MAL score) is shared by everyone and only the admin changes it. Score, watched episodes, Plan to Watch, notes, watch dates and the watchlist are separate for each user (`user_anime`, `watch_lists.user_id`). Lists require sign-in; since the site bypasses Cloudflare Access for `/api`, the API is closed to anonymous reads.
@@ -134,6 +144,8 @@ All endpoints are under `/api` and paths are kebab-case. 🔑 requires sign-in (
 | POST                    | `/auth/forgot-password`, `/auth/reset-password` | Password reset                                                              |
 | GET/PUT 🔑              | `/profile` (`/auth/profile`)                    | Profile: name, username, email, avatar, bio, recommendation and notification preferences; changing the password requires the current one |
 | GET 🔑                  | `/profile/top-anime?limit=10`                   | Top rated anime                                                             |
+| GET, POST, PUT, DELETE 🔑 | `/series`, `/movies` (`/:id`, `/:id/mine`, `/genres`) | TV series and movies: filtered list, add, edit your own data (catalog fields for admins), remove from your list |
+| GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | IMDb search and details through OMDb (needs `OMDB_API_KEY`)                 |
 | GET 🔑                  | `/profile/recommendations`                      | Genre-based recommendations (if enabled in the profile)                    |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | List, create and revoke extension keys                                      |
 | GET/POST                | `/cron/airing`                                  | Airing tracking (with CRON_SECRET)                                          |
@@ -157,6 +169,7 @@ No license has been specified for this project yet.
 - **Profil**: İstatistikler (arşiv, tamamlanan, ortalama puan), en yüksek puanlı 10 anime, profil ve şifre düzenleme. Kişiye özel öneriler yolda ([#39](https://github.com/dogukankirali/local-db-app/issues/39)).
 - **Hesaplar**: JWT ile kayıt/giriş, e-posta ile şifre sıfırlama (tek kullanımlık, 1 saat geçerli bağlantı).
 - **AniList senkronizasyonu**: Arşivdeki animelerin eksik bilgilerini, puanlarını ve seri ilişkilerini toplu doldurur.
+- **Diziler ve filmler** (`/series`, `/movies`): aynı grid/tablo, filtreler ve kişisel puan, durum, bölüm ilerlemesi, Plan to Watch, notlar ve tarihler. Ayrıntılar (yıl, puan, türler, oyuncular, özet, poster, sezonlar) IMDb'den [OMDb](https://www.omdbapi.com/) üzerinden gelir; ücretsiz anahtarı `npx wrangler secret put OMDB_API_KEY` ile (yerelde `worker/.dev.vars` içinde `OMDB_API_KEY=`) tanımla. Anahtar yoksa kayıtlar elle girilir.
 - **Tarayıcı eklentisi** (`extension/`, Manifest V3, Chrome & Firefox):
   - **Kiroku Tracker**: AniList'ten anime seçimi, oynatıcıda ileri sarma (skip) sayacı, sezon puanlama, istatistik ve geçmiş.
   - **Kiroku Sync**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sayfalarında bölüm ilerlemesini Kiroku'ya yazar, "Add to Kiroku Watchlist" butonu ekler.
@@ -241,6 +254,15 @@ npm run deploy                             # frontend'i derler ve Worker'ı yay�
 
 Eklenti sunucu adresini popup'taki ayarlardan alır; buraya sitenin adresini yazın (ör. `https://app.dogukankirali.com`). Aynı sekmedeki **Kiroku Hesabı** kartından kullanıcı adı/e-posta ve şifreyle giriş yapılır: eklenti kendine özel bir anahtar alır (şifre saklanmaz) ve isteklerde `Authorization: Bearer` olarak gönderir. Anahtarlar Kiroku'da Profil sayfasından görülüp iptal edilebilir.
 
+## Manga indirici (eklenti)
+
+Eklentinin **Manga İndirici** sayfası (popup → Ayarlar → 📚 Manga İndirici) birden çok kaynakta arar, bölüm listelerini dil tercihine göre birleştirir ("Türkçe varsa Türkçe, yoksa İngilizce", yalnızca Türkçe, yalnızca İngilizce) ve her bölümü `ComicInfo.xml` ile CBZ olarak kaydeder; seri klasörüne `series.json` ve `cover.jpg` da yazılır (bilgiler AniList'ten, MAL ID'siyle). Görseller dönüştürülmeden olduğu gibi saklanır. Tarayıcıda çalıştığı için siteler normal bir ziyaretçi görür; bir site bot doğrulaması isterse aynı tarayıcıda bir kez açmak yeterli.
+
+- **Kaynaklar** (`extension/manga/sources.js`): MangaDex (resmî API, tr/en), Tempest (JuraTempest), Tortuga Çeviri ve deneysel olarak Manga-TR ile SadScans. Site mantığı Keiyoushi eklentilerinden (Apache-2.0) uyarlandı.
+- **Kayıt yeri**: doğrudan bu bilgisayara, `İndirilenler/Kiroku/Manga/<Seri>/` (klasör değiştirilebilir). Hiçbir yere yüklenmez, başka yerde kopyası tutulmaz; dosyaları sunucuya taşımak kullanıcıya kalır.
+
+Kütüphaneyi ev sunucusundan sunmak (Caddy + Cloudflare Tunnel): [docs/manga-library-server.md](docs/manga-library-server.md).
+
 ## Kullanıcıya özel liste
 
 Anime kataloğu (ad, durum, bölüm sayısı, kapak, türler, MAL puanı) herkes için ortaktır ve yalnızca admin değiştirir. Puan, izlenen bölüm, Plan to Watch, notlar, izleme tarihleri ve watchlist her kullanıcı için ayrıdır (`user_anime`, `watch_lists.user_id`). Listeler giriş ister; site Cloudflare Access'te `/api` için bypass edildiğinden API girişsiz okumaya kapalıdır.
@@ -279,6 +301,8 @@ Tüm uçlar `/api` altındadır ve yollar kebab-case'tir. 🔑 giriş (JWT ya da
 | POST                    | `/auth/forgot-password`, `/auth/reset-password` | Şifre sıfırlama                                                             |
 | GET/PUT 🔑              | `/profile` (`/auth/profile`)                    | Profil: ad, kullanıcı adı, e-posta, avatar, bio, öneri ve bildirim tercihleri; şifre değişikliği mevcut şifre ister |
 | GET 🔑                  | `/profile/top-anime?limit=10`                   | En yüksek puanlı animeler                                                   |
+| GET, POST, PUT, DELETE 🔑 | `/series`, `/movies` (`/:id`, `/:id/mine`, `/genres`) | Diziler ve filmler: filtreli liste, ekleme, kendi verini düzenleme (admin katalog alanlarını da), listenden çıkarma |
+| GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | OMDb üzerinden IMDb araması ve ayrıntıları (`OMDB_API_KEY` gerekir)         |
 | GET 🔑                  | `/profile/recommendations`                      | Tür tabanlı öneriler (profilde açıksa)                                      |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | Eklenti anahtarlarını listele, oluştur, iptal et                            |
 | GET/POST                | `/cron/airing`                                  | Yayın takibi (CRON_SECRET ile)                                              |
