@@ -12,6 +12,7 @@
 - **Profile**: stats (archive, completed, average score), top 10 rated anime, profile and password editing. Personalized recommendations are on the way ([#39](https://github.com/dogukankirali/local-db-app/issues/39)).
 - **Accounts**: sign-up/sign-in with JWT, password reset by email (single-use link, valid for 1 hour).
 - **AniList sync**: fills in missing details, scores and series relations of archived anime in bulk.
+- **TV series & movies** (`/series`, `/movies`): same grid/table, filters and per-user score, status, episode progress, Plan to Watch, notes and dates. Details (year, rating, genres, cast, plot, poster, seasons) come from IMDb via [OMDb](https://www.omdbapi.com/); set the free key with `npx wrangler secret put OMDB_API_KEY` (locally `OMDB_API_KEY=` in `worker/.dev.vars`). Without a key, titles are entered manually.
 - **Browser extension** (`extension/`, Manifest V3, Chrome & Firefox):
   - **Kiroku Tracker**: pick an anime from AniList, skip counter in the player, season rating, stats and history.
   - **Kiroku Sync**: writes episode progress to Kiroku on MyAnimeList, Anizium, TürkAnime and TRAnimeİzle pages and adds an "Add to Kiroku Watchlist" button.
@@ -143,6 +144,8 @@ All endpoints are under `/api` and paths are kebab-case. 🔑 requires sign-in (
 | POST                    | `/auth/forgot-password`, `/auth/reset-password` | Password reset                                                              |
 | GET/PUT 🔑              | `/profile` (`/auth/profile`)                    | Profile: name, username, email, avatar, bio, recommendation and notification preferences; changing the password requires the current one |
 | GET 🔑                  | `/profile/top-anime?limit=10`                   | Top rated anime                                                             |
+| GET, POST, PUT, DELETE 🔑 | `/series`, `/movies` (`/:id`, `/:id/mine`, `/genres`) | TV series and movies: filtered list, add, edit your own data (catalog fields for admins), remove from your list |
+| GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | IMDb search and details through OMDb (needs `OMDB_API_KEY`)                 |
 | GET 🔑                  | `/profile/recommendations`                      | Genre-based recommendations (if enabled in the profile)                    |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | List, create and revoke extension keys                                      |
 | GET/POST                | `/cron/airing`                                  | Airing tracking (with CRON_SECRET)                                          |
@@ -166,6 +169,7 @@ No license has been specified for this project yet.
 - **Profil**: İstatistikler (arşiv, tamamlanan, ortalama puan), en yüksek puanlı 10 anime, profil ve şifre düzenleme. Kişiye özel öneriler yolda ([#39](https://github.com/dogukankirali/local-db-app/issues/39)).
 - **Hesaplar**: JWT ile kayıt/giriş, e-posta ile şifre sıfırlama (tek kullanımlık, 1 saat geçerli bağlantı).
 - **AniList senkronizasyonu**: Arşivdeki animelerin eksik bilgilerini, puanlarını ve seri ilişkilerini toplu doldurur.
+- **Diziler ve filmler** (`/series`, `/movies`): aynı grid/tablo, filtreler ve kişisel puan, durum, bölüm ilerlemesi, Plan to Watch, notlar ve tarihler. Ayrıntılar (yıl, puan, türler, oyuncular, özet, poster, sezonlar) IMDb'den [OMDb](https://www.omdbapi.com/) üzerinden gelir; ücretsiz anahtarı `npx wrangler secret put OMDB_API_KEY` ile (yerelde `worker/.dev.vars` içinde `OMDB_API_KEY=`) tanımla. Anahtar yoksa kayıtlar elle girilir.
 - **Tarayıcı eklentisi** (`extension/`, Manifest V3, Chrome & Firefox):
   - **Kiroku Tracker**: AniList'ten anime seçimi, oynatıcıda ileri sarma (skip) sayacı, sezon puanlama, istatistik ve geçmiş.
   - **Kiroku Sync**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sayfalarında bölüm ilerlemesini Kiroku'ya yazar, "Add to Kiroku Watchlist" butonu ekler.
@@ -297,6 +301,8 @@ Tüm uçlar `/api` altındadır ve yollar kebab-case'tir. 🔑 giriş (JWT ya da
 | POST                    | `/auth/forgot-password`, `/auth/reset-password` | Şifre sıfırlama                                                             |
 | GET/PUT 🔑              | `/profile` (`/auth/profile`)                    | Profil: ad, kullanıcı adı, e-posta, avatar, bio, öneri ve bildirim tercihleri; şifre değişikliği mevcut şifre ister |
 | GET 🔑                  | `/profile/top-anime?limit=10`                   | En yüksek puanlı animeler                                                   |
+| GET, POST, PUT, DELETE 🔑 | `/series`, `/movies` (`/:id`, `/:id/mine`, `/genres`) | Diziler ve filmler: filtreli liste, ekleme, kendi verini düzenleme (admin katalog alanlarını da), listenden çıkarma |
+| GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | OMDb üzerinden IMDb araması ve ayrıntıları (`OMDB_API_KEY` gerekir)         |
 | GET 🔑                  | `/profile/recommendations`                      | Tür tabanlı öneriler (profilde açıksa)                                      |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | Eklenti anahtarlarını listele, oluştur, iptal et                            |
 | GET/POST                | `/cron/airing`                                  | Yayın takibi (CRON_SECRET ile)                                              |

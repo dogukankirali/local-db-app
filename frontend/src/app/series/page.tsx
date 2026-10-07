@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import LiveTvOutlinedIcon from "@mui/icons-material/LiveTvOutlined";
-import ComingSoon from "../../components/Common/ComingSoon";
+import ScreenLibrary from "../../components/screen/ScreenLibrary";
 
 export const metadata: Metadata = { title: "Diziler" };
 
 export default function SeriesPage() {
-  return <ComingSoon title="Diziler" description="Dizi takibi yakında burada. Sezon ve bölüm ilerlemeni buradan izleyebileceksin." icon={<LiveTvOutlinedIcon />} />;
+  return <ScreenLibrary kind="series" />;
 }
