@@ -1,12 +1,14 @@
 // The user's own manga library (outside Kiroku). Chapters registered in Kiroku carry a file path relative to
 // the library root: '<Series Name>/<Chapter N - Title>.cbz'. The browser opens the CBZ directly from:
+//   http   — a plain HTTP file server with Caddy `file_server browse` JSON listings (GET dir with
+//            Accept: application/json → [{ name, is_dir, ... }]); files are read with GET like WebDAV.
 //   webdav — a WebDAV base URL (+ optional Basic auth user/password), configured per browser in localStorage.
 //            The server must allow CORS from the Kiroku origin (Authorization header, GET).
 //   local  — development / offline: a folder picked with the File System Access API (kept for this tab only),
 //            or a single CBZ picked with <input type=file> in the reader.
 // Credentials never leave the browser and are never sent to the Kiroku Worker.
 
-export type LibraryConfig = { kind: "webdav" | "local"; url: string; username: string; password: string };
+export type LibraryConfig = { kind: "webdav" | "http" | "local"; url: string; username: string; password: string };
 
 const KEY = "kirokuMangaLibrary";
 const DEFAULT: LibraryConfig = { kind: "webdav", url: "", username: "", password: "" };
@@ -97,7 +99,26 @@ export function readLibraryFile(path: string): Promise<ArrayBuffer> {
 // ---- Listing (library sync) ----
 
 export type LibraryEntry = { name: string; isDir: boolean };
-export type LibrarySeries = { series: string; files: string[] };
+export type LibrarySeries = { series: string; files: string[]; meta: SeriesMeta };
+/** IDs from a folder's series.json (downloader / old scraper format: {"mal_id": 171196, "name": "...", ...}) */
+export type SeriesMeta = { anilistId?: number; malId?: number; name?: string };
+
+export function parseSeriesJson(text: string): SeriesMeta {
+  try {
+    const j = JSON.parse(text) as Record<string, unknown>;
+    const id = (...keys: string[]) => {
+      for (const k of keys) {
+        const n = Number(j[k]);
+        if (Number.isInteger(n) && n > 0) return n;
+      }
+      return undefined;
+    };
+    const name = typeof j.name === "string" ? j.name.trim() : typeof j.title === "string" ? j.title.trim() : "";
+    return { anilistId: id("anilist_id", "al_id", "anilistId"), malId: id("mal_id", "malId"), name: name || undefined };
+  } catch {
+    return {};
+  }
+}
 
 /** PROPFIND Depth: 1 on a folder (path relative to the library root) */
 async function listWebdav(cfg: LibraryConfig, path: string): Promise<LibraryEntry[]> {
@@ -130,6 +151,25 @@ async function listWebdav(cfg: LibraryConfig, path: string): Promise<LibraryEntr
   return out;
 }
 
+/** Caddy `file_server browse`: GET <dir>/ with Accept: application/json */
+async function listHttp(cfg: LibraryConfig, path: string): Promise<LibraryEntry[]> {
+  if (!cfg.url) throw new LibraryError("Kütüphane adresi ayarlanmadı", "config");
+  const url = davUrl(cfg, path).replace(/\/?$/, "/");
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { ...davHeaders(cfg), Accept: "application/json" }, credentials: "omit" });
+  } catch {
+    throw new LibraryError("Kütüphane sunucusuna ulaşılamadı (adres ya da CORS ayarı)", "config");
+  }
+  if (res.status === 401 || res.status === 403) throw new LibraryError("Kütüphane sunucusu girişi reddetti", "config");
+  if (!res.ok) throw new LibraryError(`Kütüphane listelenemedi (${res.status})`, "config");
+  const data = (await res.json().catch(() => null)) as { name?: string; is_dir?: boolean }[] | null;
+  if (!Array.isArray(data)) throw new LibraryError("Sunucu JSON dizin listesi döndürmedi (Caddy file_server browse bekleniyor)", "config");
+  return data
+    .map((e) => ({ name: String(e.name ?? "").replace(/\/+$/, "").normalize("NFC"), isDir: Boolean(e.is_dir) }))
+    .filter((e) => e.name && !e.name.startsWith("."));
+}
+
 async function listLocal(path: string): Promise<LibraryEntry[]> {
   if (!localRoot) throw new LibraryError("Yerel kütüphane klasörü seçilmedi", "pick");
   let dir = localRoot;
@@ -144,12 +184,16 @@ async function listLocal(path: string): Promise<LibraryEntry[]> {
 /** Series folders in the library root with the *.cbz files directly inside each */
 export async function listLibrary(onSeries?: (done: number, total: number) => void): Promise<LibrarySeries[]> {
   const cfg = loadLibrary();
-  const list = cfg.kind === "local" || localRoot ? listLocal : (p: string) => listWebdav(cfg, p);
+  const list =
+    cfg.kind === "local" || localRoot ? listLocal : cfg.kind === "http" ? (p: string) => listHttp(cfg, p) : (p: string) => listWebdav(cfg, p);
   const folders = (await list("")).filter((e) => e.isDir);
   const out: LibrarySeries[] = [];
   for (const [i, f] of folders.entries()) {
-    const files = (await list(f.name)).filter((e) => !e.isDir && /\.cbz$/i.test(e.name)).map((e) => `${f.name}/${e.name}`);
-    out.push({ series: f.name, files });
+    const entries = await list(f.name);
+    const files = entries.filter((e) => !e.isDir && /\.cbz$/i.test(e.name)).map((e) => `${f.name}/${e.name}`);
+    const json = entries.find((e) => !e.isDir && e.name.toLowerCase() === "series.json");
+    const meta = json ? parseSeriesJson(new TextDecoder().decode(await readLibraryFile(`${f.name}/${json.name}`).catch(() => new ArrayBuffer(0)))) : {};
+    out.push({ series: f.name, files, meta });
     onSeries?.(i + 1, folders.length);
   }
   return out;

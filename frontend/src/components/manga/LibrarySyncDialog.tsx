@@ -28,7 +28,7 @@ export default function LibrarySyncDialog({ open, onClose, onDone }: { open: boo
         setProgress({ step: s.series, done: i, total: library.length });
         if (!s.files.length && !prune) continue;
         const chapters = s.files.map((filePath) => ({ filePath, ...parseChapterFile(filePath) }));
-        out.push(await ChapterService.librarySync({ series: s.series, chapters, prune }));
+        out.push(await ChapterService.librarySync({ series: s.series, ...s.meta, chapters, prune }));
         setResults([...out]);
       }
       onDone();
@@ -47,7 +47,7 @@ export default function LibrarySyncDialog({ open, onClose, onDone }: { open: boo
       <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <LibrarySettings />
         <Typography sx={{ fontSize: "0.8rem", color: palette.textMuted }}>
-          Kökteki her klasör bir seri, içindeki .cbz dosyaları bölümler (ör. “Bölüm 12 - Başlık.cbz”). Seri adı katalogdaki bir mangayla eşleşmezse yeni manga eklenir.
+          Kökteki her klasör bir seri, içindeki .cbz dosyaları bölümler (ör. “Bölüm 12 - Başlık.cbz”). Klasördeki series.json varsa AniList / MAL id ile, yoksa seri adıyla eşleşir; eşleşmezse yeni manga eklenir.
         </Typography>
         <FormControlLabel control={<Checkbox checked={prune} onChange={(e) => setPrune(e.target.checked)} />} label="Kütüphanede artık olmayan bölümleri listeden kaldır" />
         {progress && (

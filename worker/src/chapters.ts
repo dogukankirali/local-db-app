@@ -178,8 +178,9 @@ chapters.post("/manga/:id{[0-9]+}/chapters", requireAuth, async (c) => {
 
 // Library sync: the browser lists the user's library (WebDAV PROPFIND or a local folder), one request per
 // series folder. Body: { series: "<folder name>", chapters: [{ filePath, number, title }], prune?: boolean }.
-// The folder is matched to a manga by name / English name (case-insensitive) or a new catalog entry is
-// created; the manga is added to the caller's list. Chapters are upserted by (manga, owner, file_path) with
+// Optional anilistId / malId / name come from the folder's series.json. Matching order: AniList id → MAL
+// id → folder name → series.json name (name / English name, case-insensitive); otherwise a new catalog entry
+// is created with those IDs; the manga is added to the caller's list. Chapters are upserted by (manga, owner, file_path) with
 // source "library"; with prune, the caller's "library" chapters of that manga that are gone are removed.
 chapters.post("/manga/library-sync", requireAuth, async (c) => {
   const body = await readJson(c);
@@ -193,15 +194,42 @@ chapters.post("/manga/library-sync", requireAuth, async (c) => {
     .filter((it) => validFilePath(it.filePath));
   const db = c.env.DB;
 
-  let manga = await db
-    .prepare("SELECT id, name FROM manga WHERE name = ? COLLATE NOCASE OR english_name = ? COLLATE NOCASE ORDER BY name = ? COLLATE NOCASE DESC LIMIT 1")
-    .bind(series, series, series)
-    .first<{ id: number; name: string }>();
+  // IDs from the folder's series.json (when present): AniList id → MAL id → name
+  const anilistId = int(field(body, "anilistId")) || null;
+  const malId = int(field(body, "malId")) || null;
+  const jsonName = str(field(body, "name")).trim().normalize("NFC").slice(0, 300);
+  type Found = { id: number; name: string; anilist_id: number | null; mal_id: number | null };
+  const byName = (n: string) =>
+    db
+      .prepare(
+        "SELECT id, name, anilist_id, mal_id FROM manga WHERE name = ? COLLATE NOCASE OR english_name = ? COLLATE NOCASE ORDER BY name = ? COLLATE NOCASE DESC LIMIT 1"
+      )
+      .bind(n, n, n)
+      .first<Found>();
+  let manga =
+    (anilistId && (await db.prepare("SELECT id, name, anilist_id, mal_id FROM manga WHERE anilist_id = ?").bind(anilistId).first<Found>())) ||
+    (malId && (await db.prepare("SELECT id, name, anilist_id, mal_id FROM manga WHERE mal_id = ? ORDER BY id LIMIT 1").bind(malId).first<Found>())) ||
+    (await byName(series)) ||
+    (jsonName && jsonName !== series ? await byName(jsonName) : null);
   let created = false;
   if (!manga) {
-    const res = await db.prepare("INSERT INTO manga (name) VALUES (?)").bind(series).run();
-    manga = { id: Number(res.meta.last_row_id), name: series };
+    const name = jsonName || series;
+    const res = await db
+      .prepare("INSERT INTO manga (name, anilist_id, mal_id, mal_link, anilist_link) VALUES (?, ?, ?, ?, ?)")
+      .bind(name, anilistId, malId, malId ? `https://myanimelist.net/manga/${malId}` : "", anilistId ? `https://anilist.co/manga/${anilistId}` : "")
+      .run();
+    manga = { id: Number(res.meta.last_row_id), name, anilist_id: anilistId, mal_id: malId };
     created = true;
+  } else if ((anilistId && !manga.anilist_id) || (malId && !manga.mal_id)) {
+    // Fill missing IDs on a name match; skipped if another row already owns that AniList id (UNIQUE)
+    await db
+      .prepare(
+        `UPDATE manga SET mal_id = COALESCE(mal_id, ?),
+           anilist_id = COALESCE(anilist_id, CASE WHEN EXISTS (SELECT 1 FROM manga WHERE anilist_id = ?) THEN NULL ELSE ? END)
+         WHERE id = ?`
+      )
+      .bind(malId, anilistId, anilistId, manga.id)
+      .run();
   }
   const mangaId = manga.id;
 
