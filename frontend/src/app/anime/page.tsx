@@ -25,6 +25,7 @@ import { AnimeService } from "../../Services/AnimeServices";
 import TableHeaders from "../../components/CollapsibleTableV2/Components/Headers/Headers";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
+import { ANIME_DATA_CHANGED } from "../../components/anime/notesEvents";
 
 // Grid varsayılan görünüm: tablo (moment-timezone vb. ağır bağımlılıklarıyla) ve
 // modallar yalnızca gerektiğinde yüklenir, ilk açılış paketine girmez.
@@ -221,6 +222,14 @@ function AnimePageContent() {
     if (paletteImport === "1") setBulkImportOpen(true);
     navRouter.replace("/anime");
   }, [paletteNew, paletteImport]);
+  // Hesap menüsündeki "Notlardan içe aktar" bitince liste tazelenir
+  const refreshRef = useRef(refreshAfterMutation);
+  refreshRef.current = refreshAfterMutation;
+  useEffect(() => {
+    const onChanged = () => refreshRef.current("create");
+    window.addEventListener(ANIME_DATA_CHANGED, onChanged);
+    return () => window.removeEventListener(ANIME_DATA_CHANGED, onChanged);
+  }, []);
   const [genres, setGenres] = useState<{ value: string; label: string }[]>();
   const [series, setSeries] = useState<{ value: string; label: string }[]>([]);
   const [user, setUser] = useState<any>(null);

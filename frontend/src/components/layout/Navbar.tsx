@@ -20,10 +20,15 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
+import dynamic from "next/dynamic";
 import { useAuth } from "../../contexts/AuthContext";
 import { getPageTitle } from "../../config/navigation";
 import { palette } from "../../theme/customTheme";
 import { OPEN_COMMAND_PALETTE } from "../CommandPalette";
+
+// Yalnızca admin açar; ilk açılışta yüklenir
+const NotesImportDialog = dynamic(() => import("../anime/NotesImportDialog"), { ssr: false });
 
 export const TOPBAR_HEIGHT = 64;
 
@@ -100,7 +105,8 @@ function SearchBox() {
 export default function Navbar({ onMenuClick }: NavbarProps) {
   const pathname = usePathname() || "/";
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const [notesOpen, setNotesOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const close = () => setAnchorEl(null);
 
@@ -168,6 +174,19 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               </ListItemIcon>
               Profil
             </MenuItem>
+            {isAdmin && (
+              <MenuItem
+                onClick={() => {
+                  close();
+                  setNotesOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <AutoFixHighRoundedIcon fontSize="small" />
+                </ListItemIcon>
+                Notlardan içe aktar
+              </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 close();
@@ -181,6 +200,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               Çıkış yap
             </MenuItem>
           </Menu>
+          {isAdmin && notesOpen && <NotesImportDialog open onClose={() => setNotesOpen(false)} />}
         </>
       ) : (
         <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1 }}>
