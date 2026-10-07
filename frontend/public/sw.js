@@ -2,13 +2,13 @@
 // İlk yüklemeden sonra kapaklar ağ beklemeden diskten gelir; sayfalar ve API'ye dokunulmaz.
 // Önbellek adı değişirse eski önbellekler silinir.
 
-const CACHE = "kiroku-covers-v1";
+const CACHE = "kiroku-covers-v2";
 const MAX_ENTRIES = 1500;
 
 const isCover = (url) =>
   url.hostname === "s4.anilist.co" ||
   url.hostname === "cdn.myanimelist.net" ||
-  (url.origin === self.location.origin && url.pathname === "/api/animeCover");
+  (url.origin === self.location.origin && url.pathname === "/api/anime-cover");
 
 self.addEventListener("install", () => self.skipWaiting());
 

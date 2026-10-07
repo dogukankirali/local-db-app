@@ -308,7 +308,7 @@ export default function Constants({
 
         type: "select-api",
 
-        apiPath: "getSeries",
+        apiPath: "get-series",
       },
 
       { key: "MALScore", value: "MAL Score", icon: <></>, type: "float" },

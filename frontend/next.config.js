@@ -20,7 +20,7 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
   },
   images: {
-    // Kapaklar MAL CDN'inden ve /api/animeCover adresinden geliyor
+    // Kapaklar MAL CDN'inden ve /api/anime-cover adresinden geliyor
     unoptimized: true,
   },
   webpack: (config) => {

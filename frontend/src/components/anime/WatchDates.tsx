@@ -1,7 +1,7 @@
 "use client";
 
 // Kullanıcının izlemeye başlama/bitirme tarihi. Yalnızca düzenleme penceresinden değiştirilir
-// (form ile birlikte /updateAnimeTable'a gider); detay kartı, tablo ve detay sayfası salt gösterir.
+// (form ile birlikte /update-anime-table'a gider); detay kartı, tablo ve detay sayfası salt gösterir.
 // 2000-01-01, mevcut kayıtlara geçişte yazılan "eski kayıt (tarih bilinmiyor)" işaretidir.
 
 import { alpha } from "@mui/material/styles";
