@@ -149,8 +149,8 @@ export interface Chapter {
   source: string;
   externalId: string;
   pageCount: number;
-  /** Pages live in R2 (served by the Worker) instead of being fetched from the source at read time */
-  stored: boolean;
+  /** Library chapters: CBZ path relative to the user's library root ('<Series>/<Chapter N - Title>.cbz'); "" for live MangaDex chapters */
+  filePath: string;
   lang: string;
   groupName: string;
   publishedAt: string;
@@ -158,6 +158,19 @@ export interface Chapter {
 }
 
 export type MangaDexChapterInput = Pick<Chapter, "externalId" | "number" | "volume" | "title" | "pageCount" | "lang" | "groupName" | "publishedAt">;
+
+export interface LibraryChapterInput {
+  filePath: string;
+  number: number;
+  volume?: string;
+  title?: string;
+  lang: string;
+  pageCount?: number;
+  /** "upload" for manual entries, or a source adapter's slug */
+  source?: string;
+  externalId?: string;
+  scanlator?: string;
+}
 
 export const ChapterService = {
   async list(mangaId: number): Promise<Chapter[]> {
@@ -172,13 +185,10 @@ export const ChapterService = {
   async saveMangaDex(mangaId: number, chapters: MangaDexChapterInput[]): Promise<{ saved: number }> {
     return (await axios.post(`${base}/${mangaId}/chapters/mangadex`, { chapters })).data;
   },
-  async createUpload(mangaId: number, data: { number: number; volume?: string; title: string; lang: string; pageCount: number; source?: string; externalId?: string; scanlator?: string }): Promise<Chapter> {
-    return (await axios.post<Chapter>(`${base}/${mangaId}/chapters/upload`, data)).data;
+  /** Registers a CBZ in the user's own library (metadata only; the file never goes to Kiroku) */
+  async register(mangaId: number, data: LibraryChapterInput): Promise<Chapter> {
+    return (await axios.post<Chapter>(`${base}/${mangaId}/chapters`, data)).data;
   },
-  async uploadPage(chapterId: number, n: number, webp: Blob) {
-    await axios.put(`${base}/chapters/${chapterId}/pages/${n}`, webp, { headers: { "Content-Type": "image/webp" } });
-  },
-  pageUrl: (chapterId: number, n: number) => `${base}/chapters/${chapterId}/pages/${n}`,
   async remove(chapterId: number) {
     await axios.delete(`${base}/chapters/${chapterId}`);
   },

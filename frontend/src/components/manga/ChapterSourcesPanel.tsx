@@ -1,7 +1,8 @@
 "use client";
 
-// Admin tools on the manga detail page: link a MangaDex title and save its chapter list (metadata only),
-// or upload a CBZ that is converted to WebP in the browser and stored in R2.
+// Chapter tools on the manga detail page. Admins link a MangaDex title and save its chapter list (metadata
+// only). Every user can point the browser at their own manga library (WebDAV or a local folder) and register
+// CBZ files that are already there; the browser extension's downloader registers them the same way.
 
 import { useState } from "react";
 import {
@@ -10,15 +11,16 @@ import {
   Button,
   Checkbox,
   CircularProgress,
+  MenuItem,
   FormControlLabel,
-  LinearProgress,
   TextField,
   Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { ChapterService, errorText, type Manga } from "../../Services/MangaService";
 import { mangaDexChapters, searchMangaDex, type MangaDexHit } from "../../lib/mangadex";
-import { readCbz, toWebp } from "../../lib/cbz";
+import { openCbz } from "../../lib/cbz";
+import { canPickFolder, libraryPath, loadLibrary, localFolderName, pickLocalFolder, saveLibrary, type LibraryConfig } from "../../lib/library";
 import { palette } from "../../theme/customTheme";
 
 const LANGS = [
@@ -109,62 +111,111 @@ export function MangaDexPanel({ manga, onChanged }: { manga: Manga; onChanged: (
   );
 }
 
-export function CbzUploadPanel({ manga, nextNumber, onChanged }: { manga: Manga; nextNumber: number; onChanged: () => void }) {
-  const [file, setFile] = useState<File | null>(null);
+export function LibrarySettings() {
+  const [cfg, setCfg] = useState<LibraryConfig>(() => loadLibrary());
+  const [folder, setFolder] = useState(localFolderName());
+  const [saved, setSaved] = useState(false);
+  const set = (p: Partial<LibraryConfig>) => {
+    setSaved(false);
+    setCfg((c) => ({ ...c, ...p }));
+  };
+  return (
+    <Box>
+      <Typography sx={{ fontWeight: 600, mb: 0.5 }}>Manga kütüphanem</Typography>
+      <Typography sx={{ fontSize: "0.75rem", color: palette.textMuted, mb: 1 }}>
+        CBZ dosyaları kendi sunucunda ya da bilgisayarında durur; bu ayarlar yalnızca bu tarayıcıda saklanır ve Kiroku&apos;ya gönderilmez.
+      </Typography>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "140px 1fr" }, gap: 1 }}>
+        <TextField size="small" select label="Tür" value={cfg.kind} onChange={(e) => set({ kind: e.target.value as LibraryConfig["kind"] })}>
+          <MenuItem value="webdav">WebDAV</MenuItem>
+          <MenuItem value="local">Yerel klasör</MenuItem>
+        </TextField>
+        {cfg.kind === "webdav" ? (
+          <TextField size="small" label="Kütüphane adresi" placeholder="https://…/Manga" value={cfg.url} onChange={(e) => set({ url: e.target.value.trim() })} />
+        ) : (
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <Button size="small" variant="outlined" disabled={!canPickFolder()} onClick={() => pickLocalFolder().then(setFolder).catch(() => {})}>Klasör seç</Button>
+            <Typography noWrap sx={{ fontSize: "0.8rem", color: palette.textMuted }}>
+              {folder || (canPickFolder() ? "Bu sekme için seçilmedi" : "Tarayıcı klasör seçmeyi desteklemiyor; okuyucuda dosya seçebilirsin")}
+            </Typography>
+          </Box>
+        )}
+        {cfg.kind === "webdav" && (
+          <>
+            <TextField size="small" label="Kullanıcı" value={cfg.username} onChange={(e) => set({ username: e.target.value })} />
+            <TextField size="small" type="password" label="Şifre" value={cfg.password} onChange={(e) => set({ password: e.target.value })} />
+          </>
+        )}
+      </Box>
+      <Button size="small" sx={{ mt: 1 }} variant="contained" onClick={() => { saveLibrary(cfg); setSaved(true); }}>{saved ? "Kaydedildi" : "Kaydet"}</Button>
+    </Box>
+  );
+}
+
+// Registers a CBZ that already sits in the library. Picking the file (optional) fills page count and
+// ComicInfo.xml fields; the file itself is only read locally and never uploaded.
+export function LibraryChapterForm({ manga, nextNumber, onChanged }: { manga: Manga; nextNumber: number; onChanged: () => void }) {
   const [number, setNumber] = useState(String(nextNumber));
   const [title, setTitle] = useState("");
   const [lang, setLang] = useState("tr");
-  const [progress, setProgress] = useState<{ done: number; total: number; step: string } | null>(null);
+  const [scanlator, setScanlator] = useState("");
+  const [pageCount, setPageCount] = useState(0);
+  const [path, setPath] = useState("");
+  const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ severity: "success" | "error"; text: string } | null>(null);
+  const autoPath = libraryPath(manga.name, Number(number) || 0, title);
 
-  const upload = async () => {
+  const inspect = async (file: File | undefined) => {
     if (!file) return;
+    try {
+      const { pages, comicInfo } = await openCbz(await file.arrayBuffer());
+      setPageCount(pages.length);
+      if (comicInfo.Number) setNumber(comicInfo.Number);
+      if (comicInfo.Title) setTitle(comicInfo.Title);
+      if (comicInfo.LanguageISO) setLang(comicInfo.LanguageISO.toLowerCase());
+      if (comicInfo.Translator || comicInfo.ScanInformation) setScanlator(comicInfo.Translator || comicInfo.ScanInformation);
+      setPath(`${libraryPath(manga.name, 0).split("/")[0]}/${file.name}`);
+    } catch (e) {
+      setMsg({ severity: "error", text: `CBZ okunamadı: ${errorText(e)}` });
+    }
+  };
+
+  const save = async () => {
+    setBusy(true);
     setMsg(null);
     try {
-      setProgress({ done: 0, total: 1, step: "Açılıyor" });
-      const pages = readCbz(await file.arrayBuffer());
-      if (!pages.length) throw new Error("CBZ içinde resim bulunamadı");
-      const chapter = await ChapterService.createUpload(manga.id, { number: Number(number) || 0, title, lang, pageCount: pages.length });
-      for (let i = 0; i < pages.length; i++) {
-        setProgress({ done: i, total: pages.length, step: `Sayfa ${i + 1}/${pages.length}` });
-        const webp = await toWebp(pages[i].name, pages[i].data);
-        await ChapterService.uploadPage(chapter.id, i + 1, webp);
-      }
-      setMsg({ severity: "success", text: `${pages.length} sayfa yüklendi` });
-      setFile(null);
+      await ChapterService.register(manga.id, { filePath: path || autoPath, number: Number(number) || 0, title, lang, scanlator, pageCount });
+      setMsg({ severity: "success", text: "Bölüm eklendi" });
       setTitle("");
+      setPath("");
+      setPageCount(0);
       setNumber(String((Number(number) || 0) + 1));
       onChanged();
     } catch (e) {
-      setMsg({ severity: "error", text: `Yükleme başarısız: ${errorText(e)}` });
+      setMsg({ severity: "error", text: errorText(e) });
     } finally {
-      setProgress(null);
+      setBusy(false);
     }
   };
 
   return (
     <Box>
-      <Typography sx={{ fontWeight: 600, mb: 1 }}>CBZ yükle</Typography>
+      <Typography sx={{ fontWeight: 600, mb: 1 }}>Kütüphaneden bölüm ekle</Typography>
       {msg && <Alert severity={msg.severity} sx={{ mb: 1 }}>{msg.text}</Alert>}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "90px 1fr 80px" }, gap: 1 }}>
         <TextField size="small" label="Bölüm" type="number" value={number} onChange={(e) => setNumber(e.target.value)} />
         <TextField size="small" label="Başlık" value={title} onChange={(e) => setTitle(e.target.value)} />
         <TextField size="small" label="Dil" value={lang} onChange={(e) => setLang(e.target.value.toLowerCase())} />
+        <TextField size="small" label="Çeviri grubu" value={scanlator} onChange={(e) => setScanlator(e.target.value)} sx={{ gridColumn: { sm: "1 / -1" } }} />
+        <TextField size="small" label="Dosya yolu" placeholder={autoPath} value={path} onChange={(e) => setPath(e.target.value)} helperText={pageCount ? `${pageCount} sayfa` : "Kütüphane köküne göre"} sx={{ gridColumn: { sm: "1 / -1" } }} />
       </Box>
-      <Box sx={{ display: "flex", gap: 1, mt: 1, alignItems: "center" }}>
-        <Button component="label" variant="outlined" size="small">
-          Dosya seç
-          <input hidden type="file" accept=".cbz,.zip,application/zip,application/vnd.comicbook+zip" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+        <Button component="label" size="small" variant="outlined">
+          CBZ&apos;den doldur
+          <input hidden type="file" accept=".cbz,.zip" onChange={(e) => inspect(e.target.files?.[0])} />
         </Button>
-        <Typography noWrap sx={{ fontSize: "0.8rem", color: palette.textMuted, flex: 1 }}>{file?.name ?? "Dosya seçilmedi"}</Typography>
-        <Button size="small" variant="contained" disabled={!file || Boolean(progress)} onClick={upload}>Yükle</Button>
+        <Button size="small" variant="contained" disabled={busy} onClick={save}>Ekle</Button>
       </Box>
-      {progress && (
-        <Box sx={{ mt: 1 }}>
-          <LinearProgress variant="determinate" value={(progress.done / progress.total) * 100} />
-          <Typography sx={{ fontSize: "0.72rem", color: palette.textMuted, mt: 0.5 }}>{progress.step}</Typography>
-        </Box>
-      )}
     </Box>
   );
 }

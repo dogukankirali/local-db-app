@@ -2,8 +2,6 @@ import type { Context } from "hono";
 
 export type Env = {
   DB: D1Database;
-  /** Uploaded manga chapter pages (R2, see wrangler.jsonc) */
-  MANGA_BUCKET?: R2Bucket;
   ASSETS: Fetcher;
   JWT_SECRET_KEY: string;
   APP_URL?: string;

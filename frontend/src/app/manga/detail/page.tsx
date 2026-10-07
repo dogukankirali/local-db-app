@@ -18,7 +18,7 @@ import { ChapterService, MangaService, errorText, type Chapter, type Manga } fro
 import { fetchMediaDetail, formatFuzzy, plainDescription, type MediaDetail } from "../../../lib/anilistDetail";
 import { GenreChips } from "../../../components/Common/GenreChip";
 import MangaEditorDialog from "../../../components/manga/MangaEditorDialog";
-import { CbzUploadPanel, MangaDexPanel } from "../../../components/manga/ChapterSourcesPanel";
+import { LibraryChapterForm, LibrarySettings, MangaDexPanel } from "../../../components/manga/ChapterSourcesPanel";
 import { chapterLabel, FORMAT_LABEL, PUB_STATUS_LABEL, READ_STATUS_COLOR, READ_STATUS_LABEL, progressText } from "../../../components/manga/mangaLabels";
 import { palette } from "../../../theme/customTheme";
 
@@ -143,7 +143,7 @@ function MangaDetail() {
         </Box>
         {!visible.length ? (
           <Typography sx={{ fontSize: "0.85rem", color: palette.textMuted }}>
-            Henüz bölüm yok.{isAdmin ? " Aşağıdan MangaDex bağlayabilir ya da CBZ yükleyebilirsin." : ""}
+            Henüz bölüm yok. Aşağıdan kütüphanendeki CBZ dosyalarını ekleyebilirsin.
           </Typography>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", maxHeight: 520, overflowY: "auto" }}>
@@ -157,8 +157,8 @@ function MangaDetail() {
                       {[ch.lang.toUpperCase(), ch.groupName, `${ch.pageCount} sayfa`, ch.publishedAt?.slice(0, 10)].filter(Boolean).join(" · ")}
                     </Typography>
                   </Box>
-                  {ch.stored && <Tooltip title={`Kiroku'da saklanıyor (${ch.source})`}><CloudDoneOutlinedIcon sx={{ fontSize: 18, color: palette.textMuted }} /></Tooltip>}
-                  {isAdmin && <IconButton size="small" onClick={() => remove(ch)}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton>}
+                  {ch.filePath && <Tooltip title={`Kütüphanemde: ${ch.filePath}`}><CloudDoneOutlinedIcon sx={{ fontSize: 18, color: palette.textMuted }} /></Tooltip>}
+                  {(isAdmin || ch.filePath) && <IconButton size="small" onClick={() => remove(ch)}><DeleteOutlineRoundedIcon fontSize="small" /></IconButton>}
                 </Box>
               );
             })}
@@ -166,12 +166,11 @@ function MangaDetail() {
         )}
       </Box>
 
-      {isAdmin && (
-        <Box sx={{ ...card, display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 3 }}>
-          <MangaDexPanel manga={manga} onChanged={loadChapters} />
-          <CbzUploadPanel manga={manga} nextNumber={Math.floor(Math.max(0, ...chapters.map((c) => c.number))) + 1} onChanged={loadChapters} />
-        </Box>
-      )}
+      <Box sx={{ ...card, display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 3 }}>
+        <LibrarySettings />
+        <LibraryChapterForm manga={manga} nextNumber={Math.floor(Math.max(0, ...chapters.map((c) => c.number))) + 1} onChanged={loadChapters} />
+        {isAdmin && <MangaDexPanel manga={manga} onChanged={loadChapters} />}
+      </Box>
 
       <MangaEditorDialog open={editing} manga={manga} isAdmin={isAdmin} onClose={() => setEditing(false)} onSaved={(m) => { setManga(m); setEditing(false); }} />
     </Box>
