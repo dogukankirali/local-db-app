@@ -1,6 +1,6 @@
 "use client";
 
-import WatchDates from "./WatchDates";
+import { formatWatchDate } from "./WatchDates";
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
@@ -269,13 +269,19 @@ export default function AnimeDetailModal({
                 </Box>
               </motion.div>
 
+              <motion.div variants={item}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+                  <Stat label="Başladım">{formatWatchDate(a.StartedAt)}</Stat>
+                  <Stat label="Bitirdim">{formatWatchDate(a.FinishedAt)}</Stat>
+                </Box>
+              </motion.div>
+
               {a.Genre && (Array.isArray(a.Genre) ? a.Genre.length > 0 : String(a.Genre).trim()) && (
                 <motion.div variants={item}>
                   <GenreChips genres={a.Genre} max={12} justify="flex-start" />
                 </motion.div>
               )}
 
-              <WatchDates key={a.ID} animeId={a.ID} startedAt={a.StartedAt} finishedAt={a.FinishedAt} />
               {a.Notes && (
                 <motion.div variants={item}>
                   <Box sx={{ p: 1.5, borderRadius: "8px", backgroundColor: alpha(palette.overlay, 0.035), border: `1px solid ${alpha(palette.overlay, 0.05)}` }}>

@@ -1,73 +1,77 @@
 "use client";
 
-// Kullanıcının izlemeye başlama/bitirme tarihi, takvimden seçilir ve hemen kaydedilir.
+// Kullanıcının izlemeye başlama/bitirme tarihi. Yalnızca düzenleme penceresinden değiştirilir
+// (form ile birlikte /updateAnimeTable'a gider); detay kartı, tablo ve detay sayfası salt gösterir.
 // 2000-01-01, mevcut kayıtlara geçişte yazılan "eski kayıt (tarih bilinmiyor)" işaretidir.
 
-import { useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/tr";
-import axios from "axios";
-import { toast } from "sonner";
-import { API_BASE } from "../../Services/http";
 import { palette } from "../../theme/customTheme";
-import { ANIME_DATA_CHANGED } from "./notesEvents";
+import { Field, fieldBg, fieldBorder } from "../ui/FormControls";
 
 export const OLD_RECORD_DATE = "2000-01-01";
 
-export default function WatchDates({ animeId, startedAt, finishedAt, row = false }: { animeId: number; startedAt?: string; finishedAt?: string; row?: boolean }) {
-  const [started, setStarted] = useState(startedAt ?? "");
-  const [finished, setFinished] = useState(finishedAt ?? "");
-  const [saving, setSaving] = useState(false);
+/** "YYYY-MM-DD" → "07.10.2026"; boşsa "—", eski kayıt işaretiyse "Bilinmiyor" */
+export function formatWatchDate(v?: string) {
+  if (!v) return "—";
+  if (v === OLD_RECORD_DATE) return "Bilinmiyor";
+  const d = dayjs(v);
+  return d.isValid() ? d.format("DD.MM.YYYY") : "—";
+}
 
-  const save = async (next: { started: string; finished: string }) => {
-    if (next.started && next.finished && next.finished < next.started) {
-      toast.error("Bitiş tarihi başlamadan önce olamaz");
-      return;
-    }
-    const prev = { started, finished };
-    setStarted(next.started);
-    setFinished(next.finished);
-    setSaving(true);
-    try {
-      await axios.post(`${API_BASE}/myAnime/dates`, { ID: animeId, StartedAt: next.started, FinishedAt: next.finished });
-      toast.success("Tarih kaydedildi");
-      // Grid/tablo verisi yenilensin (pencere kapanıp açılınca yeni tarih görünsün)
-      window.dispatchEvent(new Event(ANIME_DATA_CHANGED));
-    } catch (err: any) {
-      setStarted(prev.started);
-      setFinished(prev.finished);
-      toast.error(err?.response?.data?.message || "Tarih kaydedilemedi");
-    } finally {
-      setSaving(false);
-    }
-  };
+const pickerSx = {
+  "& .MuiOutlinedInput-root": {
+    minHeight: 40,
+    borderRadius: "10px",
+    fontSize: "0.9rem",
+    backgroundColor: fieldBg,
+    "& .MuiOutlinedInput-notchedOutline": { border: fieldBorder },
+    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: alpha(palette.overlay, 0.14) },
+    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { border: `1px solid ${alpha(palette.primary, 0.6)}` },
+  },
+};
 
-  const field = (label: string, value: string, onChange: (v: string) => void, minDate?: string) => (
-    <Box sx={{ flex: 1, minWidth: 0 }}>
+/** Düzenleme formundaki iki tarih alanı; değişiklik `onChange` ile taslağa yazılır, Kaydet ile gider */
+export default function WatchDateFields({
+  startedAt,
+  finishedAt,
+  onChange,
+  disabled,
+}: {
+  startedAt?: string;
+  finishedAt?: string;
+  onChange: (patch: { StartedAt?: string; FinishedAt?: string }) => void;
+  disabled?: boolean;
+}) {
+  const field = (label: string, value: string | undefined, set: (v: string) => void, minDate?: string) => (
+    <Field label={label} hint={value === OLD_RECORD_DATE ? "Eski kayıt, tarih bilinmiyor" : undefined}>
       <DatePicker
-        label={label}
-        value={value ? dayjs(value) : null}
-        disabled={saving}
+        value={value && value !== OLD_RECORD_DATE ? dayjs(value) : null}
+        disabled={disabled}
         disableFuture
         minDate={minDate && minDate !== OLD_RECORD_DATE ? dayjs(minDate) : undefined}
         format="DD.MM.YYYY"
-        onAccept={(d: Dayjs | null) => onChange(d && d.isValid() ? d.format("YYYY-MM-DD") : "")}
-        slotProps={{ popper: { sx: { zIndex: 1600 } }, textField: { size: "small", fullWidth: true }, field: { clearable: true, onClear: () => onChange("") } as any }}
+        onChange={(d: Dayjs | null) => {
+          if (!d) set("");
+          else if (d.isValid()) set(d.format("YYYY-MM-DD"));
+        }}
+        slotProps={{
+          popper: { sx: { zIndex: 1600 } },
+          textField: { size: "small", fullWidth: true, sx: pickerSx },
+          field: { clearable: true, onClear: () => set("") } as any,
+        }}
       />
-      {value === OLD_RECORD_DATE && <Typography sx={{ fontSize: "0.68rem", color: palette.textFaint, mt: 0.25 }}>Eski kayıt, tarih bilinmiyor</Typography>}
-    </Box>
+    </Field>
   );
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="tr">
-      <Box sx={{ display: "grid", gap: 1.5, mt: row ? 0 : 2, gridTemplateColumns: row ? { xs: "1fr", sm: "repeat(2, minmax(0, 220px))" } : "1fr" }}>
-        {field("Başladım", started, (v) => save({ started: v, finished }))}
-        {field("Bitirdim", finished, (v) => save({ started, finished: v }), started)}
-      </Box>
+      {field("Başladım", startedAt, (v) => onChange({ StartedAt: v }))}
+      {field("Bitirdim", finishedAt, (v) => onChange({ FinishedAt: v }), startedAt)}
     </LocalizationProvider>
   );
 }

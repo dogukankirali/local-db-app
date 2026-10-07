@@ -15,6 +15,7 @@ import { Field, Segmented, TextInput, fieldBg, fieldBorder } from "../ui/FormCon
 import { GenreChip, genreLabel } from "../Common/GenreChip";
 import { palette } from "../../theme/customTheme";
 import { AnimeService } from "../../Services/AnimeServices";
+import WatchDateFields from "./WatchDates";
 
 // Alanlar API ile aynı adlarda; IAnime tipleri (ör. Score: string) gerçek veriyle örtüşmediği için gevşek tutuldu
 export type AnimeDraft = Record<string, any>;
@@ -319,6 +320,11 @@ export default function AnimeForm({
             ]}
           />
         </Field>
+
+        {/* Tarihler kullanıcının kendi kaydına ait; yalnızca var olan animeyi düzenlerken */}
+        {value.ID ? (
+          <WatchDateFields startedAt={value.StartedAt} finishedAt={value.FinishedAt} disabled={readOnly} onChange={onChange} />
+        ) : null}
 
         <LinkField label="İzleme linki" value={value.AnimeLink ?? ""} readOnly={lockCatalog} onChange={(v) => onChange({ AnimeLink: v })} />
         <LinkField label="MAL sayfası" value={value.MALAnimeLink ?? ""} readOnly={lockCatalog} onChange={(v) => onChange({ MALAnimeLink: v })} />

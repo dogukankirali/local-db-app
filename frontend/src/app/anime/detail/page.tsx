@@ -15,7 +15,7 @@ import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import { AnimeService } from "../../../Services/AnimeServices";
 import { palette } from "../../../theme/customTheme";
-import WatchDates from "../../../components/anime/WatchDates";
+import { formatWatchDate } from "../../../components/anime/WatchDates";
 import {
   FORMAT_TR,
   MediaDetail,
@@ -275,7 +275,8 @@ function DetailContent() {
                   )
                 }
               />
-              <WatchDates key={anime.ID} animeId={anime.ID} startedAt={anime.StartedAt} finishedAt={anime.FinishedAt} />
+              <InfoRow label="Başladım" value={formatWatchDate(anime.StartedAt)} />
+              <InfoRow label="Bitirdim" value={formatWatchDate(anime.FinishedAt)} />
               {anime.Notes && <Typography sx={{ fontSize: "0.82rem", color: palette.textMuted, whiteSpace: "pre-wrap", mt: 1.25 }}>{anime.Notes}</Typography>}
             </Section>
           )}

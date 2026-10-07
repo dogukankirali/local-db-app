@@ -413,7 +413,19 @@ anime.post("/updateAnimeTable", requireAuth, async (c) => {
       .run();
     await setGenres(db, id, str(field(body, "Genre")));
   }
-  await upsertUserAnime(db, user.userId, id, userFields(body)).run();
+  const fields: UserFields = userFields(body);
+  // Tarihler yalnızca gövdede varsa yazılır; eski istemciler (eklenti) göndermediğinde silinmez
+  const hasStarted = field(body, "StartedAt") !== undefined;
+  const hasFinished = field(body, "FinishedAt") !== undefined;
+  if (hasStarted || hasFinished) {
+    const started = str(field(body, "StartedAt")).trim();
+    const finished = str(field(body, "FinishedAt")).trim();
+    if ((started && !DATE_RE.test(started)) || (finished && !DATE_RE.test(finished))) return message(c, "Tarih YYYY-AA-GG olmalı", 400);
+    if (started && finished && finished < started) return message(c, "Bitiş tarihi başlamadan önce olamaz", 400);
+    if (hasStarted) fields.started_at = started || null;
+    if (hasFinished) fields.finished_at = finished || null;
+  }
+  await upsertUserAnime(db, user.userId, id, fields).run();
   return message(c, "OK");
 });
 
