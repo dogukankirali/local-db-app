@@ -7,6 +7,7 @@ import { coverRoutes } from "./covers";
 import { titleRoutes } from "./titles";
 import { googleRoutes } from "./google";
 import { manga } from "./manga";
+import { screen } from "./screen";
 import { chapters } from "./chapters";
 import { profileRoutes } from "./profile";
 import { users } from "./users";
@@ -24,6 +25,7 @@ api.get("/healthcheck", async (c) => {
 api.route("/", anime);
 api.route("/", watchlist);
 api.route("/", manga);
+api.route("/", screen);
 api.route("/", chapters);
 api.route("/", users);
 api.route("/", anilistRoutes);

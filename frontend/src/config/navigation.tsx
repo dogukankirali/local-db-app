@@ -4,6 +4,7 @@ import MovieOutlinedIcon from "@mui/icons-material/MovieOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import LiveTvOutlinedIcon from "@mui/icons-material/LiveTvOutlined";
+import TheatersOutlinedIcon from "@mui/icons-material/TheatersOutlined";
 import BookmarksOutlinedIcon from "@mui/icons-material/BookmarksOutlined";
 import BookmarkAddedOutlinedIcon from "@mui/icons-material/BookmarkAddedOutlined";
 
@@ -31,6 +32,7 @@ export const navSections: NavSection[] = [
       { label: "Manga", href: "/manga", icon: <MenuBookOutlinedIcon />, description: "Okuma listen" },
       { label: "Kitaplar", href: "/book", icon: <AutoStoriesOutlinedIcon />, description: "Kitap arşivin" },
       { label: "Diziler", href: "/series", icon: <LiveTvOutlinedIcon />, description: "Dizi takibi" },
+      { label: "Filmler", href: "/movies", icon: <TheatersOutlinedIcon />, description: "Film arşivin" },
     ],
   },
   {
