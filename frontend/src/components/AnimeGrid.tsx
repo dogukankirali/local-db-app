@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { flushSync } from "react-dom";
-import { Box, Typography, Chip, Skeleton } from "@mui/material";
+import { Box, Typography, Chip, Skeleton, Tooltip } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import StarIcon from "@mui/icons-material/Star";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
@@ -23,6 +23,16 @@ function withViewTransition(update: () => void) {
 }
 
 // Kartın 3B eğimi: React state yerine CSS değişkenleri, her harekette yeniden render olmasın
+const badgeSx = {
+  display: "flex",
+  alignItems: "center",
+  gap: 0.4,
+  px: 0.75,
+  py: 0.3,
+  borderRadius: "6px",
+  backgroundColor: "rgba(0,0,0,0.78)",
+} as const;
+
 function handleTilt(e: React.PointerEvent<HTMLDivElement>) {
   if (e.pointerType !== "mouse") return;
   const el = e.currentTarget;
@@ -66,6 +76,7 @@ const AnimeCard = memo(function AnimeCard({
   const imgSrc = sizedCover(getCoverSrc(anime.Cover), gridSize >= 7 ? "medium" : "large");
   const status = getStatusInfo(anime);
   const score = parseFloat(String(anime.Score)) || 0;
+  const malScore = Number(anime.MALScore) || 0;
   const coverRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -131,26 +142,26 @@ const AnimeCard = memo(function AnimeCard({
           }}
         />
 
-        {score > 0 && (
-          <Box
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              zIndex: 2,
-              backgroundColor: "rgba(0,0,0,0.7)",
-              backdropFilter: "blur(6px)",
-              borderRadius: "6px",
-              px: 0.75,
-              py: 0.3,
-              display: "flex",
-              alignItems: "center",
-              gap: 0.3,
-              color: "#FBBF24",
-            }}
-          >
-            <StarIcon sx={{ fontSize: 12 }} />
-            <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, lineHeight: 1 }}>{score}</Typography>
+        {(score > 0 || malScore > 0) && (
+          <Box sx={{ position: "absolute", top: 8, right: 8, zIndex: 2, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0.5 }}>
+            {score > 0 && (
+              <Tooltip title="Senin puanın" placement="left">
+                <Box sx={{ ...badgeSx, color: "#FBBF24" }}>
+                  <StarIcon sx={{ fontSize: 12 }} />
+                  <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, lineHeight: 1 }}>{score}</Typography>
+                </Box>
+              </Tooltip>
+            )}
+            {malScore > 0 && (
+              <Tooltip title="MyAnimeList puanı" placement="left">
+                <Box sx={{ ...badgeSx, color: "#9DB8FF", border: "1px solid rgba(46,81,162,0.9)" }}>
+                  <Box component="span" sx={{ fontSize: "0.56rem", fontWeight: 800, letterSpacing: "0.04em", px: 0.4, py: 0.1, borderRadius: "3px", color: "#fff", backgroundColor: "#2E51A2", lineHeight: 1.2 }}>
+                    MAL
+                  </Box>
+                  <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, lineHeight: 1 }}>{malScore.toFixed(2)}</Typography>
+                </Box>
+              </Tooltip>
+            )}
           </Box>
         )}
 
@@ -175,8 +186,9 @@ const AnimeCard = memo(function AnimeCard({
               py: 0.5,
               opacity: 0,
               transition: "opacity 0.25s ease",
-              backgroundColor: "rgba(0,0,0,0.55)",
-              backdropFilter: "blur(4px)",
+              // backdrop-filter kullanılmaz: 3B eğimli kartta, grid'in kırpılan kenarlarına yakın kartlarda
+              // Chrome bu katmanı düşürüp hover butonlarını gizleyebiliyor
+              backgroundColor: "rgba(10,10,14,0.82)",
               borderRadius: "0 0 10px 10px",
             }}
           >
