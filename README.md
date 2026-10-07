@@ -103,6 +103,8 @@ The extension's **Manga İndirici** page (popup → Ayarlar → 📚 Manga İndi
 - **Sources** (`extension/manga/sources.js`): MangaDex (official API, tr/en), Tempest (JuraTempest), Tortuga Çeviri, and the experimental Manga-TR and SadScans. Site logic is adapted from the Keiyoushi extensions (Apache-2.0).
 - **Where files go**: straight to this computer, `Downloads/Kiroku/Manga/<Series>/` (folder configurable). Nothing is uploaded or kept anywhere else; moving the files to a server is up to the user.
 
+Serving the library from a home server (Caddy + Cloudflare Tunnel): [docs/manga-library-server.md](docs/manga-library-server.md).
+
 ## Per-user list
 
 The anime catalog (name, status, episode count, cover, genres, MAL score) is shared by everyone and only the admin changes it. Score, watched episodes, Plan to Watch, notes, watch dates and the watchlist are separate for each user (`user_anime`, `watch_lists.user_id`). Lists require sign-in; since the site bypasses Cloudflare Access for `/api`, the API is closed to anonymous reads.
@@ -254,6 +256,8 @@ Eklentinin **Manga İndirici** sayfası (popup → Ayarlar → 📚 Manga İndir
 
 - **Kaynaklar** (`extension/manga/sources.js`): MangaDex (resmî API, tr/en), Tempest (JuraTempest), Tortuga Çeviri ve deneysel olarak Manga-TR ile SadScans. Site mantığı Keiyoushi eklentilerinden (Apache-2.0) uyarlandı.
 - **Kayıt yeri**: doğrudan bu bilgisayara, `İndirilenler/Kiroku/Manga/<Seri>/` (klasör değiştirilebilir). Hiçbir yere yüklenmez, başka yerde kopyası tutulmaz; dosyaları sunucuya taşımak kullanıcıya kalır.
+
+Kütüphaneyi ev sunucusundan sunmak (Caddy + Cloudflare Tunnel): [docs/manga-library-server.md](docs/manga-library-server.md).
 
 ## Kullanıcıya özel liste
 
