@@ -20,9 +20,12 @@ import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
 import { Switch, IconButton, Tooltip } from "@mui/material";
 import { toast } from "sonner";
-import { ProfileService, type ApiToken, type Profile, type RecommendedAnime } from "../../Services/ProfileService";
+import { ProfileService, type ApiToken, type Profile } from "../../Services/ProfileService";
 import { sizedCover } from "../../utils/cover";
 import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
+import CasinoRoundedIcon from "@mui/icons-material/CasinoRounded";
+import DiscoverRecommendations from "../../components/profile/DiscoverRecommendations";
+import RewatchWheel from "../../components/profile/RewatchWheel";
 import { useAuth } from "../../contexts/AuthContext";
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import { AnimeService } from "../../Services/AnimeServices";
@@ -218,7 +221,6 @@ export default function ProfilePage() {
 
   const [animes, setAnimes] = useState<TEATable.IAnime[] | null>(null);
   const [top, setTop] = useState<TEATable.IAnime[] | null>(null);
-  const [recs, setRecs] = useState<RecommendedAnime[] | null>(null);
   const [tokens, setTokens] = useState<ApiToken[] | null>(null);
   const [newToken, setNewToken] = useState<string | null>(null);
 
@@ -243,11 +245,6 @@ export default function ProfilePage() {
     );
   }, [user?.id]);
 
-  const loadRecs = () => ProfileService.recommendations(12).then((r) => setRecs(r.enabled ? r.data : null)).catch(() => setRecs(null));
-  useEffect(() => {
-    if (profile?.showRecommendations) loadRecs();
-    else setRecs(null);
-  }, [profile?.showRecommendations]);
 
   const stats = useMemo(() => {
     if (!animes) return null;
@@ -461,25 +458,17 @@ export default function ProfilePage() {
           </SectionTitle>
           {!profile?.showRecommendations ? (
             <Typography sx={{ color: palette.textMuted, fontSize: "0.85rem" }}>
-              Açarsan puan verdiğin türlere göre, henüz izlemediğin ve MAL puanı yüksek animeler önerilir.
+              Açarsan sevdiğin animelerin benzerleri ve puanladığın türlerden, arşivinde olmayan animeler önerilir.
             </Typography>
-          ) : !recs ? (
-            <Box sx={{ display: "grid", placeItems: "center", py: 4 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : recs.length === 0 ? (
-            <Typography sx={{ color: palette.textMuted, fontSize: "0.85rem" }}>Şimdilik önerecek anime bulunamadı. Daha fazla animeye puan verdikçe öneriler gelir.</Typography>
           ) : (
-            <Box sx={coverGrid}>
-              {recs.map((anime) => (
-                <CoverCard
-                  key={anime.ID}
-                  anime={{ ...anime, Score: String(anime.MALScore ? Math.round(anime.MALScore * 10) : 0) }}
-                  caption={anime.Reason ? `${anime.Reason} sevdiğin için` : `MAL ${anime.MALScore.toFixed(2)}`}
-                />
-              ))}
-            </Box>
+            <DiscoverRecommendations catalog={animes} />
           )}
+        </Box>
+
+        {/* Rewatch çarkı */}
+        <Box sx={card}>
+          <SectionTitle icon={<CasinoRoundedIcon sx={{ color: palette.primary }} />}>Rewatch çarkı</SectionTitle>
+          <RewatchWheel catalog={animes} />
         </Box>
 
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) minmax(0, 1fr)" }, gap: 3, alignItems: "start" }}>
