@@ -214,6 +214,9 @@ export default function AnimeDetailModal({
                 <Typography component="h2" sx={{ fontSize: { xs: "1.2rem", sm: "1.45rem" }, fontWeight: 800, lineHeight: 1.2, pr: 5, color: palette.text }}>
                   {a.Name}
                 </Typography>
+                {a.EnglishName && a.EnglishName !== a.Name && (
+                  <Typography sx={{ mt: 0.5, pr: 5, fontSize: "0.92rem", color: palette.textMuted, lineHeight: 1.3 }}>{a.EnglishName}</Typography>
+                )}
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.25 }}>
                   <Pill color={status.color}>
                     {a.PlanToWatch && <BookmarkRoundedIcon sx={{ fontSize: 14 }} />}

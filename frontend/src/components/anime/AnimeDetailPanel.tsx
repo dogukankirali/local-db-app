@@ -58,6 +58,14 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1.75 }}>
+          {a.EnglishName && a.EnglishName !== a.Name && (
+            <Typography sx={{ fontSize: "0.85rem", color: palette.textMuted, mb: -0.75 }}>
+              <Box component="span" sx={{ fontSize: "0.68rem", color: palette.textFaint, textTransform: "uppercase", letterSpacing: "0.06em", mr: 1 }}>
+                İngilizce
+              </Box>
+              {a.EnglishName}
+            </Typography>
+          )}
           <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75 }}>
             <Pill color={status.color}>{status.label}</Pill>
             <Pill color={a.IsMovie ? "#34D399" : "#F472B6"}>{a.IsMovie ? "Film" : "TV"}</Pill>

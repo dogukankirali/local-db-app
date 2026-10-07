@@ -188,15 +188,18 @@ export module AnimeService {
     (async () => {
       const state: SyncState = { success: false, message: "", updated: 0, failed: 0, errors: [], progress: 0, totalWork: 0, completed: 0 };
       try {
-        const [pending, coverPending] = await Promise.all([
+        const [pending, coverPending, englishPending] = await Promise.all([
           axios.get(`${path}/sync/pending`, { signal }),
           axios.get(`${path}/covers/pending`, { signal }),
+          axios.get(`${path}/titles/english/pending`, { signal }),
         ]);
+        const englishItems: { id: number; idMal: number }[] = englishPending.data.items ?? [];
+        const englishBatchSize: number = englishPending.data.batchSize ?? 50;
         const items: { id: number; name: string }[] = pending.data.items ?? [];
         const batchSize: number = pending.data.batchSize ?? 8;
         const covers: { id: number; idMal: number | null }[] = coverPending.data.items ?? [];
         const coverBatchSize: number = coverPending.data.batchSize ?? 50;
-        state.totalWork = items.length + covers.length;
+        state.totalWork = items.length + covers.length + englishItems.length;
         onStart({ ...state });
         if (!state.totalWork) {
           onComplete({ ...state, success: true, progress: 100, message: "Güncellenecek anime yok" });
@@ -258,7 +261,31 @@ export module AnimeService {
           state.completed = items.length + Math.min(i, covers.length);
           state.message = `Kapaklar yükseltiliyor: ${Math.min(i, covers.length)}/${covers.length}`;
           report();
-          if (i < covers.length) await wait(SYNC_DELAY_MS);
+          if (i < covers.length || englishItems.length) await wait(SYNC_DELAY_MS);
+        }
+
+        // İngilizce isimler: MAL id'leriyle AniList'ten toplu; bulunamayanlar '' olarak işaretlenir
+        for (let i = 0; i < englishItems.length; ) {
+          const batch = englishItems.slice(i, i + englishBatchSize);
+          let found: Map<number, string | null>;
+          try {
+            found = await AniList.englishTitlesByMalIds(batch.map((b) => b.idMal), signal);
+          } catch (err: any) {
+            if (err instanceof AniList.AniListRateLimit) {
+              onProgress({ ...state, message: `AniList hız sınırı, ${err.retryAfter} sn bekleniyor...` });
+              await wait(err.retryAfter * 1000);
+              continue;
+            }
+            throw err;
+          }
+          const updates = batch.map((b) => ({ id: b.id, english: found.get(b.idMal) ?? "" }));
+          const res = await axios.post(`${path}/titles/english/batch`, { items: updates }, { signal });
+          i += batch.length;
+          state.updated += res.data.updated ?? 0;
+          state.completed = items.length + covers.length + Math.min(i, englishItems.length);
+          state.message = `İngilizce isimler: ${Math.min(i, englishItems.length)}/${englishItems.length}`;
+          report();
+          if (i < englishItems.length) await wait(SYNC_DELAY_MS);
         }
         onComplete({ ...state, success: true, progress: 100, message: "Senkronizasyon tamamlandı" });
       } catch (err: any) {

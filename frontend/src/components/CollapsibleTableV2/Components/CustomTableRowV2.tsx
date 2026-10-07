@@ -17,6 +17,7 @@ import {
   Popover,
   Typography,
   Collapse,
+  Tooltip,
 } from "@mui/material";
 import moment from "moment-timezone";
 import { theme } from "../../../theme/customTheme";
@@ -337,7 +338,16 @@ export default function CustomTableRowV2(
                   align="center"
                   style={colStyle}
                 >
-                  {props.singleData[header.key]}
+                  {header.key === "Name" && props.singleData.EnglishName && props.singleData.EnglishName !== props.singleData.Name ? (
+                    // İngilizce isim üstüne gelince görünür
+                    <Tooltip title={props.singleData.EnglishName} placement="top" arrow>
+                      <span style={{ cursor: "help", textDecoration: "underline dotted rgba(255,255,255,0.25)", textUnderlineOffset: 3 }}>
+                        {props.singleData[header.key]}
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    props.singleData[header.key]
+                  )}
                 </TableCell>
               );
             } else if (header.type === "boolean") {

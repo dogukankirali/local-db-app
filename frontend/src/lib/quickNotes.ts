@@ -329,6 +329,7 @@ export function noteToAnimeRow(note: ParsedNote, media: AniMedia): Record<string
   const ownLink = note.link && !note.malId && !note.anilistId ? note.link : "";
   return {
     Name: media.title.romaji || media.title.english || note.name,
+    EnglishName: media.title.english ?? "",
     AnimeStatus: STATUS_MAP[media.status ?? ""] ?? "Unknown",
     // Puan verildiyse izlenip bitirildiği varsayılır
     WatchStatus: note.score !== null && episodes ? episodes : 0,

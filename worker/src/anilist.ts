@@ -26,6 +26,7 @@ type Media = {
 type SyncRow = {
   id: number;
   name: string;
+  english_name: string | null;
   anime_status: string | null;
   total_number_of_episodes: number | null;
   mal_score: number | null;
@@ -111,7 +112,7 @@ anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
 
   const { results: rows } = await db
     .prepare(
-      `SELECT a.id, a.name, a.anime_status, a.total_number_of_episodes, a.mal_score, a.mal_anime_link,
+      `SELECT a.id, a.name, a.english_name, a.anime_status, a.total_number_of_episodes, a.mal_score, a.mal_anime_link,
          CASE WHEN a.cover IS NULL OR a.cover = '' THEN '' ELSE 'x' END AS cover, a.series,
          (SELECT COUNT(*) FROM animes_genres ag WHERE ag.anime_id = a.id) AS genre_count
        FROM animes a WHERE a.id IN (${ids.map(() => "?").join(", ")})`
@@ -140,6 +141,7 @@ anilistRoutes.post("/sync/batch", requireAdmin, async (c) => {
     }
     const sets: Record<string, unknown> = { is_movie: m.format === "MOVIE" ? 1 : 0 };
     if (Number.isInteger(m.id)) sets.anilist_id = m.id;
+    if ((force || !anime.english_name) && m.title.english) sets.english_name = m.title.english;
     if ((force || !anime.mal_anime_link) && m.idMal) sets.mal_anime_link = `https://myanimelist.net/anime/${m.idMal}`;
     if ((force || !(anime.mal_score! > 0)) && m.averageScore) sets.mal_score = m.averageScore / 10;
     if ((force || !(anime.total_number_of_episodes! > 0)) && m.episodes) sets.total_number_of_episodes = m.episodes;

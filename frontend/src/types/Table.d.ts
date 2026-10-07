@@ -56,6 +56,8 @@ declare namespace TEATable {
     NextEpisode?: number;
     NextEpisodeAt?: string;
     AiredEpisodes?: number;
+    /** AniList'teki İngilizce isim; yoksa "" */
+    EnglishName?: string;
   }
 
   export interface IAnimeDetail {

@@ -9,6 +9,7 @@ import { bool, field, int, message, num, readJson, str, type AppEnv, type Ctx } 
 type AnimeRow = {
   id: number;
   name: string;
+  english_name?: string | null;
   anime_status: string | null;
   watch_status: number | null;
   total_number_of_episodes: number | null;
@@ -33,7 +34,7 @@ type AnimeRow = {
 const INLINE_COVER = "__inline__";
 
 // Liste sorgularında base64 kapaklar taşınmaz; yerine /api/animeCover adresi verilir
-export const LIST_COLUMNS = `a.id, a.name, a.anime_status, COALESCE(u.watch_status, 0) AS watch_status, a.total_number_of_episodes, a.is_movie,
+export const LIST_COLUMNS = `a.id, a.name, a.english_name, a.anime_status, COALESCE(u.watch_status, 0) AS watch_status, a.total_number_of_episodes, a.is_movie,
   u.score, a.mal_score, u.notes, a.anime_link, a.mal_anime_link, a.series, COALESCE(u.plan_to_watch, 0) AS plan_to_watch,
   u.user_id IS NOT NULL AS in_list, a.anilist_id, a.next_episode, a.next_episode_at, a.aired_episodes,
   CASE WHEN a.cover LIKE 'data:%' THEN '${INLINE_COVER}' ELSE a.cover END AS cover,
@@ -52,6 +53,7 @@ export function toAnime(c: Ctx, r: AnimeRow) {
   return {
     ID: r.id,
     Name: r.name,
+    EnglishName: r.english_name ?? "",
     AnimeStatus: r.anime_status ?? "",
     WatchStatus: r.watch_status ?? 0,
     TotalNumberOfEpisodes: r.total_number_of_episodes ?? 0,
@@ -108,8 +110,8 @@ function buildWhere(filters: unknown[]): { sql: string; params: unknown[] } {
       case "Name": {
         const name = str(value).trim();
         if (name) {
-          where.push("a.name LIKE ?");
-          params.push(`%${name}%`);
+          where.push("(a.name LIKE ? OR a.english_name LIKE ?)");
+          params.push(`%${name}%`, `%${name}%`);
         }
         break;
       }
@@ -190,6 +192,7 @@ async function setGenres(db: D1Database, animeId: number, genre: string) {
 function animeFields(body: Record<string, unknown>) {
   return {
     name: str(field(body, "Name")),
+    english_name: str(field(body, "EnglishName")).trim(),
     anime_status: str(field(body, "AnimeStatus")),
     total_number_of_episodes: int(field(body, "TotalNumberOfEpisodes")),
     is_movie: bool(field(body, "IsMovie")) ? 1 : 0,
@@ -376,13 +379,14 @@ anime.post("/updateAnimeTable", requireAuth, async (c) => {
     const keepCover = a.cover.includes("/animeCover?id=") ? 1 : 0;
     await db
       .prepare(
-        `UPDATE animes SET name = ?, anime_status = ?, total_number_of_episodes = ?, is_movie = ?,
+        `UPDATE animes SET name = ?, english_name = CASE WHEN ? = '' THEN english_name ELSE ? END,
+           anime_status = ?, total_number_of_episodes = ?, is_movie = ?,
            mal_score = ?, anime_link = ?, mal_anime_link = ?,
            cover = CASE WHEN ? THEN cover ELSE ? END, series = ?
          WHERE id = ?`
       )
       .bind(
-        a.name, a.anime_status, a.total_number_of_episodes, a.is_movie,
+        a.name, a.english_name, a.english_name, a.anime_status, a.total_number_of_episodes, a.is_movie,
         a.mal_score, a.anime_link, a.mal_anime_link,
         keepCover, a.cover, a.series, id
       )

@@ -245,6 +245,7 @@ const STATUS_MAP: Record<string, string> = { FINISHED: "Finished", RELEASING: "C
 export function discoveryToAnime(m: DiscoverMedia) {
   return {
     Name: discoveryTitle(m),
+    EnglishName: m.title.english ?? "",
     AnimeStatus: STATUS_MAP[m.status ?? ""] ?? "Unknown",
     WatchStatus: 0,
     TotalNumberOfEpisodes: m.episodes ?? 0,
