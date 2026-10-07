@@ -89,7 +89,7 @@ function createIndicator() {
         .at-details img { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; }
         .at-info { display: flex; flex-direction: column; justify-content: center; max-width: 160px; }
         .at-info strong { font-size: 13px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-bottom: 2px; }
-        .at-info small { font-size: 11px; color: #4f46e5; margin-bottom: 6px; }
+        .at-info small { font-size: 11px; color: #FF7849; margin-bottom: 6px; }
         .at-info span { font-size: 12px; color: #aaa; font-weight: 400; }
         .at-info span b { color: #ef4444; font-weight: 600; font-size: 14px; }
     `;
@@ -427,7 +427,7 @@ function addMALWatchlistButton() {
         }
 
         anisyncBtn.textContent = "Adding to Kiroku...";
-        anisyncBtn.style.color = "#6366f1";
+        anisyncBtn.style.color = "#FF9A73";
 
         chrome.runtime.sendMessage({ action: "addToWatchlist", data }, (response) => {
             if (response && response.success) {
@@ -443,6 +443,34 @@ function addMALWatchlistButton() {
             }
         });
     });
+
+    // MAL'ın kendi "Add to Favorites" satırının kopyası gibi görünsün: aynı sınıf, aynı sarmalayıcı, satır ardına
+    const favEl = Array.from(document.querySelectorAll(".leftside a, .leftside span, .leftside div, .leftside li"))
+        .filter(el => el.textContent.trim().toLowerCase() === "add to favorites")
+        .pop();
+    if (favEl) {
+        anisyncBtn.className = `${favEl.className || ""} add-to-anisync-mal-btn`.trim();
+        anisyncBtn.removeAttribute("style");
+        anisyncBtn.style.cursor = "pointer";
+        const computed = getComputedStyle(favEl);
+        anisyncBtn.style.color = computed.color;
+        anisyncBtn.style.font = computed.font;
+        let row = favEl;
+        while (row.parentElement && row.parentElement.children.length === 1 && !row.parentElement.classList.contains("leftside")) row = row.parentElement;
+        let holder = anisyncBtn;
+        for (let el = favEl; el !== row; ) {
+            el = el.parentElement;
+            const wrap = el.cloneNode(false);
+            wrap.removeAttribute("id");
+            wrap.appendChild(holder);
+            holder = wrap;
+        }
+        const defaultColor = computed.color;
+        anisyncBtn.onmouseover = null;
+        anisyncBtn.addEventListener("mouseout", () => { if (!anisyncBtn.dataset.done) anisyncBtn.style.color = defaultColor; });
+        row.parentElement.insertBefore(holder, row.nextSibling);
+        return;
+    }
 
     if (refNode) {
         container.insertBefore(anisyncBtn, refNode);
@@ -482,7 +510,7 @@ function addAniziumDetailWatchlistButton() {
         align-items: center;
         gap: 6px;
         padding: 6px 14px;
-        background-color: #4f46e5;
+        background-color: #FF7849;
         color: #ffffff;
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 4px;
@@ -495,10 +523,10 @@ function addAniziumDetailWatchlistButton() {
     `;
 
     btn.addEventListener("mouseover", () => {
-        if (!btn.dataset.done) btn.style.backgroundColor = "#4338ca";
+        if (!btn.dataset.done) btn.style.backgroundColor = "#F2622F";
     });
     btn.addEventListener("mouseout", () => {
-        if (!btn.dataset.done) btn.style.backgroundColor = "#4f46e5";
+        if (!btn.dataset.done) btn.style.backgroundColor = "#FF7849";
     });
 
     btn.addEventListener("click", (e) => {
@@ -511,7 +539,7 @@ function addAniziumDetailWatchlistButton() {
         }
 
         btn.textContent = "AniList'te aranıyor...";
-        btn.style.backgroundColor = "#6366f1";
+        btn.style.backgroundColor = "#FF9A73";
 
         chrome.runtime.sendMessage({
             action: "addFromTitle",
@@ -576,8 +604,30 @@ function addStreamingUpdateButton() {
             return matches.length > 0 ? matches[matches.length - 1] : null;
         };
 
-        const reportBtn = findDeepest(["report an issue", "sorun bildir"]);
-        const markWatched = findDeepest(["mark as watched", "izlendi olarak işaretle"]);
+        // Sitenin kendi "İzledim olarak işaretle" onay kutusunun yanına; görünüm sitenin "Hata Bildir" butonundan kopyalanır
+        const firstExact = (texts) => allElements.find(el => el.children.length <= 2 && texts.includes(el.textContent.trim().toLowerCase()));
+        const siteMark = firstExact(["izledim olarak işaretle", "mark as watched", "izlendi olarak işaretle"]);
+        const siteBtn = firstExact(["hata bildir", "report an issue", "sorun bildir"]);
+        if (siteMark && siteMark.parentElement) {
+            if (siteBtn) {
+                const cs = getComputedStyle(siteBtn);
+                button.className = `${siteBtn.className || ""} update-watch-status-btn`.trim();
+                for (const prop of ["backgroundColor", "color", "font", "padding", "borderRadius", "border", "lineHeight", "boxShadow"]) button.style[prop] = cs[prop];
+            } else {
+                button.style.cssText = "padding:6px 12px;background:#6c757d;color:#fff;border:0;border-radius:3px;font-size:14px;";
+            }
+            button.style.marginLeft = "12px";
+            button.style.cursor = "pointer";
+            button.style.verticalAlign = "middle";
+            button.textContent = "Kiroku'ya işle";
+            button.dataset.siteStyled = "1";
+            siteMark.insertAdjacentElement("afterend", button);
+            bindUpdateButtonEvent(button);
+            return;
+        }
+
+        const reportBtn = findDeepest(["report an issue", "sorun bildir", "hata bildir"]);
+        const markWatched = findDeepest(["mark as watched", "izlendi olarak işaretle", "izledim olarak işaretle"]);
         const prevNextBtn = findDeepest(["previous episode", "next episode"]);
 
         const targetAnchor = reportBtn || markWatched || prevNextBtn;
@@ -587,7 +637,7 @@ function addStreamingUpdateButton() {
                 align-items: center;
                 gap: 6px;
                 padding: 6px 14px;
-                background-color: #4f46e5;
+                background-color: #FF7849;
                 color: #ffffff;
                 border: 1px solid rgba(255,255,255,0.2);
                 border-radius: 4px;
@@ -612,7 +662,7 @@ function addStreamingUpdateButton() {
             playlistTitle.style.alignItems = "center";
             playlistTitle.style.flexWrap = "wrap";
             button.style.cssText = `
-                display: inline-block; padding: 6px 14px; background-color: #4f46e5;
+                display: inline-block; padding: 6px 14px; background-color: #FF7849;
                 color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px;
                 font-weight: 500; cursor: pointer; transition: all 0.2s; border: none;
             `;
@@ -637,9 +687,9 @@ function bindUpdateButtonEvent(button) {
             return;
         }
 
-        const originalText = "Kiroku: İzlendi İşaretle";
+        const originalText = button.textContent;
+        const originalBg = button.style.backgroundColor;
         button.textContent = "Güncelleniyor...";
-        button.style.backgroundColor = "#6366f1";
 
         chrome.runtime.sendMessage({
             action: "updateAnimeStatus",
@@ -654,7 +704,7 @@ function bindUpdateButtonEvent(button) {
                 button.style.backgroundColor = "#10b981";
                 setTimeout(() => {
                     button.textContent = originalText;
-                    button.style.backgroundColor = "#4f46e5";
+                    button.style.backgroundColor = originalBg;
                 }, 2500);
             } else {
                 const isNotFound = response?.error?.toLowerCase().includes("not found") || response?.error?.toLowerCase().includes("bulunamadı");
@@ -690,13 +740,13 @@ function bindUpdateButtonEvent(button) {
 
 function attachFloatingButton(button) {
     button.style.cssText = `
-        display: inline-block; padding: 8px 16px; background-color: #4f46e5;
+        display: inline-block; padding: 8px 16px; background-color: #FF7849;
         color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px;
         font-weight: 500; cursor: pointer; position: fixed; bottom: 20px; left: 20px;
         border: none; z-index: 2147483646; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s;
     `;
-    button.addEventListener("mouseover", () => button.style.backgroundColor = "#4338ca");
-    button.addEventListener("mouseout", () => button.style.backgroundColor = "#4f46e5");
+    button.addEventListener("mouseover", () => button.style.backgroundColor = "#F2622F");
+    button.addEventListener("mouseout", () => button.style.backgroundColor = "#FF7849");
     document.body.appendChild(button);
 }
 
@@ -797,7 +847,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 const KIROKU_ORIGINS = ['https://app.dogukankirali.com', 'https://kiroku.dogukankirali.workers.dev', 'http://localhost:3000'];
 
 if (isTopFrame && KIROKU_ORIGINS.includes(location.origin)) {
-    document.documentElement.dataset.kirokuExtension = '1';
     window.addEventListener('message', (event) => {
         if (event.source !== window || event.origin !== location.origin) return;
         const msg = event.data;

@@ -219,7 +219,7 @@ export default function TableHeaders(props: {
             <StyledMUIFilterButton
               onClick={props.handleClickFilters}
               aria-label="Filtreler"
-              sx={activeFilterCount > 0 ? { color: "primary.main", borderColor: "rgba(124,92,255,0.5)" } : undefined}
+              sx={activeFilterCount > 0 ? { color: "primary.main", borderColor: "rgba(255, 120, 73,0.5)" } : undefined}
             >
               <Badge badgeContent={activeFilterCount} color="primary" sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", height: 16, minWidth: 16, top: -4, right: -4 } }}>
                 <FilterAltIcon sx={{ fontSize: 20 }} />

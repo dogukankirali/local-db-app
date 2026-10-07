@@ -5,7 +5,6 @@ import { parseNotes } from "./quickNotes";
 
 export type OpenTab = { url: string; title: string };
 
-export const hasKirokuExtension = () => typeof document !== "undefined" && document.documentElement.dataset.kirokuExtension === "1";
 
 export function requestOpenTabs(timeoutMs = 2500): Promise<OpenTab[] | null> {
   if (typeof window === "undefined") return Promise.resolve(null);

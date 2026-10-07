@@ -15,7 +15,7 @@ import { ANIME_STATUS_TR, Pill, Stat, formatNextEpisode, getCoverSrc, getStatusI
 export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; update?: unknown }) {
   const a = data as TEATable.IAnime & Record<string, any>;
   const imgSrc = getCoverSrc(a.Cover);
-  const rgb = useCoverColor(imgSrc) ?? "124, 92, 255";
+  const rgb = useCoverColor(imgSrc) ?? "255, 120, 73";
   const status = getStatusInfo(data);
   const watched = Number(a.WatchStatus) || 0;
   const total = parseInt(String(a.TotalNumberOfEpisodes)) || 0;

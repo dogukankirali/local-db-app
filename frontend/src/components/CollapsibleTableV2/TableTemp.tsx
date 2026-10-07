@@ -340,11 +340,11 @@ export default function TableTemp<T extends {}>(
                   "&:hover": { backgroundColor: "rgba(255,255,255,0.06)", color: theme.primary_text },
                 },
                 "& .MuiPaginationItem-page.Mui-selected": {
-                  backgroundColor: "rgba(124,92,255,0.18)",
-                  borderColor: "rgba(124,92,255,0.45)",
+                  backgroundColor: "rgba(255, 120, 73,0.18)",
+                  borderColor: "rgba(255, 120, 73,0.45)",
                   color: theme.primary_text,
                   fontWeight: 700,
-                  "&:hover": { backgroundColor: "rgba(124,92,255,0.26)" },
+                  "&:hover": { backgroundColor: "rgba(255, 120, 73,0.26)" },
                 },
                 "& .MuiPaginationItem-ellipsis": { border: 0 },
               }}

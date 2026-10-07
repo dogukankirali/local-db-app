@@ -392,8 +392,8 @@ export default function CustomTableRowV2(
                       fontSize: "0.7rem",
                       fontWeight: 600,
                       whiteSpace: "nowrap",
-                      backgroundColor: isMovie ? "rgba(34,211,238,0.12)" : "rgba(124,92,255,0.14)",
-                      color: isMovie ? "#22D3EE" : "#A895FF",
+                      backgroundColor: isMovie ? "rgba(34,211,238,0.12)" : "rgba(255, 120, 73,0.14)",
+                      color: isMovie ? "#22D3EE" : "#FFA585",
                     }}
                   >
                     {isMovie ? <LocalMoviesIcon sx={{ fontSize: 14 }} /> : <TvIcon sx={{ fontSize: 14 }} />}

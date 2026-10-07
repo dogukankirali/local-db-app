@@ -722,7 +722,7 @@ function AnimePageContent() {
                     borderRadius: "10px",
                     p: "3px",
                     "& .MuiToggleButton-root": { border: 0, borderRadius: "7px !important", px: 1, color: theme.secondary_text },
-                    "& .Mui-selected": { backgroundColor: "rgba(124,92,255,0.18) !important", color: `${theme.primary} !important` },
+                    "& .Mui-selected": { backgroundColor: "rgba(255, 120, 73,0.18) !important", color: `${theme.primary} !important` },
                   }}
                 >
                   <ToggleButton value="table" aria-label="Tablo görünümü">

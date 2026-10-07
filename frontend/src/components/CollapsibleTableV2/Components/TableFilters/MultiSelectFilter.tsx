@@ -81,8 +81,8 @@ export default function MultiSelectFilter({
             ...provided,
             maxWidth: isSeries ? "100%" : provided.maxWidth,
             overflow: "visible",
-            backgroundColor: "rgba(124,92,255,0.18)",
-            border: "1px solid rgba(124,92,255,0.4)",
+            backgroundColor: "rgba(255, 120, 73,0.18)",
+            border: "1px solid rgba(255, 120, 73,0.4)",
             borderRadius: "6px",
           }),
           multiValueLabel: (provided) => ({
@@ -111,12 +111,12 @@ export default function MultiSelectFilter({
             ...provided,
             color: theme.primary_text,
             backgroundColor: "rgba(255,255,255,0.03)",
-            borderColor: state.isFocused ? "rgba(124,92,255,0.6)" : "rgba(255,255,255,0.08)",
+            borderColor: state.isFocused ? "rgba(255, 120, 73,0.6)" : "rgba(255,255,255,0.08)",
             boxShadow: "none",
             borderRadius: "10px",
             minHeight: 38,
             ":hover": {
-              borderColor: "rgba(124,92,255,0.4)",
+              borderColor: "rgba(255, 120, 73,0.4)",
             },
           }),
           input: (provided) => ({

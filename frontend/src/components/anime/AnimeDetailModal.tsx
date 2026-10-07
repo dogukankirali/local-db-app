@@ -110,7 +110,7 @@ export default function AnimeDetailModal({
   const a = anime as TEATable.IAnime & Record<string, any>;
   const imgSrc = getCoverSrc(a.Cover);
   const rgb = useCoverColor(imgSrc);
-  const glow = rgb ?? "124, 92, 255";
+  const glow = rgb ?? "255, 120, 73";
   const status = getStatusInfo(anime);
   const watched = Number(a.WatchStatus) || 0;
   const total = parseInt(String(a.TotalNumberOfEpisodes)) || 0;
