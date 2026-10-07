@@ -76,7 +76,7 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
             <Stat label="Puanım">
               <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.4 }}>
                 <StarRoundedIcon sx={{ fontSize: 16, color: "#FBBF24" }} />
-                {score > 0 ? `${score} / 100` : "—"}
+                {score > 0 ? `${score} / 100` : "Puanlanmadı"}
               </Box>
             </Stat>
             <Stat label="MAL">{malScore > 0 ? malScore.toFixed(2) : "—"}</Stat>

@@ -122,6 +122,7 @@ Tüm uçlar `/api` altındadır. 🔑 giriş (JWT ya da eklenti anahtarı), 🔒
 | POST 🔑             | `/createAnime`                                  | Anime ekleme (aynı isim varsa günceller); eklenti de bunu kullanır |
 | POST 🔒             | `/createAnimeWithFile`                          | CSV ile toplu ekleme                               |
 | POST 🔑             | `/updateAnimeTable`                             | Kendi puan/bölüm/PTW/notlarını günceller; admin katalog alanlarını da |
+| POST 🔑             | `/myAnime/dates`                                | İzlemeye başlama/bitirme tarihi (`StartedAt`, `FinishedAt`: YYYY-AA-GG, boş = sil) |
 | DELETE 🔒           | `/deleteAnime?id`                               | Anime silme                                        |
 | POST 🔑             | `/anime/update-episode`                         | Eklentiden bölüm ilerlemesi                        |
 | GET/POST            | `/getGenres`, `/getSeries`                      | Tür ve seri listeleri                              |

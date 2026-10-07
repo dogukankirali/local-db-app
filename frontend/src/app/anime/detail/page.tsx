@@ -15,6 +15,7 @@ import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import { AnimeService } from "../../../Services/AnimeServices";
 import { palette } from "../../../theme/customTheme";
+import WatchDates from "../../../components/anime/WatchDates";
 import {
   FORMAT_TR,
   MediaDetail,
@@ -227,7 +228,7 @@ function DetailContent() {
               ))}
             </Box>
             <Box sx={{ display: "flex", gap: { xs: 2, md: 3.5 }, flexWrap: "wrap", mt: 2.5 }}>
-              {anime?.Score ? <Stat label="Senin puanın" value={anime.Score} icon={<StarRoundedIcon sx={{ color: palette.warning }} />} /> : null}
+              {Number(anime?.Score) > 0 ? <Stat label="Senin puanın" value={anime!.Score} icon={<StarRoundedIcon sx={{ color: palette.warning }} />} /> : null}
               {media?.averageScore ? <Stat label="AniList" value={`${media.averageScore}%`} /> : null}
               {anime?.MALScore ? <Stat label="MyAnimeList" value={Number(anime.MALScore).toFixed(2)} /> : null}
               {media?.popularity ? <Stat label="Popülerlik" value={media.popularity.toLocaleString("tr")} /> : null}
@@ -258,7 +259,10 @@ function DetailContent() {
                 </Box>
                 <LinearProgress variant="determinate" value={total ? Math.min(100, (Number(watched) / Number(total)) * 100) : 0} sx={{ height: 6, borderRadius: 3 }} />
               </Box>
-              <InfoRow label="Puan" value={anime.Score ? anime.Score : "—"} />
+              <InfoRow
+                label="Puan"
+                value={Number(anime.Score) > 0 ? anime.Score : <Box component="span" sx={{ color: palette.textMuted, fontWeight: 500 }}>Puanlanmadı</Box>}
+              />
               <InfoRow
                 label="Watchlist"
                 value={
@@ -271,6 +275,7 @@ function DetailContent() {
                   )
                 }
               />
+              <WatchDates key={anime.ID} animeId={anime.ID} startedAt={anime.StartedAt} finishedAt={anime.FinishedAt} />
               {anime.Notes && <Typography sx={{ fontSize: "0.82rem", color: palette.textMuted, whiteSpace: "pre-wrap", mt: 1.25 }}>{anime.Notes}</Typography>}
             </Section>
           )}

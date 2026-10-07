@@ -12,6 +12,8 @@ type AnimeRow = {
   english_name?: string | null;
   anime_status: string | null;
   watch_status: number | null;
+  started_at?: string | null;
+  finished_at?: string | null;
   total_number_of_episodes: number | null;
   is_movie: number;
   score: number | null;
@@ -36,7 +38,7 @@ const INLINE_COVER = "__inline__";
 // Liste sorgularında base64 kapaklar taşınmaz; yerine /api/animeCover adresi verilir
 export const LIST_COLUMNS = `a.id, a.name, a.english_name, a.anime_status, COALESCE(u.watch_status, 0) AS watch_status, a.total_number_of_episodes, a.is_movie,
   u.score, a.mal_score, u.notes, a.anime_link, a.mal_anime_link, a.series, COALESCE(u.plan_to_watch, 0) AS plan_to_watch,
-  u.user_id IS NOT NULL AS in_list, a.anilist_id, a.next_episode, a.next_episode_at, a.aired_episodes,
+  u.user_id IS NOT NULL AS in_list, u.started_at, u.finished_at, a.anilist_id, a.next_episode, a.next_episode_at, a.aired_episodes,
   CASE WHEN a.cover LIKE 'data:%' THEN '${INLINE_COVER}' ELSE a.cover END AS cover,
   (SELECT group_concat(g.genre_name, ', ') FROM animes_genres ag JOIN genres g ON g.id = ag.genre_id WHERE ag.anime_id = a.id) AS genre,
   s.name AS series_name`;
@@ -73,6 +75,8 @@ export function toAnime(c: Ctx, r: AnimeRow) {
     NextEpisode: r.next_episode ?? 0,
     NextEpisodeAt: r.next_episode_at ?? "",
     AiredEpisodes: r.aired_episodes ?? 0,
+    StartedAt: r.started_at ?? "",
+    FinishedAt: r.finished_at ?? "",
   };
 }
 
@@ -215,7 +219,7 @@ function userFields(body: Record<string, unknown>) {
   };
 }
 
-type UserFields = Partial<ReturnType<typeof userFields>>;
+type UserFields = Partial<ReturnType<typeof userFields> & { started_at: string | null; finished_at: string | null }>;
 
 /**
  * Kullanıcının bir animeye ait kaydını ekler ya da günceller. Yalnızca verilen alanlar yazılır;
@@ -363,6 +367,22 @@ export async function createAnime(c: Ctx) {
 }
 
 anime.post("/createAnime", requireAuth, createAnime);
+
+// Kullanıcının izlemeye başlama/bitirme tarihi ("YYYY-MM-DD" ya da boş = sil). Kayıt yoksa listeye eklenir.
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+anime.post("/myAnime/dates", requireAuth, async (c) => {
+  const body = await readJson(c);
+  const id = int(field(body, "ID"), -1);
+  const started = str(field(body, "StartedAt")).trim();
+  const finished = str(field(body, "FinishedAt")).trim();
+  if (id < 0) return message(c, "Geçersiz anime ID'si", 400);
+  if ((started && !DATE_RE.test(started)) || (finished && !DATE_RE.test(finished))) return message(c, "Tarih YYYY-AA-GG olmalı", 400);
+  if (started && finished && finished < started) return message(c, "Bitiş tarihi başlamadan önce olamaz", 400);
+  const db = c.env.DB;
+  if (!(await db.prepare("SELECT id FROM animes WHERE id = ?").bind(id).first())) return message(c, "Anime bulunamadı", 404);
+  await upsertUserAnime(db, c.get("user")!.userId, id, { started_at: started || null, finished_at: finished || null }).run();
+  return message(c, "OK");
+});
 
 // Admin katalog alanlarını da günceller; diğer kullanıcılar yalnızca kendi puan/bölüm/PTW/notlarını
 anime.post("/updateAnimeTable", requireAuth, async (c) => {

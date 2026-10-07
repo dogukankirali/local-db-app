@@ -233,7 +233,7 @@ export default function AnimeDetailModal({
                     <Typography sx={{ fontSize: "0.68rem", color: palette.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>Puanım</Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                       <StarRoundedIcon sx={{ color: "#FBBF24", fontSize: 26 }} />
-                      <Typography sx={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, color: palette.text }}>{score > 0 ? score : "—"}</Typography>
+                      <Typography sx={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, color: palette.text }}>{score > 0 ? score : <Box component="span" sx={{ fontSize: "1rem", fontWeight: 600, color: palette.textMuted }}>Puanlanmadı</Box>}</Typography>
                       {score > 0 && <Typography sx={{ color: palette.textFaint, fontSize: "0.85rem", alignSelf: "flex-end", mb: 0.25 }}>/100</Typography>}
                     </Box>
                   </Box>

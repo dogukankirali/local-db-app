@@ -52,6 +52,8 @@ declare namespace TEATable {
     /** Kullanıcının bu anime için kaydı var mı (puan/bölüm/PTW/not) */
     InMyList?: boolean;
     AnilistID?: number;
+    StartedAt?: string;
+    FinishedAt?: string;
     /** Yayın takibi (#19): sıradaki bölüm ve yayın zamanı (ISO), bilinmiyorsa 0 / "" */
     NextEpisode?: number;
     NextEpisodeAt?: string;
