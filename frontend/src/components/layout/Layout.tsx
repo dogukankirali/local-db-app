@@ -9,6 +9,7 @@ import CommandPalette from "../CommandPalette";
 
 const COLLAPSED_KEY = "sidebarCollapsed";
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
+const PREWARM_ROUTES = ["/", "/anime", "/watchlist", "/profile", "/manga", "/book", "/series"];
 
 // Masaüstünde sabit (daraltılabilir) sidebar, md altında açılır menü (drawer).
 // Boyutlar JS yerine CSS breakpoint'leri ile yönetilir; ilk render'da kayma olmaz.
@@ -28,6 +29,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker kaydedilemedi:", err));
     }
+  }, []);
+
+  // Yalnızca `next dev`: geliştirme sunucusu her sayfayı ilk ziyarette derliyor (kod değişince yeniden), bu da
+  // ilk tıklamada birkaç saniyelik beklemeye ve tıklamanın işe yaramamış gibi görünmesine yol açıyordu.
+  // Sayfa açıldıktan kısa süre sonra diğer sayfalar arka planda sırayla derletilir. Canlıda (statik çıktı) çalışmaz.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      for (const route of PREWARM_ROUTES) {
+        if (cancelled) return;
+        await fetch(route, { headers: { Accept: "text/html" } }).catch(() => {});
+      }
+    }, 2500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   // Sayfa değişince mobil menüyü kapat
