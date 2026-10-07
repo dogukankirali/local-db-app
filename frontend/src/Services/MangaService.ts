@@ -20,6 +20,7 @@ export interface Manga {
   malLink: string;
   anilistLink: string;
   syncedAt: string;
+  mangadexId: string;
   score: number;
   readStatus: ReadStatus;
   chaptersRead: number;
@@ -31,7 +32,7 @@ export interface Manga {
   inMyList: boolean;
 }
 
-export type MangaInput = Partial<Omit<Manga, "id" | "syncedAt" | "inMyList">>;
+export type MangaInput = Partial<Omit<Manga, "id" | "syncedAt" | "inMyList" | "mangadexId">>;
 
 export interface MangaQuery {
   q?: string;
@@ -137,3 +138,72 @@ export const errorText = (e: unknown) =>
   (e as { response?: { data?: { error?: string } } })?.response?.data?.error ??
   (e as Error)?.message ??
   "Bilinmeyen hata";
+
+export interface Chapter {
+  id: number;
+  mangaId: number;
+  number: number;
+  volume: string;
+  title: string;
+  /** "mangadex" (live), "upload" (CBZ) or a source adapter's slug */
+  source: string;
+  externalId: string;
+  pageCount: number;
+  /** Library chapters: CBZ path relative to the user's library root ('<Series>/<Chapter N - Title>.cbz'); "" for live MangaDex chapters */
+  filePath: string;
+  lang: string;
+  groupName: string;
+  publishedAt: string;
+  createdAt: string;
+}
+
+export type MangaDexChapterInput = Pick<Chapter, "externalId" | "number" | "volume" | "title" | "pageCount" | "lang" | "groupName" | "publishedAt">;
+
+export interface LibraryChapterInput {
+  filePath: string;
+  number: number;
+  volume?: string;
+  title?: string;
+  lang: string;
+  pageCount?: number;
+  /** "upload" for manual entries, or a source adapter's slug */
+  source?: string;
+  externalId?: string;
+  scanlator?: string;
+}
+
+export interface LibrarySyncResult {
+  mangaId: number;
+  mangaName: string;
+  created: boolean;
+  added: number;
+  updated: number;
+  removed: number;
+  skipped: number;
+}
+
+export const ChapterService = {
+  async list(mangaId: number): Promise<Chapter[]> {
+    return (await axios.get<Chapter[]>(`${base}/${mangaId}/chapters`)).data;
+  },
+  async get(id: number): Promise<Chapter> {
+    return (await axios.get<Chapter>(`${base}/chapters/${id}`)).data;
+  },
+  async linkMangaDex(mangaId: number, mangadexId: string) {
+    await axios.put(`${base}/${mangaId}/mangadex`, { mangadexId });
+  },
+  async saveMangaDex(mangaId: number, chapters: MangaDexChapterInput[]): Promise<{ saved: number }> {
+    return (await axios.post(`${base}/${mangaId}/chapters/mangadex`, { chapters })).data;
+  },
+  /** Library sync for one series folder (see worker chapters.ts /manga/library-sync) */
+  async librarySync(data: { series: string; anilistId?: number; malId?: number; name?: string; chapters: { filePath: string; number: number; title: string }[]; prune?: boolean }): Promise<LibrarySyncResult> {
+    return (await axios.post<LibrarySyncResult>(`${base}/library-sync`, data)).data;
+  },
+  /** Registers a CBZ in the user's own library (metadata only; the file never goes to Kiroku) */
+  async register(mangaId: number, data: LibraryChapterInput): Promise<Chapter> {
+    return (await axios.post<Chapter>(`${base}/${mangaId}/chapters`, data)).data;
+  },
+  async remove(chapterId: number) {
+    await axios.delete(`${base}/chapters/${chapterId}`);
+  },
+};

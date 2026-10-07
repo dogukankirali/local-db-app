@@ -3,6 +3,7 @@
 // Manga library (/manga): grid and table views over the same filtered, paginated list.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Alert,
   Box,
@@ -44,6 +45,8 @@ import { AniListRateLimit, mangaForSync } from "../../Services/anilist";
 import { GenreChips } from "../Common/GenreChip";
 import { palette } from "../../theme/customTheme";
 import MangaEditorDialog from "./MangaEditorDialog";
+import LibrarySyncDialog from "./LibrarySyncDialog";
+import FolderSyncRoundedIcon from "@mui/icons-material/FolderCopyOutlined";
 import { PUB_STATUS_LABEL, READ_STATUS_COLOR, READ_STATUS_LABEL, progressText } from "./mangaLabels";
 
 type View = "grid" | "table";
@@ -52,7 +55,6 @@ type Toast = { severity: "success" | "error" | "info"; text: string } | null;
 const VIEW_KEY = "kirokuMangaView";
 const PAGE_SIZE = 48;
 
-/** Where a manga card links to; the detail page arrives in a later step, until then it opens the editor. */
 export type MangaOpen = (m: Manga) => void;
 
 function ReadStatusChip({ status }: { status: Manga["readStatus"] }) {
@@ -113,7 +115,8 @@ const COLUMNS: { key: string; label: string; sort?: string; align?: "right" }[] 
   { key: "genres", label: "Türler" },
 ];
 
-export default function MangaLibrary({ onOpen }: { onOpen?: MangaOpen }) {
+export default function MangaLibrary() {
+  const router = useRouter();
   const { isAdmin, isAuthenticated } = useAuth();
   const [view, setView] = useState<View>("grid");
   const [query, setQuery] = useState<MangaQuery>({ sort: "name", order: "asc", page: 1 });
@@ -126,6 +129,7 @@ export default function MangaLibrary({ onOpen }: { onOpen?: MangaOpen }) {
   const [error, setError] = useState("");
   const [toast, setToast] = useState<Toast>(null);
   const [editing, setEditing] = useState<Manga | null | undefined>(undefined);
+  const [librarySync, setLibrarySync] = useState(false);
   const [syncing, setSyncing] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
@@ -227,7 +231,7 @@ export default function MangaLibrary({ onOpen }: { onOpen?: MangaOpen }) {
     }
   };
 
-  const open = onOpen ?? ((m: Manga) => setEditing(m));
+  const open = (m: Manga) => router.push(`/manga/detail?id=${m.id}`);
   const sortLabel = (col: (typeof COLUMNS)[number]) =>
     col.sort ? (
       <TableSortLabel active={query.sort === col.sort} direction={query.sort === col.sort ? query.order : "asc"}
@@ -251,6 +255,7 @@ export default function MangaLibrary({ onOpen }: { onOpen?: MangaOpen }) {
               {syncing ? `Sync ${syncing.done}/${syncing.total}` : "AniList Sync"}
             </Button>
           )}
+          <Button variant="outlined" startIcon={<FolderSyncRoundedIcon />} onClick={() => setLibrarySync(true)}>Kütüphane sync</Button>
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setEditing(null)}>Manga ekle</Button>
           <ToggleButtonGroup size="small" exclusive value={view} onChange={(_, v) => changeView(v)}>
             <ToggleButton value="grid" aria-label="Izgara"><GridViewRoundedIcon fontSize="small" /></ToggleButton>
@@ -366,6 +371,8 @@ export default function MangaLibrary({ onOpen }: { onOpen?: MangaOpen }) {
           MangaService.genres().then(setGenres).catch(() => {});
         }}
       />
+
+      <LibrarySyncDialog open={librarySync} onClose={() => setLibrarySync(false)} onDone={() => { load(); MangaService.genres().then(setGenres).catch(() => {}); }} />
 
       <Snackbar open={Boolean(toast)} autoHideDuration={4000} onClose={() => setToast(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
         {toast ? <Alert onClose={() => setToast(null)} severity={toast.severity} variant="filled">{toast.text}</Alert> : undefined}

@@ -26,6 +26,7 @@ type MangaRow = {
   mal_link: string | null;
   anilist_link: string | null;
   synced_at: string | null;
+  mangadex_id?: string | null;
   score: number | null;
   read_status: string | null;
   chapters_read: number | null;
@@ -38,7 +39,7 @@ type MangaRow = {
 };
 
 export const MANGA_COLUMNS = `m.id, m.name, m.english_name, m.status, m.format, m.total_chapters, m.total_volumes, m.mal_score,
-  m.genres, m.cover, m.anilist_id, m.mal_id, m.mal_link, m.anilist_link, m.synced_at,
+  m.genres, m.cover, m.anilist_id, m.mal_id, m.mal_link, m.anilist_link, m.synced_at, m.mangadex_id,
   u.score, u.read_status, u.chapters_read, u.volumes_read, u.plan_to_read, u.notes, u.started_at, u.finished_at,
   u.user_id IS NOT NULL AS in_list`;
 export const MANGA_FROM = `manga m LEFT JOIN user_manga u ON u.manga_id = m.id AND u.user_id = ?`;
@@ -59,6 +60,7 @@ export const toManga = (r: MangaRow) => ({
   malLink: r.mal_link ?? "",
   anilistLink: r.anilist_link ?? "",
   syncedAt: r.synced_at ?? "",
+  mangadexId: r.mangadex_id ?? "",
   score: r.score ?? 0,
   readStatus: r.read_status ?? "",
   chaptersRead: r.chapters_read ?? 0,

@@ -9,7 +9,7 @@ const FIELDS = `
   description(asHtml: false)
   bannerImage
   coverImage { extraLarge large color }
-  format status episodes duration source
+  format status episodes chapters volumes duration source
   season seasonYear
   startDate { year month day }
   endDate { year month day }
@@ -43,6 +43,8 @@ export type MediaDetail = {
   format: string | null;
   status: string | null;
   episodes: number | null;
+  chapters?: number | null;
+  volumes?: number | null;
   duration: number | null;
   source: string | null;
   season: string | null;
@@ -79,17 +81,21 @@ export type RelatedMedia = {
 };
 
 /** Önce AniList id, sonra MAL id, en son isimle arar */
-export async function fetchMediaDetail(opts: { anilistId?: number | null; malId?: number | null; name?: string }, signal?: AbortSignal) {
+export async function fetchMediaDetail(
+  opts: { anilistId?: number | null; malId?: number | null; name?: string; type?: "ANIME" | "MANGA" },
+  signal?: AbortSignal
+) {
+  const type = opts.type ?? "ANIME";
   if (opts.anilistId) {
-    const r = await anilistQuery<{ Media: MediaDetail | null }>(`query($id:Int){ Media(id:$id, type:ANIME){ ${FIELDS} } }`, { id: opts.anilistId }, signal);
+    const r = await anilistQuery<{ Media: MediaDetail | null }>(`query($id:Int){ Media(id:$id, type:${type}){ ${FIELDS} } }`, { id: opts.anilistId }, signal);
     if (r.Media) return r.Media;
   }
   if (opts.malId) {
-    const r = await anilistQuery<{ Media: MediaDetail | null }>(`query($id:Int){ Media(idMal:$id, type:ANIME){ ${FIELDS} } }`, { id: opts.malId }, signal).catch(() => ({ Media: null }));
+    const r = await anilistQuery<{ Media: MediaDetail | null }>(`query($id:Int){ Media(idMal:$id, type:${type}){ ${FIELDS} } }`, { id: opts.malId }, signal).catch(() => ({ Media: null }));
     if (r.Media) return r.Media;
   }
   if (opts.name) {
-    const r = await anilistQuery<{ Media: MediaDetail | null }>(`query($s:String){ Media(search:$s, type:ANIME){ ${FIELDS} } }`, { s: opts.name }, signal).catch(() => ({ Media: null }));
+    const r = await anilistQuery<{ Media: MediaDetail | null }>(`query($s:String){ Media(search:$s, type:${type}){ ${FIELDS} } }`, { s: opts.name }, signal).catch(() => ({ Media: null }));
     if (r.Media) return r.Media;
   }
   return null;
