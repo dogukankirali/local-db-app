@@ -13,7 +13,8 @@ import { genreLabel } from "../components/Common/GenreChip";
 export type DiscoverMedia = {
   id: number;
   idMal: number | null;
-  title: { romaji: string | null; english: string | null };
+  title: { romaji: string | null; english: string | null; native?: string | null };
+  synonyms?: string[];
   format: string | null;
   episodes: number | null;
   seasonYear: number | null;
@@ -37,12 +38,15 @@ const SKIP_GENRES = new Set(["Ecchi", "Hentai"]);
 const OK_FORMATS = new Set(["TV", "TV_SHORT", "MOVIE", "ONA"]);
 const SERIES_FORMATS = new Set(["TV", "TV_SHORT", "ONA"]);
 
-const FIELDS = `id idMal title { romaji english } format episodes seasonYear averageScore status genres isAdult siteUrl
+const FIELDS = `id idMal title { romaji english native } synonyms format episodes seasonYear averageScore status genres isAdult siteUrl
   coverImage { extraLarge large }
   relations { edges { relationType node { id idMal type format title { romaji } } } }`;
 
-export const normTitle = (s: string | null | undefined) =>
-  (s ?? "").toLocaleLowerCase("en").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+// Karşılaştırma anahtarı: küçük harf, yalnızca harf ve rakam ("N.H.K ni Youkoso!" = "NHK ni Youkoso")
+export const normTitle = (s: string | null | undefined) => (s ?? "").toLocaleLowerCase("en").normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "");
+
+/** Bir AniList kaydının tüm başlıkları (romaji, İngilizce, Japonca, eş anlamlılar) */
+const titleKeys = (m: DiscoverMedia) => [m.title.romaji, m.title.english, m.title.native, ...(m.synonyms ?? [])].map(normTitle).filter(Boolean);
 
 const malIdOf = (link?: string) => Number(/myanimelist\.net\/anime\/(\d+)/.exec(link ?? "")?.[1]) || null;
 
@@ -54,10 +58,12 @@ export type TasteProfile = {
   seeds: { malId: number; name: string; weight: number }[];
   catalogMal: Set<number>;
   catalogNames: Set<string>;
+  /** Bu oturumda eklenen ya da "ilgilenmiyorum" denen AniList id'leri */
+  excludedIds: Set<number>;
   watchedMal: Set<number>;
 };
 
-export function buildTasteProfile(catalog: TEATable.IAnime[]): TasteProfile {
+export function buildTasteProfile(catalog: TEATable.IAnime[], excluded: Iterable<number> = []): TasteProfile {
   const catalogMal = new Set<number>();
   const catalogNames = new Set<string>();
   const watchedMal = new Set<number>();
@@ -99,7 +105,7 @@ export function buildTasteProfile(catalog: TEATable.IAnime[]): TasteProfile {
     .filter((r) => r.score >= mean && malIdOf(r.a.MALAnimeLink))
     .map((r) => ({ malId: malIdOf(r.a.MALAnimeLink)!, name: r.a.Name, weight: Math.pow(Math.max(1, r.score - mean + 5), 2) }));
 
-  return { genreWeights, anilistGenres, seeds, catalogMal, catalogNames, watchedMal };
+  return { genreWeights, anilistGenres, seeds, catalogMal, catalogNames, watchedMal, excludedIds: new Set(excluded) };
 }
 
 /** Ağırlıklı, yerine koymadan rastgele örnek (Efraimidis-Spirakis) */
@@ -195,8 +201,10 @@ export async function discover(
   for (const c of candidates.values()) {
     const m = c.media;
     if (m.isAdult || !OK_FORMATS.has(m.format ?? "") || m.status === "NOT_YET_RELEASED") continue;
+    // ONA olarak işaretlenmiş özel bölüm/özet derlemeleri de elenir
+    if (/\b(specials?|recaps?|picture drama|mini anime)\b/i.test(`${m.title.romaji ?? ""} ${m.title.english ?? ""}`)) continue;
     // Arşivde olanlar önerilmez
-    if ((m.idMal && profile.catalogMal.has(m.idMal)) || profile.catalogNames.has(normTitle(m.title.romaji)) || profile.catalogNames.has(normTitle(m.title.english))) continue;
+    if ((m.idMal && profile.catalogMal.has(m.idMal)) || profile.excludedIds.has(m.id) || titleKeys(m).some((k) => profile.catalogNames.has(k))) continue;
 
     // Devam sezonu: önceki sezonu izlediyse "devamı" olarak önerilir, izlemediyse elenir
     const prequels = (m.relations?.edges ?? []).filter((e) => e.relationType === "PREQUEL" && e.node.type === "ANIME" && SERIES_FORMATS.has(e.node.format ?? "") );

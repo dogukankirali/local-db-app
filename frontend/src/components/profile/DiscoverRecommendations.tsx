@@ -8,6 +8,9 @@ import ShuffleRoundedIcon from "@mui/icons-material/ShuffleRounded";
 import BookmarkAddRoundedIcon from "@mui/icons-material/BookmarkAddRounded";
 import BookmarkAddedRoundedIcon from "@mui/icons-material/BookmarkAddedRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
+import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 import { Discovery, buildTasteProfile, discover, discoveryTitle, discoveryToAnime } from "../../lib/discover";
 import { AnimeService } from "../../Services/AnimeServices";
@@ -15,7 +18,7 @@ import { palette } from "../../theme/customTheme";
 
 const FORMAT_TR: Record<string, string> = { TV: "TV", TV_SHORT: "TV kısa", MOVIE: "Film", ONA: "ONA" };
 
-function DiscoveryCard({ d, added, onAdd }: { d: Discovery; added: boolean; onAdd: () => void }) {
+function DiscoveryCard({ d, added, onAdd, onWatched, onHide }: { d: Discovery; added: boolean; onAdd: () => void; onWatched: () => void; onHide: () => void }) {
   const m = d.media;
   const score = m.averageScore ?? 0;
   const scoreColor = score >= 85 ? palette.success : score >= 70 ? palette.warning : palette.textMuted;
@@ -83,6 +86,16 @@ function DiscoveryCard({ d, added, onAdd }: { d: Discovery; added: boolean; onAd
               </IconButton>
             </span>
           </Tooltip>
+          <Tooltip title="İzledim (bitirdiklerime ekle, bir daha önerme)">
+            <IconButton size="small" onClick={onWatched} aria-label="İzledim" sx={{ color: "#fff", backgroundColor: alpha("#000000", 0.5) }}>
+              <TaskAltRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="İlgilenmiyorum (bir daha önerme)">
+            <IconButton size="small" onClick={onHide} aria-label="İlgilenmiyorum" sx={{ color: "#fff", backgroundColor: alpha("#000000", 0.5) }}>
+              <VisibilityOffRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="AniList'te aç">
             <IconButton size="small" component="a" href={m.siteUrl} target="_blank" rel="noopener noreferrer" aria-label="AniList'te aç" sx={{ color: "#fff", backgroundColor: alpha("#000000", 0.5) }}>
               <OpenInNewRoundedIcon fontSize="small" />
@@ -101,6 +114,21 @@ function DiscoveryCard({ d, added, onAdd }: { d: Discovery; added: boolean; onAd
   );
 }
 
+const hiddenKey = (userId?: number) => `kiroku:discover-hidden:${userId ?? "guest"}`;
+function loadHidden(userId?: number): number[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(hiddenKey(userId)) || "[]");
+    return Array.isArray(v) ? v.filter((x) => Number.isInteger(x)) : [];
+  } catch {
+    return [];
+  }
+}
+function saveHidden(userId: number | undefined, ids: number[]) {
+  try {
+    localStorage.setItem(hiddenKey(userId), JSON.stringify(ids.slice(-2000)));
+  } catch {}
+}
+
 const coverGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", gap: 2 };
 
 /** Arşivde olmayan, zevke göre AniList önerileri; her "Karıştır" farklı bir seçki getirir */
@@ -113,7 +141,18 @@ export default function DiscoverRecommendations({ catalog }: { catalog: TEATable
   const shown = useRef<Set<number>[]>([]);
   const abort = useRef<AbortController | null>(null);
 
-  const profile = useMemo(() => (catalog ? buildTasteProfile(catalog) : null), [catalog]);
+  const { user } = useAuth();
+  // Bu oturumda eklenenler ve "ilgilenmiyorum" denenler bir daha önerilmez
+  const excluded = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    for (const id of loadHidden(user?.id)) excluded.current.add(id);
+  }, [user?.id]);
+  const profile = useMemo(() => (catalog ? buildTasteProfile(catalog, loadHidden(user?.id)) : null), [catalog, user?.id]);
+  const exclude = (id: number) => {
+    excluded.current.add(id);
+    profile?.excludedIds.add(id);
+    setItems((list) => (list ? list.filter((x) => x.media.id !== id) : list));
+  };
 
   const shuffle = useCallback(async () => {
     if (!profile) return;
@@ -147,10 +186,28 @@ export default function DiscoverRecommendations({ catalog }: { catalog: TEATable
     try {
       await AnimeService.createAnime(discoveryToAnime(d.media) as unknown as TEATable.IAnime);
       setAdded((s) => new Set(s).add(d.media.id));
+      profile?.excludedIds.add(d.media.id);
       toast.success(`${discoveryTitle(d.media)} izleneceklere eklendi`);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Eklenemedi");
     }
+  };
+
+  const markWatched = async (d: Discovery) => {
+    try {
+      const anime = { ...discoveryToAnime(d.media), PlanToWatch: false, WatchStatus: d.media.episodes ?? 0 };
+      await AnimeService.createAnime(anime as unknown as TEATable.IAnime);
+      exclude(d.media.id);
+      toast.success(`${discoveryTitle(d.media)} bitirdiklerine eklendi`, { description: "Arşivden puan verebilirsin; puanın sonraki önerileri de etkiler." });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Eklenemedi");
+    }
+  };
+
+  const hide = (d: Discovery) => {
+    exclude(d.media.id);
+    saveHidden(user?.id, [...loadHidden(user?.id), d.media.id]);
+    toast(`${discoveryTitle(d.media)} bir daha önerilmeyecek`);
   };
 
   return (
@@ -190,7 +247,7 @@ export default function DiscoverRecommendations({ catalog }: { catalog: TEATable
                 transition={{ type: "spring", stiffness: 380, damping: 30, delay: i * 0.03 }}
                 style={{ minWidth: 0 }}
               >
-                <DiscoveryCard d={d} added={added.has(d.media.id)} onAdd={() => add(d)} />
+                <DiscoveryCard d={d} added={added.has(d.media.id)} onAdd={() => add(d)} onWatched={() => markWatched(d)} onHide={() => hide(d)} />
               </motion.div>
             ))}
           </AnimatePresence>
