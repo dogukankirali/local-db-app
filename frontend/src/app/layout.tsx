@@ -27,8 +27,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr" className={inter.variable}>
+    <html lang="tr" className={inter.variable} suppressHydrationWarning>
       <head>
+        {/* Seçilen aydınlık/karanlık tema ilk boyamadan önce zemine uygulanır (beyaz/siyah parlama olmasın) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var l=localStorage.getItem("kirokuMode")==="light";document.documentElement.style.background=l?"#F4F5F8":"#0B0D12";document.documentElement.style.colorScheme=l?"light":"dark"}catch(e){}`,
+          }}
+        />
         {/* Kapak CDN'lerine bağlantı erken açılsın */}
         <link rel="preconnect" href="https://s4.anilist.co" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.myanimelist.net" />

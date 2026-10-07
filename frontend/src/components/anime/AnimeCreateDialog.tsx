@@ -40,6 +40,7 @@ function fromSearch(a: SearchResult): AnimeDraft {
   const names = [...(a.genres ?? []), ...(a.themes ?? []), ...(a.demographics ?? [])].map((g: any) => g.name).filter(Boolean);
   return {
     Name: a.title || a.title_english || a.name || "",
+    EnglishName: a.title_english || "",
     Cover: coverOf(a),
     AnimeStatus: a.airing ? "Currently Airing" : a.status === "NOT_YET_RELEASED" ? "Not yet aired" : "Finished",
     TotalNumberOfEpisodes: a.episodes || 0,

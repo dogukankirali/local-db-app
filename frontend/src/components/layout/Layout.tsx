@@ -6,9 +6,11 @@ import { Box, Drawer } from "@mui/material";
 import Navbar from "./Navbar";
 import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "./Sidebar";
 import CommandPalette from "../CommandPalette";
+import ProtectedRoute from "../auth/ProtectedRoute";
 
 const COLLAPSED_KEY = "sidebarCollapsed";
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
+const PREWARM_ROUTES = ["/", "/anime", "/watchlist", "/profile", "/manga", "/book", "/series"];
 
 // Masaüstünde sabit (daraltılabilir) sidebar, md altında açılır menü (drawer).
 // Boyutlar JS yerine CSS breakpoint'leri ile yönetilir; ilk render'da kayma olmaz.
@@ -28,6 +30,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker kaydedilemedi:", err));
     }
+  }, []);
+
+  // Yalnızca `next dev`: geliştirme sunucusu her sayfayı ilk ziyarette derliyor (kod değişince yeniden), bu da
+  // ilk tıklamada birkaç saniyelik beklemeye ve tıklamanın işe yaramamış gibi görünmesine yol açıyordu.
+  // Sayfa açıldıktan kısa süre sonra diğer sayfalar arka planda sırayla derletilir. Canlıda (statik çıktı) çalışmaz.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      for (const route of PREWARM_ROUTES) {
+        if (cancelled) return;
+        await fetch(route, { headers: { Accept: "text/html" } }).catch(() => {});
+      }
+    }, 2500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   // Sayfa değişince mobil menüyü kapat
@@ -84,7 +104,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       >
         <Navbar onMenuClick={() => setMobileOpen(true)} />
         <Box component="main" sx={{ flex: 1, minWidth: 0, p: { xs: 1.5, sm: 2, md: 3 } }}>
-          {children}
+          {/* Listeler giriş ister (API de girişsiz okumaya kapalı); girişsiz ziyaretçi login'e yönlenir */}
+          <ProtectedRoute>{children}</ProtectedRoute>
         </Box>
       </Box>
       <CommandPalette />

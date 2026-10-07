@@ -1,5 +1,6 @@
 import { Box, Tooltip } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import { palette } from "../../theme/customTheme";
 import { genreTranslations } from "../../utils/genreTranslations";
 
 // Okunaklı, birbirinden ayırt edilebilen tonlar: koyu zeminde renkli metin + aynı tonun düşük opaklıklı zemini
@@ -111,7 +112,7 @@ export function GenreChips({
               height: 22,
               px: 0.75,
               borderRadius: "6px",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: alpha(palette.overlay, 0.06),
               color: "text.secondary",
               fontSize: "0.7rem",
               fontWeight: 600,

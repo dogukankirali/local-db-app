@@ -47,17 +47,17 @@ export default function GoogleButton() {
           borderRadius: "8px",
           fontWeight: 600,
           color: palette.text,
-          backgroundColor: alpha("#FFFFFF", 0.04),
-          border: `1px solid ${alpha("#FFFFFF", 0.1)}`,
-          "&:hover": { backgroundColor: alpha("#FFFFFF", 0.08) },
+          backgroundColor: alpha(palette.overlay, 0.04),
+          border: `1px solid ${alpha(palette.overlay, 0.1)}`,
+          "&:hover": { backgroundColor: alpha(palette.overlay, 0.08) },
         }}
       >
         Google ile devam et
       </Button>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, my: 2.5 }}>
-        <Box sx={{ flex: 1, height: "1px", backgroundColor: alpha("#FFFFFF", 0.08) }} />
+        <Box sx={{ flex: 1, height: "1px", backgroundColor: alpha(palette.overlay, 0.08) }} />
         <Typography sx={{ fontSize: "0.75rem", color: palette.textFaint }}>veya</Typography>
-        <Box sx={{ flex: 1, height: "1px", backgroundColor: alpha("#FFFFFF", 0.08) }} />
+        <Box sx={{ flex: 1, height: "1px", backgroundColor: alpha(palette.overlay, 0.08) }} />
       </Box>
     </>
   );

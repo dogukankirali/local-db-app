@@ -1,13 +1,13 @@
 import { alpha, createTheme } from "@mui/material/styles";
-import { palette } from "./customTheme";
+import { palette, themeMode } from "./customTheme";
 
 const fontFamily =
   "var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 const theme = createTheme({
   palette: {
-    mode: "dark",
-    primary: { main: palette.primary, dark: palette.primaryHover, contrastText: "#fff" },
+    mode: themeMode,
+    primary: { main: palette.primary, dark: palette.primaryHover, contrastText: palette.onPrimary },
     secondary: { main: palette.accent },
     success: { main: palette.success },
     warning: { main: palette.warning },
@@ -15,9 +15,9 @@ const theme = createTheme({
     info: { main: palette.info },
     background: { default: palette.ink, paper: palette.surface },
     text: { primary: palette.text, secondary: palette.textMuted },
-    divider: alpha("#FFFFFF", 0.06),
+    divider: alpha(palette.overlay, 0.06),
     action: {
-      hover: alpha("#FFFFFF", 0.04),
+      hover: alpha(palette.overlay, 0.04),
       selected: alpha(palette.primary, 0.14),
     },
   },
@@ -39,10 +39,10 @@ const theme = createTheme({
         "::selection": { backgroundColor: alpha(palette.primary, 0.35) },
         "*::-webkit-scrollbar": { width: 8, height: 8 },
         "*::-webkit-scrollbar-thumb": {
-          backgroundColor: alpha("#FFFFFF", 0.08),
+          backgroundColor: alpha(palette.overlay, 0.08),
           borderRadius: 8,
         },
-        "*::-webkit-scrollbar-thumb:hover": { backgroundColor: alpha("#FFFFFF", 0.16) },
+        "*::-webkit-scrollbar-thumb:hover": { backgroundColor: alpha(palette.overlay, 0.16) },
         "*::-webkit-scrollbar-track": { backgroundColor: "transparent" },
       },
     },

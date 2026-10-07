@@ -112,8 +112,8 @@ export default function BulkImportDialog({ open, onClose, onDone }: { open: bool
           textAlign: "center",
           borderRadius: "12px",
           cursor: "pointer",
-          border: `1.5px dashed ${dragging ? palette.primary : alpha("#FFFFFF", 0.14)}`,
-          backgroundColor: dragging ? alpha(palette.primary, 0.08) : alpha("#FFFFFF", 0.02),
+          border: `1.5px dashed ${dragging ? palette.primary : alpha(palette.overlay, 0.14)}`,
+          backgroundColor: dragging ? alpha(palette.primary, 0.08) : alpha(palette.overlay, 0.02),
           transition: "all .15s ease",
           "&:hover": { borderColor: alpha(palette.primary, 0.6) },
         }}
@@ -141,14 +141,14 @@ export default function BulkImportDialog({ open, onClose, onDone }: { open: bool
             </Typography>
           )}
           {total > 0 && (
-            <Box sx={{ borderRadius: "10px", border: `1px solid ${alpha("#FFFFFF", 0.06)}`, overflow: "hidden" }}>
-              <Box sx={{ px: 1.5, py: 1, fontSize: "0.75rem", fontWeight: 600, color: palette.textMuted, backgroundColor: alpha("#FFFFFF", 0.03) }}>
+            <Box sx={{ borderRadius: "10px", border: `1px solid ${alpha(palette.overlay, 0.06)}`, overflow: "hidden" }}>
+              <Box sx={{ px: 1.5, py: 1, fontSize: "0.75rem", fontWeight: 600, color: palette.textMuted, backgroundColor: alpha(palette.overlay, 0.03) }}>
                 {total} anime bulundu · ilk {Math.min(total, 5)} tanesi:
               </Box>
               {parsed.rows.slice(0, 5).map((r, i) => (
                 <Box
                   key={i}
-                  sx={{ display: "flex", gap: 1.5, px: 1.5, py: 1, fontSize: "0.85rem", borderTop: `1px solid ${alpha("#FFFFFF", 0.05)}` }}
+                  sx={{ display: "flex", gap: 1.5, px: 1.5, py: 1, fontSize: "0.85rem", borderTop: `1px solid ${alpha(palette.overlay, 0.05)}` }}
                 >
                   <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>{r.Name}</Box>
                   <Box sx={{ color: palette.textMuted, whiteSpace: "nowrap" }}>

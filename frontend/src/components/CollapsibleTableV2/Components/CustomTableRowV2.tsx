@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../theme/customTheme";
 import { useState } from "react";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
@@ -17,6 +19,7 @@ import {
   Popover,
   Typography,
   Collapse,
+  Tooltip,
 } from "@mui/material";
 import moment from "moment-timezone";
 import { theme } from "../../../theme/customTheme";
@@ -250,7 +253,7 @@ export default function CustomTableRowV2(
             ? theme.table_row_dark
             : theme.table_row_light,
           borderTop:
-            rowIndex % 2 === 0 ? "1px solid rgba(255, 255, 255, 0.12)" : "none",
+            rowIndex % 2 === 0 ? `1px solid ${alpha(palette.overlay, 0.12)}` : "none",
           transition: "background-color 0.2s ease-in-out",
         }}
       >
@@ -337,7 +340,16 @@ export default function CustomTableRowV2(
                   align="center"
                   style={colStyle}
                 >
-                  {props.singleData[header.key]}
+                  {header.key === "Name" && props.singleData.EnglishName && props.singleData.EnglishName !== props.singleData.Name ? (
+                    // İngilizce isim üstüne gelince görünür
+                    <Tooltip title={props.singleData.EnglishName} placement="top" arrow>
+                      <span style={{ cursor: "help", textDecoration: `underline dotted ${alpha(palette.overlay, 0.25)}`, textUnderlineOffset: 3 }}>
+                        {props.singleData[header.key]}
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    props.singleData[header.key]
+                  )}
                 </TableCell>
               );
             } else if (header.type === "boolean") {
@@ -382,8 +394,8 @@ export default function CustomTableRowV2(
                       fontSize: "0.7rem",
                       fontWeight: 600,
                       whiteSpace: "nowrap",
-                      backgroundColor: isMovie ? "rgba(34,211,238,0.12)" : "rgba(124,92,255,0.14)",
-                      color: isMovie ? "#22D3EE" : "#A895FF",
+                      backgroundColor: isMovie ? "rgba(34,211,238,0.12)" : alpha(palette.primary, 0.14),
+                      color: isMovie ? "#22D3EE" : "#FFA585",
                     }}
                   >
                     {isMovie ? <LocalMoviesIcon sx={{ fontSize: 14 }} /> : <TvIcon sx={{ fontSize: 14 }} />}
@@ -502,7 +514,7 @@ export default function CustomTableRowV2(
                       height: 56,
                       margin: "auto",
                       borderRadius: 6,
-                      backgroundColor: "rgba(255,255,255,0.05)",
+                      backgroundColor: alpha(palette.overlay, 0.05),
                       boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
                     }}
                   >
@@ -648,7 +660,7 @@ export default function CustomTableRowV2(
                          {watched} {total > 0 ? `/ ${total}` : ""}
                        </Typography>
                        {total > 0 && (
-                         <Box sx={{ width: "100%", height: "4px", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "2px", overflow: "hidden" }}>
+                         <Box sx={{ width: "100%", height: "4px", backgroundColor: alpha(palette.overlay, 0.1), borderRadius: "2px", overflow: "hidden" }}>
                            <Box sx={{ width: `${progress}%`, height: "100%", backgroundColor: theme.primary }} />
                          </Box>
                        )}

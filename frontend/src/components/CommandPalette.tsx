@@ -105,7 +105,7 @@ export default function CommandPalette() {
             borderRadius: "14px",
             backgroundColor: palette.surface,
             backgroundImage: "none",
-            border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
+            border: `1px solid ${alpha(palette.overlay, 0.08)}`,
             boxShadow: "0 30px 80px rgba(0,0,0,0.6)",
             overflow: "hidden",
           },
@@ -123,7 +123,7 @@ export default function CommandPalette() {
             alignItems: "center",
             gap: 1.25,
             px: 2,
-            borderBottom: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+            borderBottom: `1px solid ${alpha(palette.overlay, 0.06)}`,
           },
           "& [cmdk-input]": {
             flex: 1,
@@ -269,8 +269,8 @@ function Kbd({ children }: { children: React.ReactNode }) {
         fontFamily: "inherit",
         fontSize: "0.7rem",
         color: palette.textMuted,
-        border: `1px solid ${alpha("#FFFFFF", 0.1)}`,
-        backgroundColor: alpha("#FFFFFF", 0.04),
+        border: `1px solid ${alpha(palette.overlay, 0.1)}`,
+        backgroundColor: alpha(palette.overlay, 0.04),
       }}
     >
       {children}

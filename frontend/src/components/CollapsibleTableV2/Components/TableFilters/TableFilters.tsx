@@ -297,7 +297,7 @@ export default function TableSettings({
             backgroundImage: "none",
             boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
             borderRadius: "16px",
-            border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
+            border: `1px solid ${alpha(palette.overlay, 0.08)}`,
             overflow: "visible",
             width: { xs: "calc(100vw - 32px)", sm: 480 },
           },
@@ -358,7 +358,7 @@ export default function TableSettings({
           );
         })}
         {extraSection && (
-          <Box sx={{ gridColumn: "1 / -1", pt: 2, mt: 0.5, borderTop: `1px solid ${alpha("#FFFFFF", 0.06)}` }}>
+          <Box sx={{ gridColumn: "1 / -1", pt: 2, mt: 0.5, borderTop: `1px solid ${alpha(palette.overlay, 0.06)}` }}>
             {extraSectionTitle && (
               <Typography sx={{ fontWeight: 700, fontSize: "0.9rem", mb: 1.5 }}>{extraSectionTitle}</Typography>
             )}
@@ -375,7 +375,7 @@ export default function TableSettings({
           gap: 1,
           px: 2.5,
           py: 1.5,
-          borderTop: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+          borderTop: `1px solid ${alpha(palette.overlay, 0.06)}`,
         }}
       >
         <Button onClick={clearFilters} sx={{ color: palette.textMuted }} disabled={activeCount === 0 && getFilledFilters(filterState).length === 0}>

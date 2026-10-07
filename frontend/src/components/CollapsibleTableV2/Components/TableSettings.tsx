@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../theme/customTheme";
 import {
   InputLabel,
   Popover,
@@ -91,7 +93,7 @@ export default function TableSettings({
             styles={{
               placeholder: (provided: any) => ({
                 ...provided,
-                color: "rgba(255, 255, 255, 0.7)",
+                color: alpha(palette.overlay, 0.7),
                 fontWeight: "400",
                 fontSize: "1rem",
                 lineHeight: "1.4375em",

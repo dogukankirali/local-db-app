@@ -49,6 +49,17 @@ declare namespace TEATable {
     Series?: number;
     SeriesName?: string;
     PlanToWatch?: boolean;
+    /** Kullanıcının bu anime için kaydı var mı (puan/bölüm/PTW/not) */
+    InMyList?: boolean;
+    AnilistID?: number;
+    StartedAt?: string;
+    FinishedAt?: string;
+    /** Yayın takibi (#19): sıradaki bölüm ve yayın zamanı (ISO), bilinmiyorsa 0 / "" */
+    NextEpisode?: number;
+    NextEpisodeAt?: string;
+    AiredEpisodes?: number;
+    /** AniList'teki İngilizce isim; yoksa "" */
+    EnglishName?: string;
   }
 
   export interface IAnimeDetail {

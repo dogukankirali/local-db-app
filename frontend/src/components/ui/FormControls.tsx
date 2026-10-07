@@ -6,8 +6,8 @@ import { Box, InputBase, InputBaseProps, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { palette } from "../../theme/customTheme";
 
-export const fieldBorder = `1px solid ${alpha("#FFFFFF", 0.08)}`;
-export const fieldBg = alpha("#FFFFFF", 0.03);
+export const fieldBorder = `1px solid ${alpha(palette.overlay, 0.08)}`;
+export const fieldBg = alpha(palette.overlay, 0.03);
 
 export function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: React.ReactNode }) {
   return (
@@ -51,7 +51,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, InputBaseProps & { e
           backgroundColor: fieldBg,
           alignItems: multiline ? "flex-start" : "center",
           transition: "border-color .15s ease",
-          "&:hover": { borderColor: alpha("#FFFFFF", 0.14) },
+          "&:hover": { borderColor: alpha(palette.overlay, 0.14) },
           "&.Mui-focused": { borderColor: alpha(palette.primary, 0.6) },
           "&.Mui-disabled": { opacity: 0.6 },
           "& input[type=number]::-webkit-inner-spin-button": { opacity: 0.5 },

@@ -30,14 +30,14 @@ function StatCard({ label, value, href }: { label: string; value: number | null;
         p: 2.5,
         borderRadius: "16px",
         backgroundColor: palette.surface,
-        border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        border: `1px solid ${alpha(palette.overlay, 0.06)}`,
         transition: "border-color .15s ease, transform .15s ease",
         "&:hover": { borderColor: alpha(palette.primary, 0.4), transform: "translateY(-2px)" },
       }}
     >
       <Typography sx={{ fontSize: "0.78rem", color: palette.textMuted, mb: 1 }}>{label}</Typography>
       {value === null ? (
-        <Skeleton width={60} height={40} sx={{ bgcolor: alpha("#FFFFFF", 0.06) }} />
+        <Skeleton width={60} height={40} sx={{ bgcolor: alpha(palette.overlay, 0.06) }} />
       ) : (
         <Typography sx={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.1 }}>{value}</Typography>
       )}
@@ -69,7 +69,7 @@ export default function HomePage() {
           p: { xs: 3, md: 4 },
           mb: 3,
           borderRadius: "20px",
-          border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+          border: `1px solid ${alpha(palette.overlay, 0.06)}`,
           background: `radial-gradient(120% 140% at 0% 0%, ${alpha(palette.primary, 0.28)} 0%, transparent 55%), radial-gradient(90% 120% at 100% 100%, ${alpha(palette.accent, 0.16)} 0%, transparent 60%), ${palette.surface}`,
         }}
       >
@@ -98,7 +98,7 @@ export default function HomePage() {
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(3, minmax(0, 1fr))", sm: "repeat(4, minmax(0, 1fr))", md: "repeat(6, minmax(0, 1fr))" }, gap: 2, mb: 4 }}>
         {watchlist === null
           ? Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} variant="rounded" sx={{ aspectRatio: "2/3", height: "auto", borderRadius: "14px", bgcolor: alpha("#FFFFFF", 0.04) }} />
+              <Skeleton key={i} variant="rounded" sx={{ aspectRatio: "2/3", height: "auto", borderRadius: "14px", bgcolor: alpha(palette.overlay, 0.04) }} />
             ))
           : watchlist.slice(0, 6).map((item, i) => (
               <Box key={item.id} component={Link} href="/watchlist" sx={{ textDecoration: "none", color: "inherit" }}>
@@ -155,7 +155,7 @@ export default function HomePage() {
               textAlign: "left",
               borderRadius: "16px",
               backgroundColor: palette.surface,
-              border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+              border: `1px solid ${alpha(palette.overlay, 0.06)}`,
               transition: "border-color .15s ease, transform .15s ease",
               "&:hover": { borderColor: alpha(palette.primary, 0.4), transform: "translateY(-2px)", "& .go": { opacity: 1, transform: "translateX(0)" } },
             }}

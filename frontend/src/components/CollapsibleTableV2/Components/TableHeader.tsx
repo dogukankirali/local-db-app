@@ -1,5 +1,8 @@
 "use client";
 
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../theme/customTheme";
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
@@ -71,7 +74,7 @@ export function HeaderItem({
     transition,
     opacity: isDragging ? 0 : 1,
     border: "none",
-    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    borderBottom: `1px solid ${alpha(palette.overlay, 0.08)}`,
     padding: "10px 12px",
     backgroundColor: theme.table_header,
     color: theme.secondary_text,
@@ -292,7 +295,7 @@ export default function TableHeader({
               width: "56px",
               padding: "10px 12px",
               backgroundColor: theme.table_header,
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              borderBottom: `1px solid ${alpha(palette.overlay, 0.08)}`,
             }}
           />
         )}
