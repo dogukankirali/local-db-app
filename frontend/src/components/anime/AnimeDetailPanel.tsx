@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
@@ -112,8 +113,28 @@ export default function AnimeDetailPanel({ data }: { data: TEATable.IAnime; upda
             <Typography sx={{ fontSize: "0.82rem", color: palette.textMuted, lineHeight: 1.55, whiteSpace: "pre-wrap", maxWidth: 760 }}>{a.Notes}</Typography>
           )}
 
-          {links.length > 0 && (
+          {true && (
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              <Box
+                component={Link}
+                href={`/anime/detail?id=${a.ID}`}
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  height: 30,
+                  px: 1.25,
+                  borderRadius: "8px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: palette.onPrimary,
+                  textDecoration: "none",
+                  backgroundColor: palette.primary,
+                  "&:hover": { backgroundColor: palette.primaryHover },
+                }}
+              >
+                Detay sayfası
+              </Box>
               {links.map((l) => (
                 <Box
                   key={l.label}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
@@ -283,9 +284,29 @@ export default function AnimeDetailModal({
                 </motion.div>
               )}
 
-              {(links.length > 0 || renderActions) && (
+              {(true) && (
                 <motion.div variants={item}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", pt: 0.5 }}>
+                    <Box
+                      component={Link}
+                      href={`/anime/detail?id=${a.ID}`}
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        height: 30,
+                        px: 1.25,
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        color: palette.onPrimary,
+                        textDecoration: "none",
+                        backgroundColor: palette.primary,
+                        "&:hover": { backgroundColor: palette.primaryHover },
+                      }}
+                    >
+                      Detay sayfası
+                    </Box>
                     {links.map((l) => (
                       <Tooltip key={l.label} title={l.href}>
                         <Box
