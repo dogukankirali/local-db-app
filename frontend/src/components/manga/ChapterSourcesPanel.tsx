@@ -128,9 +128,10 @@ export function LibrarySettings() {
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "140px 1fr" }, gap: 1 }}>
         <TextField size="small" select label="Tür" value={cfg.kind} onChange={(e) => set({ kind: e.target.value as LibraryConfig["kind"] })}>
           <MenuItem value="webdav">WebDAV</MenuItem>
+          <MenuItem value="http">HTTP (Caddy)</MenuItem>
           <MenuItem value="local">Yerel klasör</MenuItem>
         </TextField>
-        {cfg.kind === "webdav" ? (
+        {cfg.kind !== "local" ? (
           <TextField size="small" label="Kütüphane adresi" placeholder="https://…/Manga" value={cfg.url} onChange={(e) => set({ url: e.target.value.trim() })} />
         ) : (
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
@@ -140,7 +141,7 @@ export function LibrarySettings() {
             </Typography>
           </Box>
         )}
-        {cfg.kind === "webdav" && (
+        {cfg.kind !== "local" && (
           <>
             <TextField size="small" label="Kullanıcı" value={cfg.username} onChange={(e) => set({ username: e.target.value })} />
             <TextField size="small" type="password" label="Şifre" value={cfg.password} onChange={(e) => set({ password: e.target.value })} />
