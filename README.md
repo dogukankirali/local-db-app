@@ -96,6 +96,13 @@ npm run deploy                             # builds the frontend and publishes t
 
 The extension reads the server address from the popup settings; enter the site address there (e.g. `https://app.dogukankirali.com`). Sign in from the **Kiroku Account** card on the same tab with username/email and password: the extension gets its own key (the password is not stored) and sends it as `Authorization: Bearer` with requests. Keys can be viewed and revoked from the Profile page in Kiroku.
 
+## Manga downloader (extension)
+
+The extension's **Manga İndirici** page (popup → Ayarlar → 📚 Manga İndirici) searches several sources, merges their chapter lists by language preference ("Turkish if available, otherwise English", Turkish only, English only) and saves each chapter as a CBZ with `ComicInfo.xml`; the series folder also gets `series.json` and `cover.jpg` (metadata from AniList, with the MAL ID). Images are stored as they are, without conversion. It runs in the browser so sites see a normal visitor; if a site asks for a bot check, open it once in the same browser.
+
+- **Sources** (`extension/manga/sources.js`): MangaDex (official API, tr/en), Tempest (JuraTempest), Tortuga Çeviri, and the experimental Manga-TR and SadScans. Site logic is adapted from the Keiyoushi extensions (Apache-2.0).
+- **Where files go**: straight to this computer, `Downloads/Kiroku/Manga/<Series>/` (folder configurable). Nothing is uploaded or kept anywhere else; moving the files to a server is up to the user.
+
 ## Per-user list
 
 The anime catalog (name, status, episode count, cover, genres, MAL score) is shared by everyone and only the admin changes it. Score, watched episodes, Plan to Watch, notes, watch dates and the watchlist are separate for each user (`user_anime`, `watch_lists.user_id`). Lists require sign-in; since the site bypasses Cloudflare Access for `/api`, the API is closed to anonymous reads.
@@ -240,6 +247,13 @@ npm run deploy                             # frontend'i derler ve Worker'ı yay�
 **Firefox**: `about:debugging#/runtime/this-firefox` → "Geçici Eklenti Yükle" → `extension/manifest.json`.
 
 Eklenti sunucu adresini popup'taki ayarlardan alır; buraya sitenin adresini yazın (ör. `https://app.dogukankirali.com`). Aynı sekmedeki **Kiroku Hesabı** kartından kullanıcı adı/e-posta ve şifreyle giriş yapılır: eklenti kendine özel bir anahtar alır (şifre saklanmaz) ve isteklerde `Authorization: Bearer` olarak gönderir. Anahtarlar Kiroku'da Profil sayfasından görülüp iptal edilebilir.
+
+## Manga indirici (eklenti)
+
+Eklentinin **Manga İndirici** sayfası (popup → Ayarlar → 📚 Manga İndirici) birden çok kaynakta arar, bölüm listelerini dil tercihine göre birleştirir ("Türkçe varsa Türkçe, yoksa İngilizce", yalnızca Türkçe, yalnızca İngilizce) ve her bölümü `ComicInfo.xml` ile CBZ olarak kaydeder; seri klasörüne `series.json` ve `cover.jpg` da yazılır (bilgiler AniList'ten, MAL ID'siyle). Görseller dönüştürülmeden olduğu gibi saklanır. Tarayıcıda çalıştığı için siteler normal bir ziyaretçi görür; bir site bot doğrulaması isterse aynı tarayıcıda bir kez açmak yeterli.
+
+- **Kaynaklar** (`extension/manga/sources.js`): MangaDex (resmî API, tr/en), Tempest (JuraTempest), Tortuga Çeviri ve deneysel olarak Manga-TR ile SadScans. Site mantığı Keiyoushi eklentilerinden (Apache-2.0) uyarlandı.
+- **Kayıt yeri**: doğrudan bu bilgisayara, `İndirilenler/Kiroku/Manga/<Seri>/` (klasör değiştirilebilir). Hiçbir yere yüklenmez, başka yerde kopyası tutulmaz; dosyaları sunucuya taşımak kullanıcıya kalır.
 
 ## Kullanıcıya özel liste
 

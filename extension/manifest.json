@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Kiroku — Tracker & Sync",
-  "version": "16.4",
+  "version": "16.5",
   "description": "Anime takip (skip sayacı, puan, istatistik) + Kiroku Sync: izleme sitelerinde otomatik bölüm ve watchlist takibi.",
-  "permissions": ["storage", "activeTab", "scripting", "webRequest"],
+  "permissions": ["storage", "activeTab", "scripting", "webRequest", "downloads", "declarativeNetRequestWithHostAccess"],
   "host_permissions": [
     "https://graphql.anilist.co/*",
     "https://myanimelist.net/*",

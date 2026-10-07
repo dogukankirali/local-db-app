@@ -768,3 +768,7 @@ async function handleUpdateFromStreaming(tabId) {
         showSyncerStatus('❌ ' + err.message, true);
     }
 }
+
+document.getElementById('open-manga-downloader').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('manga-downloader.html') });
+});
