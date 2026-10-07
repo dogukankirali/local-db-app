@@ -98,7 +98,7 @@ Eklenti sunucu adresini popup'taki ayarlardan alır; buraya sitenin adresini yaz
 
 ## Kullanıcıya özel liste
 
-Anime kataloğu (ad, durum, bölüm sayısı, kapak, türler, MAL puanı) herkes için ortaktır ve yalnızca admin değiştirir. Puan, izlenen bölüm, Plan to Watch, notlar ve watchlist her kullanıcı için ayrıdır (`user_anime`, `watch_lists.user_id`). Giriş yapmadan açılan listeler site sahibinin (ilk admin) verisini gösterir.
+Anime kataloğu (ad, durum, bölüm sayısı, kapak, türler, MAL puanı) herkes için ortaktır ve yalnızca admin değiştirir. Puan, izlenen bölüm, Plan to Watch, notlar ve watchlist her kullanıcı için ayrıdır (`user_anime`, `watch_lists.user_id`). Listeler giriş ister; site Cloudflare Access'te `/api` için bypass edildiğinden API girişsiz okumaya kapalıdır.
 
 ## Yayın takibi ve yeni bölüm maili
 
@@ -116,8 +116,8 @@ Tüm uçlar `/api` altındadır. 🔑 giriş (JWT ya da eklenti anahtarı), 🔒
 
 | Yöntem              | Yol                                             | Açıklama                                           |
 | ------------------- | ----------------------------------------------- | -------------------------------------------------- |
-| POST                | `/getAnimeTable?page&count&orderBy&order`       | Filtrelenmiş ve sayfalanmış anime listesi (giriş yapan kullanıcının puan/bölüm verisiyle) |
-| GET                 | `/getAnimeById?id`                              | Tek anime                                          |
+| POST 🔑             | `/getAnimeTable?page&count&orderBy&order`       | Filtrelenmiş ve sayfalanmış anime listesi (giriş yapan kullanıcının puan/bölüm verisiyle) |
+| GET 🔑              | `/getAnimeById?id`                              | Tek anime                                          |
 | GET                 | `/animeCover?id`                                | DB'de base64 saklanan kapağı cache'lenebilir döner |
 | POST 🔑             | `/createAnime`                                  | Anime ekleme (aynı isim varsa günceller); eklenti de bunu kullanır |
 | POST 🔒             | `/createAnimeWithFile`                          | CSV ile toplu ekleme                               |

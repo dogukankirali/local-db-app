@@ -6,6 +6,7 @@ import { Box, Drawer } from "@mui/material";
 import Navbar from "./Navbar";
 import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "./Sidebar";
 import CommandPalette from "../CommandPalette";
+import ProtectedRoute from "../auth/ProtectedRoute";
 
 const COLLAPSED_KEY = "sidebarCollapsed";
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
@@ -103,7 +104,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       >
         <Navbar onMenuClick={() => setMobileOpen(true)} />
         <Box component="main" sx={{ flex: 1, minWidth: 0, p: { xs: 1.5, sm: 2, md: 3 } }}>
-          {children}
+          {/* Listeler giriş ister (API de girişsiz okumaya kapalı); girişsiz ziyaretçi login'e yönlenir */}
+          <ProtectedRoute>{children}</ProtectedRoute>
         </Box>
       </Box>
       <CommandPalette />

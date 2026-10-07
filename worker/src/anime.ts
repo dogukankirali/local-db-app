@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { optionalAuth, requireAdmin, requireAuth, viewerId } from "./auth";
+import { requireAdmin, requireAuth, viewerId } from "./auth";
 import { bool, field, int, message, num, readJson, str, type AppEnv, type Ctx } from "./util";
 
 // Yanıt biçimi Go backend'iyle aynı tutuldu (alan adları büyük harfle başlıyor), frontend ve eklenti değişmeden çalışsın.
@@ -238,7 +238,7 @@ export function upsertUserAnime(db: D1Database, userId: number, animeId: number,
 
 export const anime = new Hono<AppEnv>();
 
-anime.all("/getAnimeTable", optionalAuth, async (c) => {
+anime.all("/getAnimeTable", requireAuth, async (c) => {
   const q = c.req.query();
   const count = Math.min(Math.max(int(q.count) || 10, 1), 1000);
   const page = Math.max(int(q.page) || 1, 1);
@@ -310,7 +310,7 @@ anime.all("/getSeries", async (c) => {
   return c.json(results.map((s) => ({ id: s.id, name: s.name, value: s.name, label: s.name })));
 });
 
-anime.get("/getAnimeById", optionalAuth, async (c) => {
+anime.get("/getAnimeById", requireAuth, async (c) => {
   const id = int(c.req.query("id"), -1);
   if (id < 0) return c.json({ error: "Geçersiz anime ID'si" }, 400);
   const row = await c.env.DB.prepare(`SELECT ${LIST_COLUMNS} FROM ${LIST_FROM} WHERE a.id = ?`)

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { optionalAuth, requireAuth, viewerId } from "./auth";
+import { requireAuth, viewerId } from "./auth";
 import { LIST_COLUMNS, toAnime, upsertUserAnime } from "./anime";
 import { field, int, readJson, type AppEnv, type Ctx } from "./util";
 
@@ -32,7 +32,7 @@ const NEXT_RANK = "(SELECT COALESCE(MAX(order_rank), 0) + 1 FROM watch_lists WHE
 
 export const watchlist = new Hono<AppEnv>();
 
-watchlist.get("/watchlist", optionalAuth, async (c) => {
+watchlist.get("/watchlist", requireAuth, async (c) => {
   const { results } = await c.env.DB.prepare(`${SELECT_ITEMS} WHERE w.user_id = ? ORDER BY w.order_rank ASC, w.id ASC`)
     .bind(await viewerId(c))
     .all();
