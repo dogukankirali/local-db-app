@@ -9,6 +9,9 @@ APP_URL=http://localhost:3000
 # Dizi/film ayrıntıları (IMDb verisi): https://www.omdbapi.com/apikey.aspx
 # OMDB_API_KEY=
 
+# Kitap ayrıntıları (Google Books, ücretsiz anahtar): https://console.cloud.google.com/apis/library/books.googleapis.com
+# GOOGLE_BOOKS_API_KEY=
+
 # Tarayıcı bildirimleri: VAPID özel anahtarı (wrangler.jsonc'deki VAPID_PUBLIC_KEY ile eş). Yeni çift üretmek için README → Yeni bölüm bildirimleri
 # VAPID_PRIVATE_KEY=
 

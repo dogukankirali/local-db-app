@@ -13,6 +13,7 @@
 - **Accounts**: sign-up/sign-in with JWT, password reset by email (single-use link, valid for 1 hour).
 - **AniList sync**: fills in missing details, scores and series relations of archived anime in bulk.
 - **TV series & movies** (`/series`, `/movies`): same grid/table, filters and per-user score, status, episode progress, Plan to Watch, notes and dates. Details (year, rating, genres, cast, plot, poster, seasons) come from IMDb via [OMDb](https://www.omdbapi.com/); set the free key with `npx wrangler secret put OMDB_API_KEY` (locally `OMDB_API_KEY=` in `worker/.dev.vars`). Without a key, titles are entered manually.
+- **Books** (`/book`): same grid/table, filters and per-user score, status, pages read, Plan to Read, notes and dates. Details come free from [Open Library](https://openlibrary.org/developers/api) (no key, straight from the browser) and [Google Books](https://developers.google.com/books) through the Worker, which has better Turkish coverage and needs a free API key: `npx wrangler secret put GOOGLE_BOOKS_API_KEY` (locally `GOOGLE_BOOKS_API_KEY=` in `worker/.dev.vars`). Search by title, author or ISBN.
 - **Browser extension** (`extension/`, Manifest V3, Chrome & Firefox):
   - **Kiroku Tracker**: pick an anime from AniList, skip counter in the player, season rating, stats and history.
   - **Kiroku Sync**: writes episode progress to Kiroku on MyAnimeList, Anizium, TürkAnime and TRAnimeİzle pages and adds an "Add to Kiroku Watchlist" button.
@@ -145,6 +146,8 @@ All endpoints are under `/api` and paths are kebab-case. 🔑 requires sign-in (
 | GET 🔑                  | `/profile/top-anime?limit=10`                   | Top rated anime                                                             |
 | GET, POST, PUT, DELETE 🔑 | `/series`, `/movies` (`/:id`, `/:id/mine`, `/genres`) | TV series and movies: filtered list, add, edit your own data (catalog fields for admins), remove from your list |
 | GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | IMDb search and details through OMDb (needs `OMDB_API_KEY`)                 |
+| GET, POST, PUT, DELETE 🔑 | `/books` (`/:id`, `/:id/mine`, `/genres`)       | Books: filtered list, add, edit your own data (catalog fields for admins), remove from your list |
+| GET 🔑                  | `/google-books/search?q`, `/google-books/:id`   | Google Books search and details (needs `GOOGLE_BOOKS_API_KEY`)              |
 | GET 🔑                  | `/profile/recommendations`                      | Genre-based recommendations (if enabled in the profile)                    |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | List, create and revoke extension keys                                      |
 | GET/POST                | `/cron/airing`                                  | Airing tracking fallback for GitHub Actions (with CRON_SECRET)              |
@@ -171,6 +174,7 @@ No license has been specified for this project yet.
 - **Hesaplar**: JWT ile kayıt/giriş, e-posta ile şifre sıfırlama (tek kullanımlık, 1 saat geçerli bağlantı).
 - **AniList senkronizasyonu**: Arşivdeki animelerin eksik bilgilerini, puanlarını ve seri ilişkilerini toplu doldurur.
 - **Diziler ve filmler** (`/series`, `/movies`): aynı grid/tablo, filtreler ve kişisel puan, durum, bölüm ilerlemesi, Plan to Watch, notlar ve tarihler. Ayrıntılar (yıl, puan, türler, oyuncular, özet, poster, sezonlar) IMDb'den [OMDb](https://www.omdbapi.com/) üzerinden gelir; ücretsiz anahtarı `npx wrangler secret put OMDB_API_KEY` ile (yerelde `worker/.dev.vars` içinde `OMDB_API_KEY=`) tanımla. Anahtar yoksa kayıtlar elle girilir.
+- **Kitaplar** (`/book`): aynı grid/tablo, filtreler ve kişisel puan, durum, okunan sayfa, Plan to Read, notlar ve tarihler. Ayrıntılar ücretsiz olarak [Open Library](https://openlibrary.org/developers/api)'den (anahtarsız, doğrudan tarayıcıdan) ve Worker üzerinden [Google Books](https://developers.google.com/books)'tan gelir; Google Books Türkçe kitaplarda daha iyidir ve ücretsiz bir API anahtarı ister: `npx wrangler secret put GOOGLE_BOOKS_API_KEY` (yerelde `worker/.dev.vars` içinde `GOOGLE_BOOKS_API_KEY=`). Ad, yazar ya da ISBN ile aranır.
 - **Tarayıcı eklentisi** (`extension/`, Manifest V3, Chrome & Firefox):
   - **Kiroku Tracker**: AniList'ten anime seçimi, oynatıcıda ileri sarma (skip) sayacı, sezon puanlama, istatistik ve geçmiş.
   - **Kiroku Sync**: MyAnimeList, Anizium, TürkAnime ve TRAnimeİzle sayfalarında bölüm ilerlemesini Kiroku'ya yazar, "Add to Kiroku Watchlist" butonu ekler.
@@ -303,6 +307,8 @@ Tüm uçlar `/api` altındadır ve yollar kebab-case'tir. 🔑 giriş (JWT ya da
 | GET 🔑                  | `/profile/top-anime?limit=10`                   | En yüksek puanlı animeler                                                   |
 | GET, POST, PUT, DELETE 🔑 | `/series`, `/movies` (`/:id`, `/:id/mine`, `/genres`) | Diziler ve filmler: filtreli liste, ekleme, kendi verini düzenleme (admin katalog alanlarını da), listenden çıkarma |
 | GET 🔑                  | `/imdb/search?q&type`, `/imdb/:imdbId`          | OMDb üzerinden IMDb araması ve ayrıntıları (`OMDB_API_KEY` gerekir)         |
+| GET, POST, PUT, DELETE 🔑 | `/books` (`/:id`, `/:id/mine`, `/genres`)       | Kitaplar: filtreli liste, ekleme, kendi verini düzenleme (admin katalog alanlarını da), listenden çıkarma |
+| GET 🔑                  | `/google-books/search?q`, `/google-books/:id`   | Google Books araması ve ayrıntıları (`GOOGLE_BOOKS_API_KEY` gerekir)         |
 | GET 🔑                  | `/profile/recommendations`                      | Tür tabanlı öneriler (profilde açıksa)                                      |
 | GET/POST/DELETE 🔑      | `/profile/tokens`                               | Eklenti anahtarlarını listele, oluştur, iptal et                            |
 | GET/POST                | `/cron/airing`                                  | GitHub Actions için yayın takibi yedeği (CRON_SECRET ile)                   |
