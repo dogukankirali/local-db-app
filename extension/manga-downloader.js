@@ -4,7 +4,7 @@
 import { SOURCES, sourceById } from "./manga/sources.js";
 import { LANGUAGE_MODES, mergeChapters, buildChapterCbz, chapterFileName } from "./manga/downloader.js";
 import { fetchMangaMetadata, seriesJson } from "./manga/metadata.js";
-import { STORAGE_KEY, DEFAULT_STORAGE, createStorage, resolveMode } from "./manga/storage.js";
+import { STORAGE_KEY, DEFAULT_STORAGE, createStorage } from "./manga/storage.js";
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -61,20 +61,10 @@ const setProgress = (ratio) => ($("progress").firstElementChild.style.width = `$
 
 // ------------------------------ Kayıt yeri ------------------------------
 
-const ST_FIELDS = ["mode", "localDir", "webdavUrl", "baseDir", "username", "password"];
 let storageSettings = { ...DEFAULT_STORAGE };
-let serviceUrl = "";
 
 function readStorageForm() {
-  const s = { ...storageSettings };
-  for (const f of ST_FIELDS) s[f] = $(`st-${f}`).value.trim() || DEFAULT_STORAGE[f];
-  s.password = $("st-password").value; // şifrede baştaki/sondaki boşluk anlamlı olabilir
-  return s;
-}
-
-function renderStorageBadge() {
-  const mode = resolveMode(readStorageForm(), serviceUrl);
-  $("storage-badge").textContent = mode === "local" ? "Şu an: yerel (geliştirme)" : "Şu an: sunucu";
+  return { localDir: $("st-localDir").value.trim() || DEFAULT_STORAGE.localDir };
 }
 
 function setStatus(text, kind = "") {
@@ -83,13 +73,10 @@ function setStatus(text, kind = "") {
 }
 
 async function initStorage() {
-  const data = await store.get([STORAGE_KEY, "service_url", "theme", "manga_lang_mode"]);
-  storageSettings = { ...DEFAULT_STORAGE, ...(data[STORAGE_KEY] ?? {}) };
-  serviceUrl = data.service_url ?? "";
+  const data = await store.get([STORAGE_KEY, "theme", "manga_lang_mode"]);
+  storageSettings = { localDir: data[STORAGE_KEY]?.localDir || DEFAULT_STORAGE.localDir };
   document.body.dataset.theme = data.theme ?? "dark";
-  for (const f of ST_FIELDS) $(`st-${f}`).value = storageSettings[f] ?? "";
-  ST_FIELDS.forEach((f) => $(`st-${f}`).addEventListener("input", renderStorageBadge));
-  renderStorageBadge();
+  $("st-localDir").value = storageSettings.localDir;
 
   $("lang-mode").innerHTML = Object.entries(LANGUAGE_MODES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
   $("lang-mode").value = data.manga_lang_mode ?? "tr-first";
@@ -97,20 +84,9 @@ async function initStorage() {
 
   $("st-save").addEventListener("click", async () => {
     storageSettings = readStorageForm();
+    // Eski sürümün sunucu ayarları (WebDAV) varsa silinir; artık hiçbir sunucuya bağlanılmıyor
     await store.set({ [STORAGE_KEY]: storageSettings });
-    setStatus("Kaydedildi", "ok");
-  });
-  $("st-test").addEventListener("click", async () => {
-    const settings = readStorageForm();
-    try {
-      const target = createStorage(settings, serviceUrl);
-      if (target.mode === "local") return setStatus(`Yerel kayıt: ${target.label}`, "ok");
-      setStatus("Deneniyor…");
-      await target.test();
-      setStatus(`Bağlantı tamam: ${target.label}`, "ok");
-    } catch (err) {
-      setStatus(err.message, "err");
-    }
+    setStatus(`Kaydedildi: ${createStorage(storageSettings).label}`, "ok");
   });
 }
 
@@ -265,12 +241,7 @@ async function downloadSelected() {
   if (!selected.length) return log("Bölüm seçilmedi", "err");
   const seriesName = $("series-name").value.trim() || picked[0].manga.title;
 
-  let target;
-  try {
-    target = createStorage(readStorageForm(), serviceUrl);
-  } catch (err) {
-    return log(err.message, "err");
-  }
+  const target = createStorage(readStorageForm());
   log(`${selected.length} bölüm indirilecek → ${target.label}/${seriesName}`);
   stopRequested = false;
   $("download").disabled = true;

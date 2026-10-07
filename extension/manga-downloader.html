@@ -19,38 +19,15 @@
 
         <!-- Kayıt yeri -->
         <section class="mat-card md-section">
-            <div class="md-section-head">
-                <h2>Kayıt yeri</h2>
-                <span id="storage-badge" class="md-badge"></span>
-            </div>
+            <div class="md-section-head"><h2>Kayıt yeri</h2></div>
             <div class="md-grid">
-                <label>Mod
-                    <select id="st-mode" class="mat-input">
-                        <option value="auto">Otomatik (Kiroku localhost ise yerel, değilse sunucu)</option>
-                        <option value="local">Yerel: İndirilenler klasörü</option>
-                        <option value="server">Sunucu (WebDAV)</option>
-                    </select>
-                </label>
-                <label>Yerel klasör (İndirilenler altında)
+                <label>İndirilenler altındaki klasör
                     <input id="st-localDir" class="mat-input" placeholder="Kiroku/Manga">
                 </label>
-                <label>WebDAV adresi
-                    <input id="st-webdavUrl" class="mat-input" placeholder="https://sunucum.example.com/dav">
-                </label>
-                <label>Sunucudaki klasör
-                    <input id="st-baseDir" class="mat-input" placeholder="Manga">
-                </label>
-                <label>Kullanıcı adı
-                    <input id="st-username" class="mat-input" autocomplete="off">
-                </label>
-                <label>Şifre
-                    <input id="st-password" type="password" class="mat-input" autocomplete="new-password">
-                </label>
             </div>
-            <p class="md-hint">Sunucu bilgileri yalnızca bu tarayıcıda saklanır, Kiroku'ya gönderilmez. Tarayıcı SFTP konuşamadığı için sunucuda WebDAV gerekir (ör. SFTPGo aynı klasörü hem SFTP hem WebDAV ile sunar).</p>
+            <p class="md-hint">CBZ'ler doğrudan bu bilgisayara (İndirilenler/&lt;klasör&gt;/&lt;Seri&gt;/) iner. Hiçbir sunucuya gönderilmez, başka yerde kopyası tutulmaz.</p>
             <div class="md-actions">
                 <button id="st-save" class="mat-btn btn-primary">Kaydet</button>
-                <button id="st-test" class="mat-btn btn-outline">Bağlantıyı dene</button>
                 <span id="st-status" class="md-status"></span>
             </div>
         </section>
