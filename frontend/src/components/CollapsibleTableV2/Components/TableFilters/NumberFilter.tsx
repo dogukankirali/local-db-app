@@ -37,8 +37,8 @@ export default function NumberFilter({ label, state, handleStateChange, min, max
         alignItems: "center",
         height: 38,
         borderRadius: "10px",
-        border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
-        backgroundColor: alpha("#FFFFFF", 0.03),
+        border: `1px solid ${alpha(palette.overlay, 0.08)}`,
+        backgroundColor: alpha(palette.overlay, 0.03),
         overflow: "hidden",
         "&:focus-within": { borderColor: alpha(palette.primary, 0.6) },
       }}
@@ -80,7 +80,7 @@ export default function NumberFilter({ label, state, handleStateChange, min, max
         onChange={onValue}
         placeholder={min !== undefined && max !== undefined ? `${min}–${max}` : "Değer"}
         inputProps={{ min, max, "aria-label": label }}
-        sx={{ flex: 1, px: 1.25, fontSize: "0.875rem", color: palette.text, borderLeft: `1px solid ${alpha("#FFFFFF", 0.08)}`, height: "100%" }}
+        sx={{ flex: 1, px: 1.25, fontSize: "0.875rem", color: palette.text, borderLeft: `1px solid ${alpha(palette.overlay, 0.08)}`, height: "100%" }}
       />
     </Box>
   );

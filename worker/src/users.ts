@@ -9,7 +9,7 @@ import {
   requireAuth,
 } from "./auth";
 import { EmailNotConfigured, sendPasswordResetEmail } from "./email";
-import { field, message, nowIso, readJson, str, type AppEnv } from "./util";
+import { bool, field, message, nowIso, readJson, str, type AppEnv, type Ctx } from "./util";
 
 export type UserRow = {
   id: number;
@@ -23,6 +23,10 @@ export type UserRow = {
   last_login: string | null;
   reset_password_token: string | null;
   reset_password_expires: string | null;
+  avatar_url?: string | null;
+  bio?: string | null;
+  show_recommendations?: number;
+  notify_new_episodes?: number;
   created_at: string;
   updated_at: string;
 };
@@ -36,6 +40,10 @@ export const toUserResponse = (u: UserRow, token?: string) => ({
   isActive: Boolean(u.is_active),
   isAdmin: Boolean(u.is_admin),
   lastLogin: u.last_login,
+  avatarUrl: u.avatar_url ?? "",
+  bio: u.bio ?? "",
+  showRecommendations: Boolean(u.show_recommendations),
+  notifyNewEpisodes: Boolean(u.notify_new_episodes),
   createdAt: u.created_at,
   updatedAt: u.updated_at,
   ...(token ? { token } : {}),
@@ -86,31 +94,51 @@ users.post("/auth/login", async (c) => {
   return c.json(toUserResponse(user, await generateToken(c.env, user)));
 });
 
-users.get("/auth/profile", requireAuth, async (c) => {
+const getProfile = async (c: Ctx) => {
   const user = await c.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(c.get("user")!.userId).first<UserRow>();
   if (!user) return message(c, "Kullanıcı bulunamadı", 404);
   return c.json(toUserResponse(user));
-});
+};
 
-users.put("/auth/profile", requireAuth, async (c) => {
+// Yalnızca gönderilen alanlar değişir. Şifre değişikliği mevcut şifreyi ister (Google ile açılmış
+// hesaplarda mevcut şifre yoktur; önce "şifremi unuttum" ile şifre belirlenmeli).
+const putProfile = async (c: Ctx) => {
   const db = c.env.DB;
   const userId = c.get("user")!.userId;
   const user = await db.prepare("SELECT * FROM users WHERE id = ?").bind(userId).first<UserRow>();
   if (!user) return message(c, "Kullanıcı bulunamadı", 404);
 
   const body = await readJson(c);
+  const has = (k: string) => field(body, k) !== undefined;
+  const username = str(field(body, "username")).trim();
   const email = str(field(body, "email")).trim();
-  const firstName = str(field(body, "firstName"));
-  const lastName = str(field(body, "lastName"));
   const password = str(field(body, "password"));
 
+  if (username && username !== user.username) {
+    if (username.length < 3) return message(c, "Kullanıcı adı en az 3 karakter olmalı", 400);
+    const taken = await db.prepare("SELECT id FROM users WHERE username = ? AND id != ?").bind(username, userId).first();
+    if (taken) return message(c, "Bu kullanıcı adı zaten kullanılıyor", 409);
+    user.username = username;
+  }
   if (email && email !== user.email) {
+    if (!email.includes("@")) return message(c, "Geçerli bir e-posta adresi girin", 400);
     const taken = await db.prepare("SELECT id FROM users WHERE email = ? AND id != ?").bind(email, userId).first();
     if (taken) return message(c, "Bu e-posta adresi zaten kullanılıyor", 409);
     user.email = email;
   }
-  if (firstName) user.first_name = firstName;
-  if (lastName) user.last_name = lastName;
+  if (has("firstName")) user.first_name = str(field(body, "firstName")).trim();
+  if (has("lastName")) user.last_name = str(field(body, "lastName")).trim();
+  if (has("bio")) user.bio = str(field(body, "bio")).slice(0, 500);
+  if (has("avatarUrl")) {
+    const avatar = str(field(body, "avatarUrl")).trim();
+    // Bağlantı ya da küçük bir yüklenmiş görsel (data:image, en fazla ~300 KB)
+    if (avatar && !/^https:\/\//.test(avatar) && !(/^data:image\/(png|jpeg|webp|gif);base64,/.test(avatar) && avatar.length < 400_000)) {
+      return message(c, "Avatar bir https bağlantısı ya da 300 KB'tan küçük bir görsel olmalı", 400);
+    }
+    user.avatar_url = avatar || null;
+  }
+  if (has("showRecommendations")) user.show_recommendations = bool(field(body, "showRecommendations")) ? 1 : 0;
+  if (has("notifyNewEpisodes")) user.notify_new_episodes = bool(field(body, "notifyNewEpisodes")) ? 1 : 0;
   if (password) {
     // Çalınan bir token ile şifre değiştirilemesin
     if (!(await checkPassword(str(field(body, "currentPassword")), user.password))) {
@@ -121,11 +149,22 @@ users.put("/auth/profile", requireAuth, async (c) => {
   }
   user.updated_at = nowIso();
   await db
-    .prepare("UPDATE users SET email = ?, first_name = ?, last_name = ?, password = ?, updated_at = ? WHERE id = ?")
-    .bind(user.email, user.first_name, user.last_name, user.password, user.updated_at, userId)
+    .prepare(
+      `UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?, password = ?, avatar_url = ?, bio = ?,
+         show_recommendations = ?, notify_new_episodes = ?, updated_at = ? WHERE id = ?`
+    )
+    .bind(
+      user.username, user.email, user.first_name, user.last_name, user.password, user.avatar_url ?? null, user.bio ?? null,
+      user.show_recommendations ?? 0, user.notify_new_episodes ?? 0, user.updated_at, userId
+    )
     .run();
   return c.json(toUserResponse(user));
-});
+};
+
+users.get("/auth/profile", requireAuth, getProfile);
+users.put("/auth/profile", requireAuth, putProfile);
+users.get("/profile", requireAuth, getProfile);
+users.put("/profile", requireAuth, putProfile);
 
 // Hesabın var olup olmadığını sızdırmamak için her durumda aynı mesajı döner
 users.post("/auth/forgot-password", async (c) => {

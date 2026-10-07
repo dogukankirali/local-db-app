@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../theme/customTheme";
 import Button from "@mui/material/Button";
 import { theme } from "../../../theme/customTheme";
 import { Utils } from "../Utils/Utilities";
@@ -40,7 +42,7 @@ export default function SCButtonGroup({
           textTransform: "none",
           "&:hover": {
             borderColor: theme.secondary_text,
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            backgroundColor: alpha(palette.overlay, 0.05),
           },
         }}
         disabled={cancelDisabled}

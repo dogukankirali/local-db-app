@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../../theme/customTheme";
 import {
   Box,
   ButtonGroup,
@@ -875,7 +877,7 @@ export default function InnerList({
                       ...provided,
                       color: "#FFFFFF",
                       "&:hover": {
-                        backgroundColor: "rgba(255, 255, 255, 0.2)",
+                        backgroundColor: alpha(palette.overlay, 0.2),
                         color: "#FFFFFF",
                       },
                     }),

@@ -567,6 +567,55 @@ document.getElementById('syncer-quick-open-wl').addEventListener('click', async 
     }
 });
 
+// Kiroku hesabı (#26): kullanıcı adı/şifre ile eklentiye özel bir anahtar alınır, şifre saklanmaz.
+// Anahtar Kiroku'da Profil sayfasından iptal edilebilir.
+function renderAccount(user) {
+    document.getElementById('syncer-account-display').style.display = user ? 'block' : 'none';
+    document.getElementById('syncer-login-wrap').style.display = user ? 'none' : 'block';
+    document.getElementById('syncer-account-text').textContent = user ? `Giriş yapıldı: ${user}` : '';
+}
+
+chrome.storage.local.get(['auth_token', 'auth_user'], (res) => renderAccount(res.auth_token ? res.auth_user || '✓' : null));
+
+async function loginToKiroku() {
+    const username = document.getElementById('syncer-login-user').value.trim();
+    const password = document.getElementById('syncer-login-pass').value;
+    if (!username || !password) return showSyncerStatus('Kullanıcı adı ve şifre gerekli.', true);
+    const serviceUrl = (await getServiceUrl()).trim().replace(/\/+$/, '');
+    if (!serviceUrl) return showSyncerStatus('Önce Service URL girin.', true);
+    try {
+        const data = await safeFetchJson(`${serviceUrl}/api/auth/extension-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, name: `Tarayıcı eklentisi (${navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chrome'})` }),
+            credentials: 'omit',
+            mode: 'cors'
+        });
+        chrome.storage.local.set({ auth_token: data.token, auth_user: data.username }, () => {
+            document.getElementById('syncer-login-pass').value = '';
+            renderAccount(data.username);
+            showSyncerStatus(`✅ ${data.username} olarak giriş yapıldı.`);
+        });
+    } catch (err) {
+        showSyncerStatus('❌ ' + err.message, true);
+    }
+}
+
+document.getElementById('syncer-login-btn').addEventListener('click', loginToKiroku);
+document.getElementById('syncer-login-pass').addEventListener('keydown', (e) => { if (e.key === 'Enter') loginToKiroku(); });
+document.getElementById('syncer-logout-btn').addEventListener('click', () => {
+    chrome.storage.local.remove(['auth_token', 'auth_user'], () => {
+        renderAccount(null);
+        showSyncerStatus('Çıkış yapıldı. Anahtarı tamamen iptal etmek için Kiroku → Profil.');
+    });
+});
+
+async function getAuthHeader() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get('auth_token', (res) => resolve(res.auth_token ? { Authorization: `Bearer ${res.auth_token}` } : {}));
+    });
+}
+
 // Sayfa bağlamı tespiti (Aktif tab'a göre buton gösterimi)
 async function checkCurrentPageContext() {
     const pageActionDiv = document.getElementById('syncer-page-action');
@@ -634,7 +683,9 @@ async function safeFetchJson(url, options = {}) {
     }
 
     if (!res.ok) {
-        const errorMsg = data?.error || data?.message || `Hata (${res.status})`;
+        const errorMsg = res.status === 401 && !url.includes('/auth/')
+            ? "Kiroku hesabına giriş yapılmamış. Configs sekmesinden giriş yap."
+            : data?.error || data?.message || `Hata (${res.status})`;
         throw new Error(errorMsg);
     }
 
@@ -655,9 +706,9 @@ async function handleAddFromMAL(tabId) {
                 return showSyncerStatus('Sayfadan anime bilgisi alınamadı.', true);
             }
 
-            await safeFetchJson(`${serviceUrl}/createAnime`, {
+            await safeFetchJson(`${serviceUrl}/api/createAnime`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...(await getAuthHeader()) },
                 body: JSON.stringify(response.animeInfo),
                 credentials: "omit",
                 mode: "cors"
@@ -705,7 +756,7 @@ async function handleUpdateFromStreaming(tabId) {
 
         await safeFetchJson(`${serviceUrl}/api/anime/update-episode`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...(await getAuthHeader()) },
             body: JSON.stringify(response.episodeInfo),
             credentials: "omit",
             mode: "cors"

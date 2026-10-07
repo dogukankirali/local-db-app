@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../../../../theme/customTheme";
 import React from "react";
 import Select, { MultiValue } from "react-select";
 import useCustomStyles from "../../Utils/CustomDropdownStyles";
@@ -68,7 +70,7 @@ export default function MultiSelectFilter({
             width: isSeries ? "auto" : provided.width,
             minWidth: isSeries ? "250px" : provided.minWidth,
             backgroundColor: theme.foreground_alt,
-            border: "1px solid rgba(255,255,255,0.08)",
+            border: `1px solid ${alpha(palette.overlay, 0.08)}`,
             borderRadius: "10px",
             boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.35)",
           }),
@@ -81,8 +83,8 @@ export default function MultiSelectFilter({
             ...provided,
             maxWidth: isSeries ? "100%" : provided.maxWidth,
             overflow: "visible",
-            backgroundColor: "rgba(124,92,255,0.18)",
-            border: "1px solid rgba(124,92,255,0.4)",
+            backgroundColor: alpha(palette.primary, 0.18),
+            border: `1px solid ${alpha(palette.primary, 0.4)}`,
             borderRadius: "6px",
           }),
           multiValueLabel: (provided) => ({
@@ -96,7 +98,7 @@ export default function MultiSelectFilter({
             ...provided,
             color: "#FFFFFF",
             "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
+              backgroundColor: alpha(palette.overlay, 0.2),
               color: "#FFFFFF",
             },
           }),
@@ -110,13 +112,13 @@ export default function MultiSelectFilter({
           control: (provided, state) => ({
             ...provided,
             color: theme.primary_text,
-            backgroundColor: "rgba(255,255,255,0.03)",
-            borderColor: state.isFocused ? "rgba(124,92,255,0.6)" : "rgba(255,255,255,0.08)",
+            backgroundColor: alpha(palette.overlay, 0.03),
+            borderColor: state.isFocused ? alpha(palette.primary, 0.6) : alpha(palette.overlay, 0.08),
             boxShadow: "none",
             borderRadius: "10px",
             minHeight: 38,
             ":hover": {
-              borderColor: "rgba(124,92,255,0.4)",
+              borderColor: alpha(palette.primary, 0.4),
             },
           }),
           input: (provided) => ({

@@ -129,7 +129,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: Si
         px: collapsed ? 1.25 : 1.75,
         py: 2,
         backgroundColor: palette.surface,
-        borderRight: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        borderRight: `1px solid ${alpha(palette.overlay, 0.06)}`,
       }}
     >
       <Box sx={{ mb: 3, mt: 0.5 }}>
@@ -140,7 +140,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: Si
         {navSections.map((section) => (
           <Box key={section.title} sx={{ mb: 2 }}>
             {collapsed ? (
-              <Box sx={{ height: 1, mx: 1.5, mb: 1.25, backgroundColor: alpha("#FFFFFF", 0.06) }} />
+              <Box sx={{ height: 1, mx: 1.5, mb: 1.25, backgroundColor: alpha(palette.overlay, 0.06) }} />
             ) : (
               <Typography
                 sx={{
@@ -182,7 +182,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: Si
                     "& svg": { fontSize: 21, color: active ? palette.primary : "inherit", transition: "color .15s ease" },
                     "&:hover": {
                       color: palette.text,
-                      backgroundColor: active ? alpha(palette.primary, 0.18) : alpha("#FFFFFF", 0.04),
+                      backgroundColor: active ? alpha(palette.primary, 0.18) : alpha(palette.overlay, 0.04),
                     },
                     "&::before": active
                       ? {
@@ -214,7 +214,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: Si
         ))}
       </Box>
 
-      <Box sx={{ pt: 1.5, borderTop: `1px solid ${alpha("#FFFFFF", 0.06)}` }}>
+      <Box sx={{ pt: 1.5, borderTop: `1px solid ${alpha(palette.overlay, 0.06)}` }}>
         <UserCard collapsed={collapsed} />
         {onToggleCollapsed && (
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", mt: 1, px: collapsed ? 0 : 0.5 }}>

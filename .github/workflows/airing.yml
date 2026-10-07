@@ -1,0 +1,35 @@
+name: Yayın takibi
+
+# #19: yayındaki animelerin durumunu, bölüm sayısını ve MAL puanını AniList'ten günceller,
+# yeni bölüm çıkınca bildirimi açık kullanıcılara mail atar. Zamanlanmış çalıştırmalar yalnızca
+# varsayılan branch'te (main) çalışır; Actions sekmesinden elle de tetiklenebilir.
+#
+# Gerekli secret: KIROKU_CRON_SECRET (Worker'daki CRON_SECRET ile aynı).
+# İsteğe bağlı: KIROKU_URL (repo variable), CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET (secret).
+
+# Zamanlama şimdilik kapalı (#19); açmak için aşağıdaki schedule satırlarını geri ekle:
+#   schedule:
+#     - cron: "17 */3 * * *"
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: airing
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: AniList'ten yayın bilgisini al ve Kiroku'ya yaz
+        run: node worker/scripts/airing-check.mjs
+        env:
+          KIROKU_URL: ${{ vars.KIROKU_URL }}
+          KIROKU_CRON_SECRET: ${{ secrets.KIROKU_CRON_SECRET }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}

@@ -23,8 +23,8 @@ export default function InputFilter({ elKey, value, handleStateChange, label, on
         height: 38,
         px: 1.25,
         borderRadius: "10px",
-        border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
-        backgroundColor: alpha("#FFFFFF", 0.03),
+        border: `1px solid ${alpha(palette.overlay, 0.08)}`,
+        backgroundColor: alpha(palette.overlay, 0.03),
         "&:focus-within": { borderColor: alpha(palette.primary, 0.6) },
       }}
     >

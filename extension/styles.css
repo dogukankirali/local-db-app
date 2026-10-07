@@ -206,8 +206,40 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 10px;
-    background: rgba(79, 70, 229, 0.12);
+    background: rgba(124, 92, 255, 0.12);
     color: var(--primary);
     border: 1px solid var(--primary);
     margin-bottom: 8px;
 }
+
+/* ============================================================
+   Kiroku görünümü — web arayüzüyle aynı renkler, yazı tipi ve köşeler
+   (frontend/src/theme/customTheme.ts palette ile eşleşir)
+   ============================================================ */
+:root {
+    --bg: #F4F5F8; --surface: #FFFFFF; --text: #12161E; --text-secondary: #5B6478;
+    --primary: #7C5CFF; --primary-hover: #6A48F5; --primary-soft: rgba(124, 92, 255, 0.15);
+    --secondary: #22D3EE; --secondary-hover: #06B6D4;
+    --success: #22C55E; --danger: #EF4444;
+    --border: #E2E5EC; --card-shadow: none;
+}
+[data-theme='dark'] {
+    --bg: #0B0D12; --surface: #12161E; --text: #E7E9EE; --text-secondary: #8A93A6;
+    --primary: #7C5CFF; --primary-hover: #6A48F5; --primary-soft: rgba(124, 92, 255, 0.15);
+    --secondary: #22D3EE; --secondary-hover: #06B6D4;
+    --success: #22C55E; --danger: #EF4444;
+    --border: #232938; --card-shadow: none;
+}
+body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; padding: 14px; }
+.logo { color: var(--text); font-weight: 700; letter-spacing: -0.01em; }
+.tab-bar { border-bottom: 1px solid var(--border); gap: 4px; }
+.tab-btn { border-radius: 8px 8px 0 0; font-weight: 600; margin-bottom: -1px; border-bottom-width: 2px; }
+.tab-btn:hover { color: var(--text); }
+.mat-card { border-radius: 12px; border: 1px solid var(--border); box-shadow: none; padding: 14px; }
+.mat-input { border-radius: 10px; background: var(--bg); border: 1px solid var(--border); }
+.mat-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.mat-btn { border-radius: 10px; font-weight: 600; text-transform: none; letter-spacing: 0; box-shadow: none; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn-outline { border: 1px solid var(--border); color: var(--text-secondary); background: transparent; }
+.btn-outline:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+.dropdown-item:hover { background: var(--primary-soft); }

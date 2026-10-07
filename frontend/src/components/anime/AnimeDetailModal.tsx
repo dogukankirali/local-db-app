@@ -1,5 +1,6 @@
 "use client";
 
+import { formatWatchDate } from "./WatchDates";
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
@@ -11,7 +12,7 @@ import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import { GenreChips } from "../Common/GenreChip";
 import { useCoverColor } from "../../hooks/useCoverColor";
-import { palette } from "../../theme/customTheme";
+import { hexToRgbTriplet, palette } from "../../theme/customTheme";
 
 /** Grid kartı ile modal posteri arasında View Transition için kullanılan ortak isim */
 export const COVER_TRANSITION_NAME = "kiroku-cover";
@@ -82,6 +83,15 @@ export function Stat({ label, children }: { label: string; children: React.React
   );
 }
 
+/** Yayın takibi (#19): "6. bölüm · 13 Eki 17:00" (yerel saat); bilinmiyorsa null */
+export function formatNextEpisode(anime: Partial<TEATable.IAnime>): string | null {
+  if (!anime.NextEpisode || !anime.NextEpisodeAt) return null;
+  const at = new Date(anime.NextEpisodeAt);
+  if (Number.isNaN(at.getTime())) return null;
+  const when = at.toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return `${anime.NextEpisode}. bölüm · ${when}`;
+}
+
 export default function AnimeDetailModal({
   anime,
   onClose,
@@ -101,13 +111,14 @@ export default function AnimeDetailModal({
   const a = anime as TEATable.IAnime & Record<string, any>;
   const imgSrc = getCoverSrc(a.Cover);
   const rgb = useCoverColor(imgSrc);
-  const glow = rgb ?? "124, 92, 255";
+  const glow = rgb ?? hexToRgbTriplet(palette.primary);
   const status = getStatusInfo(anime);
   const watched = Number(a.WatchStatus) || 0;
   const total = parseInt(String(a.TotalNumberOfEpisodes)) || 0;
   const progress = total > 0 ? Math.min(100, (watched / total) * 100) : 0;
   const score = Number(a.Score) || 0;
   const malScore = Number(a.MALScore) || 0;
+  const nextEpisode = formatNextEpisode(anime);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -157,7 +168,7 @@ export default function AnimeDetailModal({
             maxHeight: { xs: "92vh", sm: "min(640px, calc(100vh - 48px))" },
             overflow: "auto",
             borderRadius: { xs: "14px 14px 0 0", sm: "14px" },
-            border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
+            border: `1px solid ${alpha(palette.overlay, 0.08)}`,
             backgroundColor: palette.surface,
             boxShadow: `0 30px 80px rgba(0,0,0,0.6), 0 0 120px -20px rgba(${glow}, 0.35)`,
             // Kapağın baskın renginden ortam ışığı
@@ -192,7 +203,7 @@ export default function AnimeDetailModal({
                 borderRadius: "10px",
                 overflow: "hidden",
                 backgroundColor: palette.surfaceRaised,
-                boxShadow: `0 18px 40px rgba(0,0,0,0.55), 0 0 0 1px ${alpha("#FFFFFF", 0.06)}`,
+                boxShadow: `0 18px 40px rgba(0,0,0,0.55), 0 0 0 1px ${alpha(palette.overlay, 0.06)}`,
                 viewTransitionName: COVER_TRANSITION_NAME,
               }}
             >
@@ -204,6 +215,9 @@ export default function AnimeDetailModal({
                 <Typography component="h2" sx={{ fontSize: { xs: "1.2rem", sm: "1.45rem" }, fontWeight: 800, lineHeight: 1.2, pr: 5, color: palette.text }}>
                   {a.Name}
                 </Typography>
+                {a.EnglishName && a.EnglishName !== a.Name && (
+                  <Typography sx={{ mt: 0.5, pr: 5, fontSize: "0.92rem", color: palette.textMuted, lineHeight: 1.3 }}>{a.EnglishName}</Typography>
+                )}
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.25 }}>
                   <Pill color={status.color}>
                     {a.PlanToWatch && <BookmarkRoundedIcon sx={{ fontSize: 14 }} />}
@@ -220,7 +234,7 @@ export default function AnimeDetailModal({
                     <Typography sx={{ fontSize: "0.68rem", color: palette.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>Puanım</Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                       <StarRoundedIcon sx={{ color: "#FBBF24", fontSize: 26 }} />
-                      <Typography sx={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, color: palette.text }}>{score > 0 ? score : "—"}</Typography>
+                      <Typography sx={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, color: palette.text }}>{score > 0 ? score : <Box component="span" sx={{ fontSize: "1rem", fontWeight: 600, color: palette.textMuted }}>Puanlanmadı</Box>}</Typography>
                       {score > 0 && <Typography sx={{ color: palette.textFaint, fontSize: "0.85rem", alignSelf: "flex-end", mb: 0.25 }}>/100</Typography>}
                     </Box>
                   </Box>
@@ -236,7 +250,7 @@ export default function AnimeDetailModal({
                       {watched} / {total} bölüm
                     </Typography>
                   </Box>
-                  <Box sx={{ height: 6, borderRadius: 3, backgroundColor: alpha("#FFFFFF", 0.08), overflow: "hidden" }}>
+                  <Box sx={{ height: 6, borderRadius: 3, backgroundColor: alpha(palette.overlay, 0.08), overflow: "hidden" }}>
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
@@ -248,9 +262,17 @@ export default function AnimeDetailModal({
               )}
 
               <motion.div variants={item}>
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: nextEpisode ? "1fr 1fr 1fr" : "1fr 1fr", gap: 2 }}>
                   <Stat label="Seri">{a.SeriesName || "—"}</Stat>
                   <Stat label="Bölüm">{total > 0 ? total : "?"}</Stat>
+                  {nextEpisode && <Stat label="Sıradaki bölüm">{nextEpisode}</Stat>}
+                </Box>
+              </motion.div>
+
+              <motion.div variants={item}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+                  <Stat label="Başladım">{formatWatchDate(a.StartedAt)}</Stat>
+                  <Stat label="Bitirdim">{formatWatchDate(a.FinishedAt)}</Stat>
                 </Box>
               </motion.div>
 
@@ -262,16 +284,43 @@ export default function AnimeDetailModal({
 
               {a.Notes && (
                 <motion.div variants={item}>
-                  <Box sx={{ p: 1.5, borderRadius: "8px", backgroundColor: alpha("#FFFFFF", 0.035), border: `1px solid ${alpha("#FFFFFF", 0.05)}` }}>
+                  <Box sx={{ p: 1.5, borderRadius: "8px", backgroundColor: alpha(palette.overlay, 0.035), border: `1px solid ${alpha(palette.overlay, 0.05)}` }}>
                     <Typography sx={{ fontSize: "0.68rem", color: palette.textFaint, textTransform: "uppercase", letterSpacing: "0.06em", mb: 0.5 }}>Notlar</Typography>
                     <Typography sx={{ fontSize: "0.85rem", color: palette.textMuted, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{a.Notes}</Typography>
                   </Box>
                 </motion.div>
               )}
 
-              {(links.length > 0 || renderActions) && (
+              {(true) && (
                 <motion.div variants={item}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", pt: 0.5 }}>
+                    <Box
+                      component="a"
+                      href={`/anime/detail?id=${a.ID}`}
+                      onClick={(e: React.MouseEvent) => {
+                        // Modal/satır tıklama işleyicileri istemci içi geçişi yutabiliyor; geçişi doğrudan yap
+                        if (e.metaKey || e.ctrlKey || e.button !== 0) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.location.assign(`/anime/detail?id=${a.ID}`);
+                      }}
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        height: 30,
+                        px: 1.25,
+                        borderRadius: "8px",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        color: palette.onPrimary,
+                        textDecoration: "none",
+                        backgroundColor: palette.primary,
+                        "&:hover": { backgroundColor: palette.primaryHover },
+                      }}
+                    >
+                      Detay sayfası
+                    </Box>
                     {links.map((l) => (
                       <Tooltip key={l.label} title={l.href}>
                         <Box
@@ -290,9 +339,9 @@ export default function AnimeDetailModal({
                             fontWeight: 600,
                             color: palette.text,
                             textDecoration: "none",
-                            backgroundColor: alpha("#FFFFFF", 0.05),
-                            border: `1px solid ${alpha("#FFFFFF", 0.08)}`,
-                            "&:hover": { backgroundColor: alpha("#FFFFFF", 0.09) },
+                            backgroundColor: alpha(palette.overlay, 0.05),
+                            border: `1px solid ${alpha(palette.overlay, 0.08)}`,
+                            "&:hover": { backgroundColor: alpha(palette.overlay, 0.09) },
                           }}
                         >
                           {l.label}

@@ -1,3 +1,5 @@
+import { alpha } from "@mui/material/styles";
+import { palette } from "../theme/customTheme";
 // Kapaklar en büyük boyutta saklanır (AniList extraLarge ≈ 460 px); küçük gösterilen yerlerde
 // aynı görselin CDN'deki küçük sürümü istenir, böylece tablo ve kalabalık grid çok daha hızlı yüklenir.
 // AniList aynı dosyayı /cover/small/ (~100 px), /cover/medium/ (~230 px) ve /cover/large/ altında sunar;
@@ -17,8 +19,8 @@ export function sizedCover(url: string | null | undefined, size: CoverSize): str
 
 // Görsel inene kadar kutuda hafif bir parıltı gösterilir, inince yumuşakça belirir (beyaz/boş kare yerine)
 export const coverLoadingSx = {
-  backgroundColor: "#1C2130",
-  backgroundImage: "linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%)",
+  backgroundColor: palette.surfaceRaised,
+  backgroundImage: `linear-gradient(100deg, transparent 30%, ${alpha(palette.overlay, 0.05)} 50%, transparent 70%)`,
   backgroundSize: "200% 100%",
   animation: "kirokuCoverShimmer 1.4s ease-in-out infinite",
   "@keyframes kirokuCoverShimmer": { from: { backgroundPosition: "150% 0" }, to: { backgroundPosition: "-50% 0" } },

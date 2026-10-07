@@ -20,10 +20,16 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
+import TabRoundedIcon from "@mui/icons-material/TabRounded";
+import dynamic from "next/dynamic";
 import { useAuth } from "../../contexts/AuthContext";
 import { getPageTitle } from "../../config/navigation";
 import { palette } from "../../theme/customTheme";
 import { OPEN_COMMAND_PALETTE } from "../CommandPalette";
+
+// Yalnızca admin açar; ilk açılışta yüklenir
+const NotesImportDialog = dynamic(() => import("../anime/NotesImportDialog"), { ssr: false });
 
 export const TOPBAR_HEIGHT = 64;
 
@@ -56,12 +62,12 @@ function SearchBox() {
         height: 40,
         px: 1.5,
         borderRadius: "10px",
-        backgroundColor: alpha("#FFFFFF", 0.04),
-        border: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        backgroundColor: alpha(palette.overlay, 0.04),
+        border: `1px solid ${alpha(palette.overlay, 0.06)}`,
         transition: "border-color .15s ease, background-color .15s ease",
         "&:focus-within": {
           borderColor: alpha(palette.primary, 0.6),
-          backgroundColor: alpha("#FFFFFF", 0.06),
+          backgroundColor: alpha(palette.overlay, 0.06),
         },
       }}
     >
@@ -85,7 +91,7 @@ function SearchBox() {
           px: 0.75,
           py: 0.1,
           borderRadius: "6px",
-          border: `1px solid ${alpha("#FFFFFF", 0.1)}`,
+          border: `1px solid ${alpha(palette.overlay, 0.1)}`,
           fontSize: "0.7rem",
           fontFamily: "inherit",
           color: palette.textMuted,
@@ -100,7 +106,9 @@ function SearchBox() {
 export default function Navbar({ onMenuClick }: NavbarProps) {
   const pathname = usePathname() || "/";
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [tabsOpen, setTabsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const close = () => setAnchorEl(null);
 
@@ -118,7 +126,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         px: { xs: 1.5, md: 3 },
         backgroundColor: alpha(palette.ink, 0.72),
         backdropFilter: "saturate(160%) blur(14px)",
-        borderBottom: `1px solid ${alpha("#FFFFFF", 0.06)}`,
+        borderBottom: `1px solid ${alpha(palette.overlay, 0.06)}`,
       }}
     >
       <IconButton onClick={onMenuClick} aria-label="Menüyü aç" sx={{ display: { md: "none" }, color: palette.textMuted }}>
@@ -168,6 +176,32 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               </ListItemIcon>
               Profil
             </MenuItem>
+            {isAdmin && (
+              <MenuItem
+                onClick={() => {
+                  close();
+                  setNotesOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <AutoFixHighRoundedIcon fontSize="small" />
+                </ListItemIcon>
+                Notlardan içe aktar
+              </MenuItem>
+            )}
+            {isAdmin && (
+              <MenuItem
+                onClick={() => {
+                  close();
+                  setTabsOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <TabRoundedIcon fontSize="small" />
+                </ListItemIcon>
+                Açık sekmelerden watchlist&apos;e
+              </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 close();
@@ -181,6 +215,8 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               Çıkış yap
             </MenuItem>
           </Menu>
+          {isAdmin && notesOpen && <NotesImportDialog open onClose={() => setNotesOpen(false)} />}
+          {isAdmin && tabsOpen && <NotesImportDialog open source="tabs" onClose={() => setTabsOpen(false)} />}
         </>
       ) : (
         <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1 }}>
