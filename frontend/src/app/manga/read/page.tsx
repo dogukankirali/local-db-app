@@ -16,7 +16,8 @@ import AutoStoriesRoundedIcon from "@mui/icons-material/AutoStoriesRounded";
 import SwapHorizRoundedIcon from "@mui/icons-material/SwapHorizRounded";
 import FitScreenRoundedIcon from "@mui/icons-material/FitScreenRounded";
 import { ChapterService, MangaService, errorText, type Chapter, type Manga } from "../../../Services/MangaService";
-import { pageSource, preload, type PageSource } from "../../../lib/chapterPages";
+import { cbzSource, pageSource, preload, type PageSource } from "../../../lib/chapterPages";
+import { LibraryError, canPickFolder, pickLocalFolder } from "../../../lib/library";
 import { chapterLabel } from "../../../components/manga/mangaLabels";
 
 type Mode = "vertical" | "paged";
@@ -91,6 +92,8 @@ function Reader() {
   const [page, setPage] = useState(0);
   const [ui, setUi] = useState(true);
   const [error, setError] = useState("");
+  const [libError, setLibError] = useState<LibraryError | null>(null);
+  const [retry, setRetry] = useState(0);
   const [finished, setFinished] = useState(false);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -128,6 +131,7 @@ function Reader() {
     setFinished(false);
     restored.current = false;
     pageRefs.current = [];
+    setLibError(null);
     pageSource(chapter)
       .then((s) => {
         created = s;
@@ -136,12 +140,32 @@ function Reader() {
         const saved = readStore<{ page: number }>(posKey(chapter.id), { page: 0 }).page;
         setPage(Math.min(Math.max(0, saved), s.count - 1));
       })
-      .catch((e) => alive && setError(`Bölüm açılamadı: ${errorText(e)}`));
+      .catch((e) => {
+        if (!alive) return;
+        if (e instanceof LibraryError) setLibError(e);
+        else setError(`Bölüm açılamadı: ${errorText(e)}`);
+      });
     return () => {
       alive = false;
       created?.dispose();
     };
-  }, [chapter]);
+  }, [chapter, retry]);
+
+  // Library not reachable / not picked: let the user pick the folder or this one CBZ file
+  const openPickedFile = async (file: File | undefined) => {
+    if (!file || !chapter) return;
+    try {
+      const s = await cbzSource(await file.arrayBuffer());
+      setLibError(null);
+      setSrc((old) => {
+        old?.dispose();
+        return s;
+      });
+      setPage(0);
+    } catch (e) {
+      setError(`CBZ açılamadı: ${errorText(e)}`);
+    }
+  };
 
   // Remember position; reaching the last page marks the chapter as read (once)
   useEffect(() => {
@@ -249,7 +273,20 @@ function Reader() {
       </Box>
 
       <Box onClick={onTap} sx={{ minHeight: "100vh", maxWidth: settings.mode === "vertical" && settings.fit === "width" ? 900 : "none", mx: "auto" }}>
-        {!src ? (
+        {libError ? (
+          <Box onClick={(e) => e.stopPropagation()} sx={{ height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1.5, color: "#ddd", px: 2, textAlign: "center" }}>
+            <Typography>{libError.message}</Typography>
+            {chapter?.filePath && <Typography sx={{ fontSize: "0.75rem", color: "#888" }}>{chapter.filePath}</Typography>}
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center" }}>
+              {canPickFolder() && <Button variant="outlined" onClick={() => pickLocalFolder().then(() => setRetry((r) => r + 1)).catch(() => {})}>Kütüphane klasörünü seç</Button>}
+              <Button variant="contained" component="label">
+                CBZ dosyasını seç
+                <input hidden type="file" accept=".cbz,.zip" onChange={(e) => openPickedFile(e.target.files?.[0])} />
+              </Button>
+              <Button component={Link} href={`/manga/detail?id=${mangaId}`}>Kütüphane ayarları</Button>
+            </Box>
+          </Box>
+        ) : !src ? (
           <Box sx={{ height: "100vh", display: "grid", placeItems: "center" }}><CircularProgress /></Box>
         ) : settings.mode === "vertical" ? (
           <>
