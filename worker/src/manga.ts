@@ -415,3 +415,30 @@ manga.delete("/readlist/:id{[0-9]+}", requireAuth, async (c) => {
   ]);
   return c.json({ message: "OK", id, mangaId: entry.manga_id });
 });
+
+// Reader progress: called when a chapter is finished. Never lowers chapters_read; sets the status to
+// READING (or COMPLETED on the last chapter) unless the user picked one already.
+manga.put("/manga/:id{[0-9]+}/progress", requireAuth, async (c) => {
+  const id = int(c.req.param("id"));
+  const chapter = Math.floor(num(field(await readJson(c), "chaptersRead")));
+  if (chapter < 1) return c.json({ message: "Geçersiz bölüm" }, 400);
+  const db = c.env.DB;
+  const m = await db.prepare("SELECT total_chapters FROM manga WHERE id = ?").bind(id).first<{ total_chapters: number }>();
+  if (!m) return c.json({ message: "Manga bulunamadı" }, 404);
+  const userId = c.get("user")!.userId;
+  const done = m.total_chapters > 0 && chapter >= m.total_chapters;
+  await db
+    .prepare(
+      `INSERT INTO user_manga (user_id, manga_id, chapters_read, read_status) VALUES (?, ?, ?, ?)
+       ON CONFLICT (user_id, manga_id) DO UPDATE SET
+         chapters_read = MAX(chapters_read, excluded.chapters_read),
+         read_status = CASE
+           WHEN ? AND read_status IN ('', 'READING', 'PLANNING', 'PAUSED') THEN 'COMPLETED'
+           WHEN read_status IN ('', 'PLANNING') THEN 'READING'
+           ELSE read_status END,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`
+    )
+    .bind(userId, id, chapter, done ? "COMPLETED" : "READING", done ? 1 : 0)
+    .run();
+  return c.json(await mangaById(c, id));
+});

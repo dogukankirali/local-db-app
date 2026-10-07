@@ -95,6 +95,10 @@ export const MangaService = {
   async remove(id: number) {
     await axios.delete(`${base}/${id}`);
   },
+  /** Marks chapters up to `chaptersRead` as read (never lowers progress) */
+  async saveProgress(id: number, chaptersRead: number): Promise<Manga> {
+    return (await axios.put<Manga>(`${base}/${id}/progress`, { chaptersRead })).data;
+  },
   async syncBatch(items: (MangaInput & { id: number })[]): Promise<{ updated: number }> {
     return (await axios.post(`${base}/sync-batch`, { items })).data;
   },
