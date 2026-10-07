@@ -18,6 +18,7 @@ import { animesToCsv, downloadBlob } from "../../lib/animeCsv";
 import { AnimeService } from "../../Services/AnimeServices";
 import { palette } from "../../theme/customTheme";
 import { ANIME_DATA_CHANGED } from "./notesEvents";
+import { requestOpenTabs, tabsToNoteLines } from "../../lib/openTabs";
 
 
 type Row = {
@@ -45,7 +46,9 @@ const STATUS_UI = {
 
 const normalizeName = (s: string) => s.toLocaleLowerCase("tr").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
-export default function NotesImportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+// source="tabs": eklentiden açık anime sekmeleri alınır ve eşleşenler watchlist'e (Plan to Watch) eklenir
+export default function NotesImportDialog({ open, onClose, source = "notes" }: { open: boolean; onClose: () => void; source?: "notes" | "tabs" }) {
+  const fromTabs = source === "tabs";
   const [text, setText] = useState("");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [resolving, setResolving] = useState(false);
@@ -58,9 +61,26 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
   }, [open]);
 
   const parsedCount = useMemo(() => parseNotes(text).length, [text]);
+  const [tabsState, setTabsState] = useState<"loading" | "none" | "noext" | "ready">(fromTabs ? "loading" : "ready");
 
-  const resolve = async () => {
-    const notes = parseNotes(text);
+  const loadTabs = async () => {
+    setTabsState("loading");
+    const tabs = await requestOpenTabs();
+    if (tabs === null) return setTabsState("noext");
+    const lines = tabsToNoteLines(tabs);
+    setText(lines.join("\n"));
+    if (!lines.length) return setTabsState("none");
+    setTabsState("ready");
+    resolve(lines.join("\n"));
+  };
+
+  useEffect(() => {
+    if (fromTabs && open) loadTabs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromTabs, open]);
+
+  const resolve = async (input: string = text) => {
+    const notes = parseNotes(input);
     if (!notes.length) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -151,7 +171,13 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
     setRows((prev) => (prev ? prev.map((r, i) => (i === index ? { ...r, ...patch } : r)) : prev));
 
   const selected = (rows ?? []).filter((r) => r.include && r.media);
-  const toAnimeRows = () => selected.map((r) => noteToAnimeRow({ ...r.note, score: r.score }, r.media!));
+  const toAnimeRows = () =>
+    selected.map((r) =>
+      fromTabs
+        ? // Yalnızca Plan to Watch işaretlenir; arşivdeki kaydın puanı ve bölümü korunur (0/boş alanlar yazılmaz)
+          { ...noteToAnimeRow({ ...r.note, score: null }, r.media!), PlanToWatch: true, AnimeLink: r.note.link ?? "" }
+        : noteToAnimeRow({ ...r.note, score: r.score }, r.media!)
+    );
 
   const downloadCsv = () => {
     downloadBlob(animesToCsv(toAnimeRows()), `kiroku-notlar-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv;charset=utf-8");
@@ -171,7 +197,7 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
       setImporting({ ...state });
     }
     if (state.failed) toast.error(`${state.failed} anime eklenemedi`);
-    toast.success(`${state.done} anime içe aktarıldı`);
+    toast.success(fromTabs ? `${state.done} anime watchlist'e eklendi` : `${state.done} anime içe aktarıldı`);
     window.dispatchEvent(new Event(ANIME_DATA_CHANGED));
     setImporting(null);
     onClose();
@@ -190,13 +216,17 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
       open={open}
       onClose={busy ? () => {} : onClose}
       maxWidth={rows ? 980 : 720}
-      title="Notlardan içe aktar"
-      subtitle={'Not defterindeki "isim - sezon - puan" ya da "link - puan" satırlarını AniList ile eşleştirip arşive uygun hâle getirir'}
+      title={fromTabs ? "Açık sekmelerden watchlist'e" : "Notlardan içe aktar"}
+      subtitle={
+        fromTabs
+          ? "Tarayıcıdaki Anizium, TRanimeizle, TürkAnime, MAL ve AniList sekmelerini AniList ile eşleştirip watchlist'e ekler"
+          : 'Not defterindeki "isim - sezon - puan" ya da "link - puan" satırlarını AniList ile eşleştirip arşive uygun hâle getirir'
+      }
       footer={
         rows ? (
           <>
             <Button startIcon={<ArrowBackRoundedIcon />} disabled={busy} onClick={() => setRows(null)} sx={{ color: palette.textMuted }}>
-              Notları düzenle
+              {fromTabs ? "Listeyi düzenle" : "Notları düzenle"}
             </Button>
             <Box sx={{ flex: 1 }} />
             <Button startIcon={<DownloadRoundedIcon />} disabled={busy || !selected.length} onClick={downloadCsv} sx={{ color: palette.textMuted }}>
@@ -208,7 +238,11 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
               onClick={runImport}
               startIcon={importing ? <CircularProgress size={14} color="inherit" /> : <UploadFileRoundedIcon />}
             >
-              {importing ? `${importing.done + importing.failed}/${selected.length}` : `${selected.length} animeyi içe aktar`}
+              {importing
+                ? `${importing.done + importing.failed}/${selected.length}`
+                : fromTabs
+                  ? `${selected.length} animeyi watchlist'e ekle`
+                  : `${selected.length} animeyi içe aktar`}
             </Button>
           </>
         ) : (
@@ -217,7 +251,12 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
             <Button onClick={onClose} sx={{ color: palette.textMuted }}>
               İptal
             </Button>
-            <Button variant="contained" disabled={!parsedCount} onClick={resolve} startIcon={<AutoFixHighRoundedIcon />}>
+            {fromTabs && (
+              <Button onClick={loadTabs} disabled={tabsState === "loading"} sx={{ color: palette.textMuted }}>
+                Sekmeleri yeniden oku
+              </Button>
+            )}
+            <Button variant="contained" disabled={!parsedCount} onClick={() => resolve()} startIcon={<AutoFixHighRoundedIcon />}>
               {parsedCount ? `${parsedCount} satırı çözümle` : "Çözümle"}
             </Button>
           </>
@@ -226,6 +265,17 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
     >
       {!rows ? (
         <Box sx={{ display: "grid", gap: 1.5 }}>
+          {fromTabs && tabsState === "loading" && <LinearProgress sx={{ height: 4, borderRadius: 2 }} />}
+          {fromTabs && tabsState === "noext" && (
+            <Alert severity="warning" sx={{ borderRadius: "8px" }}>
+              Kiroku eklentisine ulaşılamadı. Eklentiyi (16.2 veya üstü) yükleyip bu sayfayı yenile; ya da linkleri aşağıya elle yapıştır.
+            </Alert>
+          )}
+          {fromTabs && tabsState === "none" && (
+            <Alert severity="info" sx={{ borderRadius: "8px" }}>
+              Açık Anizium, TRanimeizle, TürkAnime, MAL ya da AniList anime sekmesi bulunamadı.
+            </Alert>
+          )}
           <Typography sx={{ fontSize: "0.85rem", color: palette.textMuted, lineHeight: 1.6 }}>
             Her satıra bir anime. Desteklenenler: <b>isim - sezon - puan</b>, <b>isim S2 | 8.5</b>, <b>MAL / AniList linki - puan</b> ve eski izleme sitelerinin linkleri (linkteki
             kebab-case isim ve sezon çıkarılır). Puan 10&apos;luk yazıldıysa 100&apos;lüğe çevrilir. Eksik bilgiler (bölüm, durum, türler, kapak, MAL puanı) AniList&apos;ten gelir.
@@ -372,7 +422,7 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
                     </Typography>
                   </Box>
                   {/* Puan */}
-                  <Box sx={{ gridColumn: { xs: "3", md: "auto" } }}>
+                  <Box sx={{ gridColumn: { xs: "3", md: "auto" }, visibility: fromTabs ? "hidden" : "visible" }}>
                     <InputBase
                       type="number"
                       value={r.score ?? ""}
@@ -396,7 +446,9 @@ export default function NotesImportDialog({ open, onClose }: { open: boolean; on
             })}
           </Box>
           <Typography sx={{ fontSize: "0.75rem", color: palette.textFaint }}>
-            Puanı olan animeler izlenmiş (bütün bölümler) kabul edilir. Aynı isimde arşivde olan kayıtlar güncellenir. CSV, &quot;CSV ile toplu ekle&quot; ile de içe aktarılabilir.
+            {fromTabs
+              ? "Seçilenler Plan to Watch olarak işaretlenip watchlist'in sonuna eklenir. Arşivde olan animelerin puanı ve izlenen bölümü değişmez."
+              : 'Puanı olan animeler izlenmiş (bütün bölümler) kabul edilir. Aynı isimde arşivde olan kayıtlar güncellenir. CSV, "CSV ile toplu ekle" ile de içe aktarılabilir.'}
           </Typography>
         </Box>
       )}

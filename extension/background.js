@@ -106,6 +106,28 @@ function processSkips(currentUrl) {
 // ============================================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Kiroku sayfası açık anime sekmelerini ister (yalnızca Kiroku sayfasındaki içerik betiği gönderir)
+    if (request.action === 'getOpenAnimeTabs') {
+        const KIROKU_ORIGINS = ['https://app.dogukankirali.com', 'https://kiroku.dogukankirali.workers.dev', 'http://localhost:3000'];
+        let senderOrigin = '';
+        try { senderOrigin = new URL(sender.url || '').origin; } catch (e) {}
+        if (!KIROKU_ORIGINS.includes(senderOrigin)) { sendResponse({ tabs: [] }); return; }
+        const ANIME_HOSTS = /(^|\.)(anizium\.(com|co)|tranimeizle\.(top|co|net|com)|turkanime\.(co|tv|net)|myanimelist\.net|anilist\.co)$/i;
+        chrome.tabs.query({}, (tabs) => {
+            const list = [];
+            for (const tab of tabs || []) {
+                let url;
+                try { url = new URL(tab.url || ''); } catch (e) { continue; }
+                if (!ANIME_HOSTS.test(url.hostname)) continue;
+                // MAL/AniList'te yalnızca anime sayfaları (arama, profil vb. değil)
+                if (/myanimelist\.net|anilist\.co/i.test(url.hostname) && !/^\/anime\/\d+/.test(url.pathname)) continue;
+                list.push({ url: tab.url, title: tab.title || '' });
+            }
+            sendResponse({ tabs: list });
+        });
+        return true;
+    }
+
     // 1. AniTracker Mesajları
     if (request.action === 'skip_pressed') {
         pendingSkips++;

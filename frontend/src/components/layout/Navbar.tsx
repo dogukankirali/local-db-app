@@ -21,6 +21,7 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
+import TabRoundedIcon from "@mui/icons-material/TabRounded";
 import dynamic from "next/dynamic";
 import { useAuth } from "../../contexts/AuthContext";
 import { getPageTitle } from "../../config/navigation";
@@ -107,6 +108,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter();
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [notesOpen, setNotesOpen] = useState(false);
+  const [tabsOpen, setTabsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const close = () => setAnchorEl(null);
 
@@ -187,6 +189,19 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                 Notlardan içe aktar
               </MenuItem>
             )}
+            {isAdmin && (
+              <MenuItem
+                onClick={() => {
+                  close();
+                  setTabsOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <TabRoundedIcon fontSize="small" />
+                </ListItemIcon>
+                Açık sekmelerden watchlist&apos;e
+              </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 close();
@@ -201,6 +216,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             </MenuItem>
           </Menu>
           {isAdmin && notesOpen && <NotesImportDialog open onClose={() => setNotesOpen(false)} />}
+          {isAdmin && tabsOpen && <NotesImportDialog open source="tabs" onClose={() => setTabsOpen(false)} />}
         </>
       ) : (
         <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1 }}>

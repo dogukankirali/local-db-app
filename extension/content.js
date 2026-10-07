@@ -788,3 +788,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
     }
 });
+
+// ============================================================
+// PART 3: Kiroku köprüsü — açık anime sekmelerini Kiroku sayfasına verir
+// Yalnızca Kiroku sayfalarında ve üst çerçevede dinlenir; sekmeler arka planda anime sitelerine göre süzülür.
+// ============================================================
+
+const KIROKU_ORIGINS = ['https://app.dogukankirali.com', 'https://kiroku.dogukankirali.workers.dev', 'http://localhost:3000'];
+
+if (isTopFrame && KIROKU_ORIGINS.includes(location.origin)) {
+    document.documentElement.dataset.kirokuExtension = '1';
+    window.addEventListener('message', (event) => {
+        if (event.source !== window || event.origin !== location.origin) return;
+        const msg = event.data;
+        if (!msg || msg.source !== 'kiroku-page' || msg.type !== 'GET_OPEN_TABS') return;
+        chrome.runtime.sendMessage({ action: 'getOpenAnimeTabs' }, (response) => {
+            const tabs = (!chrome.runtime.lastError && response && response.tabs) || [];
+            window.postMessage({ source: 'kiroku-extension', type: 'OPEN_TABS', id: msg.id, tabs }, location.origin);
+        });
+    });
+}
