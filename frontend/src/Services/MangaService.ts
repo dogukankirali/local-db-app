@@ -172,6 +172,16 @@ export interface LibraryChapterInput {
   scanlator?: string;
 }
 
+export interface LibrarySyncResult {
+  mangaId: number;
+  mangaName: string;
+  created: boolean;
+  added: number;
+  updated: number;
+  removed: number;
+  skipped: number;
+}
+
 export const ChapterService = {
   async list(mangaId: number): Promise<Chapter[]> {
     return (await axios.get<Chapter[]>(`${base}/${mangaId}/chapters`)).data;
@@ -184,6 +194,10 @@ export const ChapterService = {
   },
   async saveMangaDex(mangaId: number, chapters: MangaDexChapterInput[]): Promise<{ saved: number }> {
     return (await axios.post(`${base}/${mangaId}/chapters/mangadex`, { chapters })).data;
+  },
+  /** Library sync for one series folder (see worker chapters.ts /manga/library-sync) */
+  async librarySync(data: { series: string; chapters: { filePath: string; number: number; title: string }[]; prune?: boolean }): Promise<LibrarySyncResult> {
+    return (await axios.post<LibrarySyncResult>(`${base}/library-sync`, data)).data;
   },
   /** Registers a CBZ in the user's own library (metadata only; the file never goes to Kiroku) */
   async register(mangaId: number, data: LibraryChapterInput): Promise<Chapter> {

@@ -45,6 +45,8 @@ import { AniListRateLimit, mangaForSync } from "../../Services/anilist";
 import { GenreChips } from "../Common/GenreChip";
 import { palette } from "../../theme/customTheme";
 import MangaEditorDialog from "./MangaEditorDialog";
+import LibrarySyncDialog from "./LibrarySyncDialog";
+import FolderSyncRoundedIcon from "@mui/icons-material/FolderCopyOutlined";
 import { PUB_STATUS_LABEL, READ_STATUS_COLOR, READ_STATUS_LABEL, progressText } from "./mangaLabels";
 
 type View = "grid" | "table";
@@ -127,6 +129,7 @@ export default function MangaLibrary() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState<Toast>(null);
   const [editing, setEditing] = useState<Manga | null | undefined>(undefined);
+  const [librarySync, setLibrarySync] = useState(false);
   const [syncing, setSyncing] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
@@ -252,6 +255,7 @@ export default function MangaLibrary() {
               {syncing ? `Sync ${syncing.done}/${syncing.total}` : "AniList Sync"}
             </Button>
           )}
+          <Button variant="outlined" startIcon={<FolderSyncRoundedIcon />} onClick={() => setLibrarySync(true)}>Kütüphane sync</Button>
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setEditing(null)}>Manga ekle</Button>
           <ToggleButtonGroup size="small" exclusive value={view} onChange={(_, v) => changeView(v)}>
             <ToggleButton value="grid" aria-label="Izgara"><GridViewRoundedIcon fontSize="small" /></ToggleButton>
@@ -367,6 +371,8 @@ export default function MangaLibrary() {
           MangaService.genres().then(setGenres).catch(() => {});
         }}
       />
+
+      <LibrarySyncDialog open={librarySync} onClose={() => setLibrarySync(false)} onDone={() => { load(); MangaService.genres().then(setGenres).catch(() => {}); }} />
 
       <Snackbar open={Boolean(toast)} autoHideDuration={4000} onClose={() => setToast(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
         {toast ? <Alert onClose={() => setToast(null)} severity={toast.severity} variant="filled">{toast.text}</Alert> : undefined}

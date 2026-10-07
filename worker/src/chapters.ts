@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { requireAdmin, requireAuth } from "./auth";
+import { upsertUserManga } from "./manga";
 import { field, int, num, readJson, str, type AppEnv, type Ctx } from "./util";
 
 // Manga chapters (metadata only): MangaDex chapters are read live; library chapters are original CBZ files in
@@ -173,6 +174,68 @@ chapters.post("/manga/:id{[0-9]+}/chapters", requireAuth, async (c) => {
     id = Number(res.meta.last_row_id);
   }
   return c.json(toChapter((await chapterById(c, id))!), existing ? 200 : 201);
+});
+
+// Library sync: the browser lists the user's library (WebDAV PROPFIND or a local folder), one request per
+// series folder. Body: { series: "<folder name>", chapters: [{ filePath, number, title }], prune?: boolean }.
+// The folder is matched to a manga by name / English name (case-insensitive) or a new catalog entry is
+// created; the manga is added to the caller's list. Chapters are upserted by (manga, owner, file_path) with
+// source "library"; with prune, the caller's "library" chapters of that manga that are gone are removed.
+chapters.post("/manga/library-sync", requireAuth, async (c) => {
+  const body = await readJson(c);
+  const user = c.get("user")!;
+  const series = str(field(body, "series")).trim().normalize("NFC");
+  const raw = field(body, "chapters");
+  if (!series || series.length > 300) return c.json({ message: "Seri adı geçersiz" }, 400);
+  if (!Array.isArray(raw) || raw.length > 5000) return c.json({ message: "chapters geçersiz" }, 400);
+  const items = (raw as Record<string, unknown>[])
+    .map((it) => ({ filePath: str(field(it, "filePath")).trim().normalize("NFC"), number: num(field(it, "number")), title: str(field(it, "title")).slice(0, 300) }))
+    .filter((it) => validFilePath(it.filePath));
+  const db = c.env.DB;
+
+  let manga = await db
+    .prepare("SELECT id, name FROM manga WHERE name = ? COLLATE NOCASE OR english_name = ? COLLATE NOCASE ORDER BY name = ? COLLATE NOCASE DESC LIMIT 1")
+    .bind(series, series, series)
+    .first<{ id: number; name: string }>();
+  let created = false;
+  if (!manga) {
+    const res = await db.prepare("INSERT INTO manga (name) VALUES (?)").bind(series).run();
+    manga = { id: Number(res.meta.last_row_id), name: series };
+    created = true;
+  }
+  const mangaId = manga.id;
+
+  const { results: existing } = await db
+    .prepare("SELECT id, file_path, source FROM manga_chapter WHERE manga_id = ? AND uploaded_by = ? AND file_path IS NOT NULL")
+    .bind(mangaId, user.userId)
+    .all<{ id: number; file_path: string; source: string }>();
+  const byPath = new Map(existing.map((r) => [r.file_path, r.id]));
+  const stmts: D1PreparedStatement[] = [upsertUserManga(db, user.userId, mangaId, {})];
+  let added = 0;
+  for (const it of items) {
+    const id = byPath.get(it.filePath);
+    if (id) {
+      stmts.push(db.prepare("UPDATE manga_chapter SET number = ?, title = ? WHERE id = ?").bind(it.number, it.title, id));
+    } else {
+      added++;
+      stmts.push(
+        db
+          .prepare("INSERT INTO manga_chapter (manga_id, number, title, source, file_path, uploaded_by, lang) VALUES (?, ?, ?, 'library', ?, ?, '')")
+          .bind(mangaId, it.number, it.title, it.filePath, user.userId)
+      );
+    }
+  }
+  let removed = 0;
+  if (field(body, "prune") === true) {
+    const keep = new Set(items.map((i) => i.filePath));
+    for (const r of existing) {
+      if (keep.has(r.file_path) || r.source !== "library") continue;
+      removed++;
+      stmts.push(db.prepare("DELETE FROM manga_chapter WHERE id = ?").bind(r.id));
+    }
+  }
+  for (let i = 0; i < stmts.length; i += 100) await db.batch(stmts.slice(i, i + 100));
+  return c.json({ mangaId, mangaName: manga.name, created, added, updated: items.length - added, removed, skipped: raw.length - items.length });
 });
 
 // Removes the metadata row only (the CBZ in the user's library is untouched). Library chapters: owner or
