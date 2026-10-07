@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Kiroku — Manga İndirici</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="manga-downloader.css">
+</head>
+<body data-theme="dark">
+    <div class="md-page">
+        <header class="md-header">
+            <img src="icon48.png" alt="" width="28" height="28">
+            <div>
+                <h1>Manga İndirici</h1>
+                <p>Bölümleri kaynaklardan indirip CBZ olarak kaydeder. Görseller olduğu gibi kalır.</p>
+            </div>
+        </header>
+
+        <!-- Kayıt yeri -->
+        <section class="mat-card md-section">
+            <div class="md-section-head">
+                <h2>Kayıt yeri</h2>
+                <span id="storage-badge" class="md-badge"></span>
+            </div>
+            <div class="md-grid">
+                <label>Mod
+                    <select id="st-mode" class="mat-input">
+                        <option value="auto">Otomatik (Kiroku localhost ise yerel, değilse sunucu)</option>
+                        <option value="local">Yerel: İndirilenler klasörü</option>
+                        <option value="server">Sunucu (WebDAV)</option>
+                    </select>
+                </label>
+                <label>Yerel klasör (İndirilenler altında)
+                    <input id="st-localDir" class="mat-input" placeholder="Kiroku/Manga">
+                </label>
+                <label>WebDAV adresi
+                    <input id="st-webdavUrl" class="mat-input" placeholder="https://sunucum.example.com/dav">
+                </label>
+                <label>Sunucudaki klasör
+                    <input id="st-baseDir" class="mat-input" placeholder="Manga">
+                </label>
+                <label>Kullanıcı adı
+                    <input id="st-username" class="mat-input" autocomplete="off">
+                </label>
+                <label>Şifre
+                    <input id="st-password" type="password" class="mat-input" autocomplete="new-password">
+                </label>
+            </div>
+            <p class="md-hint">Sunucu bilgileri yalnızca bu tarayıcıda saklanır, Kiroku'ya gönderilmez. Tarayıcı SFTP konuşamadığı için sunucuda WebDAV gerekir (ör. SFTPGo aynı klasörü hem SFTP hem WebDAV ile sunar).</p>
+            <div class="md-actions">
+                <button id="st-save" class="mat-btn btn-primary">Kaydet</button>
+                <button id="st-test" class="mat-btn btn-outline">Bağlantıyı dene</button>
+                <span id="st-status" class="md-status"></span>
+            </div>
+        </section>
+
+        <!-- Arama -->
+        <section class="mat-card md-section">
+            <div class="md-section-head"><h2>1. Manga ara</h2></div>
+            <div class="md-search">
+                <input id="q" class="mat-input" placeholder="Manga adı (ör. Berserk)">
+                <select id="lang-mode" class="mat-input"></select>
+                <button id="search" class="mat-btn btn-primary">Ara</button>
+            </div>
+            <div id="source-toggles" class="md-sources"></div>
+            <div id="results" class="md-results"></div>
+        </section>
+
+        <!-- Bölümler -->
+        <section class="mat-card md-section" id="chapters-section" hidden>
+            <div class="md-section-head">
+                <h2>2. Bölümler</h2>
+                <span id="chapter-summary" class="md-hint"></span>
+            </div>
+            <div class="md-grid">
+                <label>Seri klasör adı
+                    <input id="series-name" class="mat-input">
+                </label>
+                <label>Bilgiler (AniList / MAL)
+                    <input id="meta-info" class="mat-input" readonly>
+                </label>
+            </div>
+            <div class="md-actions">
+                <label class="md-inline">Bölüm
+                    <input id="from" type="number" class="mat-input md-num" step="any"> –
+                    <input id="to" type="number" class="mat-input md-num" step="any">
+                </label>
+                <button id="select-range" class="mat-btn btn-outline">Aralığı seç</button>
+                <button id="select-all" class="mat-btn btn-outline">Tümü</button>
+                <button id="select-none" class="mat-btn btn-outline">Hiçbiri</button>
+            </div>
+            <div class="md-table-wrap">
+                <table class="md-table">
+                    <thead><tr><th></th><th>No</th><th>Başlık</th><th>Kaynak</th><th>Dil</th><th>Dosya adı</th></tr></thead>
+                    <tbody id="chapter-rows"></tbody>
+                </table>
+            </div>
+            <div class="md-actions">
+                <button id="download" class="mat-btn btn-success">Seçilenleri indir</button>
+                <button id="stop" class="mat-btn btn-danger" disabled>Durdur</button>
+            </div>
+        </section>
+
+        <!-- Günlük -->
+        <section class="mat-card md-section">
+            <div class="md-section-head"><h2>Günlük</h2></div>
+            <div id="progress" class="md-progress"><div></div></div>
+            <pre id="log" class="md-log"></pre>
+        </section>
+    </div>
+    <script type="module" src="manga-downloader.js"></script>
+</body>
+</html>
