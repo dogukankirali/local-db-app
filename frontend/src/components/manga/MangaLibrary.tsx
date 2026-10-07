@@ -115,6 +115,9 @@ const COLUMNS: { key: string; label: string; sort?: string; align?: "right" }[] 
   { key: "genres", label: "Türler" },
 ];
 
+// Filtreler telefonda ikişer ikişer sığar, geniş ekranda doğal genişliklerinde yan yana durur
+const filterSx = { minWidth: { xs: 0, sm: 150 }, flex: { xs: "1 1 calc(50% - 4px)", sm: "0 0 auto" } };
+
 export default function MangaLibrary() {
   const router = useRouter();
   const { isAdmin, isAuthenticated } = useAuth();
@@ -265,25 +268,25 @@ export default function MangaLibrary() {
       </Box>
 
       <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 2 }}>
-        <TextField size="small" placeholder="Ara" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ minWidth: 200, flex: "1 1 200px" }}
+        <TextField size="small" placeholder="Ara" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ minWidth: { xs: 0, sm: 200 }, flex: { xs: "1 1 100%", sm: "1 1 200px" } }}
           InputProps={{ startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> }} />
-        <TextField size="small" select label="Durumum" value={query.readStatus ?? ""} onChange={(e) => patch({ readStatus: e.target.value })} sx={{ minWidth: 150 }}>
+        <TextField size="small" select label="Durumum" value={query.readStatus ?? ""} onChange={(e) => patch({ readStatus: e.target.value })} sx={filterSx}>
           <MenuItem value="">Hepsi</MenuItem>
           {Object.entries(READ_STATUS_LABEL).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
           <MenuItem value="NONE">Durum yok</MenuItem>
         </TextField>
-        <TextField size="small" select label="Yayın" value={query.status ?? ""} onChange={(e) => patch({ status: e.target.value })} sx={{ minWidth: 150 }}>
+        <TextField size="small" select label="Yayın" value={query.status ?? ""} onChange={(e) => patch({ status: e.target.value })} sx={filterSx}>
           <MenuItem value="">Hepsi</MenuItem>
           {Object.entries(PUB_STATUS_LABEL).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
         </TextField>
         <TextField size="small" select label="Tür" value={query.genres ?? []} onChange={(e) => patch({ genres: e.target.value as unknown as string[] })}
-          SelectProps={{ multiple: true, renderValue: (v) => (v as string[]).join(", ") }} sx={{ minWidth: 150, maxWidth: 260 }}>
+          SelectProps={{ multiple: true, renderValue: (v) => (v as string[]).join(", ") }} sx={{ ...filterSx, maxWidth: { sm: 260 } }}>
           {genreOptions.map((g) => <MenuItem key={g} value={g}>{g}</MenuItem>)}
         </TextField>
         <Chip label="Listemdekiler" variant={query.mine ? "filled" : "outlined"} color={query.mine ? "primary" : "default"} onClick={() => patch({ mine: !query.mine })} sx={{ alignSelf: "center" }} />
         <Chip label="Plan to Read" variant={query.ptr ? "filled" : "outlined"} color={query.ptr ? "primary" : "default"} onClick={() => patch({ ptr: !query.ptr })} sx={{ alignSelf: "center" }} />
         {view === "grid" && (
-          <TextField size="small" select label="Sırala" value={`${query.sort}:${query.order}`} onChange={(e) => { const [sort, order] = e.target.value.split(":"); patch({ sort, order: order as "asc" | "desc" }); }} sx={{ minWidth: 160 }}>
+          <TextField size="small" select label="Sırala" value={`${query.sort}:${query.order}`} onChange={(e) => { const [sort, order] = e.target.value.split(":"); patch({ sort, order: order as "asc" | "desc" }); }} sx={filterSx}>
             <MenuItem value="name:asc">Ad (A-Z)</MenuItem>
             <MenuItem value="score:desc">Puanım</MenuItem>
             <MenuItem value="mal-score:desc">Ortalama puan</MenuItem>
