@@ -43,8 +43,10 @@ export function tabsToNoteLines(tabs: OpenTab[]): string[] {
   for (const tab of tabs) {
     const fromUrl = parseNotes(tab.url)[0];
     const usable = fromUrl && !fromUrl.error && (fromUrl.malId || fromUrl.anilistId || fromUrl.name.length > 1);
-    const line = usable ? tab.url : cleanTitle(tab.title);
-    const key = usable ? `${fromUrl.malId ?? ""}|${fromUrl.anilistId ?? ""}|${fromUrl.name}|${fromUrl.season ?? ""}` : line.toLowerCase();
+    const title = cleanTitle(tab.title);
+    // İsim linkten çıkmıyorsa sekme başlığı kullanılır ama izleme linki satırda kalır (içe aktarınca "İzleme linki" dolsun)
+    const line = usable ? tab.url : title && /^https?:\/\//i.test(tab.url) ? `${title} ${tab.url}` : title;
+    const key = usable ? `${fromUrl.malId ?? ""}|${fromUrl.anilistId ?? ""}|${fromUrl.name}|${fromUrl.season ?? ""}` : title.toLowerCase();
     if (!line || seen.has(key)) continue;
     seen.add(key);
     lines.push(line);

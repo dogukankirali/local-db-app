@@ -22,6 +22,7 @@ import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
 import { Switch, IconButton, Tooltip } from "@mui/material";
 import { toast } from "sonner";
 import { ProfileService, type ApiToken, type Profile } from "../../Services/ProfileService";
+import { disablePush, enablePush, sendTestPush } from "../../lib/push";
 import { sizedCover } from "../../utils/cover";
 import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
 import CasinoRoundedIcon from "@mui/icons-material/CasinoRounded";
@@ -235,6 +236,19 @@ export default function ProfilePage() {
     setAvatarUrl(p.avatarUrl ?? "");
   };
 
+  const [airingOn, setAiringOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (user?.isAdmin) ProfileService.airingEnabled().then(setAiringOn).catch(() => setAiringOn(null));
+  }, [user?.id, user?.isAdmin]);
+  const toggleAiring = async (v: boolean) => {
+    try {
+      setAiringOn(await ProfileService.setAiringEnabled(v));
+      toast.success(v ? "Yayın takibi açıldı" : "Yayın takibi kapatıldı");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Değiştirilemedi");
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     ProfileService.get().then(applyProfile).catch(() => {});
@@ -306,6 +320,34 @@ export default function ProfilePage() {
       applyProfile(await ProfileService.update({ [key]: value }));
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Kaydedilemedi");
+    }
+  };
+
+  // Yeni bölüm bildirimleri: açınca bu tarayıcı abone olur (izin ister), kapatınca aboneliği kaldırılır
+  const [pushBusy, setPushBusy] = useState(false);
+  const togglePush = async (value: boolean) => {
+    setPushBusy(true);
+    try {
+      if (value) {
+        await enablePush();
+        toast.success("Bildirimler açıldı");
+      } else {
+        await disablePush();
+      }
+      await toggle("notifyNewEpisodes", value);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Bildirimler açılamadı");
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const testPush = async () => {
+    try {
+      await sendTestPush();
+      toast.success("Deneme bildirimi gönderildi");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Gönderilemedi");
     }
   };
 
@@ -523,11 +565,28 @@ export default function ProfilePage() {
             <Box sx={card}>
               <SectionTitle>Bildirimler</SectionTitle>
               {switchRow(
-                "Yeni bölüm e-postası",
-                "Listendeki bir animenin yeni bölümü çıkınca e-posta gelir.",
+                "Yeni bölüm bildirimi",
+                "Listendeki bir animenin yeni bölümü çıkınca bu tarayıcıya bildirim gelir. Her cihazda ayrıca açman gerekir; iPhone'da önce Kiroku'yu ana ekrana ekle.",
                 !!profile?.notifyNewEpisodes,
-                (v) => toggle("notifyNewEpisodes", v),
+                (v) => !pushBusy && togglePush(v),
                 <NotificationsActiveRoundedIcon sx={{ color: palette.primary }} />
+              )}
+              {user?.isAdmin && airingOn !== null && (
+                <Box sx={{ mt: 2 }}>
+                  {switchRow(
+                    "Yayın takibi (admin)",
+                    "Her 3 saatte bir yayındaki animeleri Kitsu'dan kontrol edip yeni bölümde herkese bildirim yazar. Varsayılan kapalıdır; açılana kadar arka planda hiçbir şey çalışmaz.",
+                    airingOn,
+                    toggleAiring,
+                    <NotificationsActiveRoundedIcon sx={{ color: palette.warning }} />
+                  )}
+                </Box>
+              )}
+              {profile?.notifyNewEpisodes && (
+                <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                  <Button size="small" variant="outlined" onClick={testPush}>Deneme bildirimi gönder</Button>
+                  <Button size="small" onClick={() => togglePush(true)} disabled={pushBusy}>Bu cihazı ekle</Button>
+                </Box>
               )}
             </Box>
 

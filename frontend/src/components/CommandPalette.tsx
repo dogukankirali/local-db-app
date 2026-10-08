@@ -20,9 +20,9 @@ import { sizedCover } from "../utils/cover";
 // Başka bir yerden açmak için: window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE))
 export const OPEN_COMMAND_PALETTE = "kiroku:command-palette";
 
-type AnimeHit = Pick<TEATable.IAnime, "ID" | "Name" | "Cover" | "AnimeStatus" | "TotalNumberOfEpisodes" | "IsMovie">;
+export type AnimeHit = Pick<TEATable.IAnime, "ID" | "Name" | "Cover" | "AnimeStatus" | "TotalNumberOfEpisodes" | "IsMovie">;
 
-function useAnimeSearch(query: string, enabled: boolean) {
+export function useAnimeSearch(query: string, enabled: boolean) {
   const [hits, setHits] = useState<AnimeHit[]>([]);
   const [loading, setLoading] = useState(false);
   const requestId = useRef(0);

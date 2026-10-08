@@ -27,6 +27,7 @@ import Constants from "../../constants/Constants";
 import { AnimeService } from "../../Services/AnimeServices";
 import TableHeaders from "../../components/CollapsibleTableV2/Components/Headers/Headers";
 import { useRouter, useSearchParams } from "next/navigation";
+import SortMenu from "../../components/ui/SortMenu";
 import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import { ANIME_DATA_CHANGED } from "../../components/anime/notesEvents";
 
@@ -42,6 +43,16 @@ const AnimeForm = dynamic(() => import("../../components/anime/AnimeForm"), { ss
 const ExportMenu = dynamic(() => import("../../components/anime/ExportMenu"), { ssr: false });
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+
+const SORT_OPTIONS = [
+  { value: "Name", label: "Ad" },
+  { value: "WatchStatus", label: "İzleme ilerlemesi" },
+  { value: "Score", label: "Puanım" },
+  { value: "MALScore", label: "MAL puanı" },
+  { value: "AnimeStatus", label: "Yayın durumu" },
+  { value: "TotalNumberOfEpisodes", label: "Bölüm sayısı" },
+  { value: "ID", label: "Son eklenen" },
+];
 
 const GRID_MIN_COLUMNS = 5;
 const GRID_MAX_COLUMNS = 10;
@@ -80,6 +91,12 @@ function AnimePageContent() {
   // Grid isteklerinde kullanılan güncel filtreler (useTableFilters aşağıda tanımlı)
   const filterStateRef = useRef<TEATable.IFilterType[]>([]);
   const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
+  // Tablo başlıkları ve sıralama menüsü aynı değeri paylaşır; grid isteği buradan okur
+  const [sortState, setSortState] = useState<{ orderBy: string; order: "asc" | "desc" }>({ orderBy: "Name", order: "asc" });
+  const sortRef = useRef(sortState);
+  sortRef.current = sortState;
+  // Eski (yarıda kalmış) grid yanıtları yeni filtre/sıralama sonucunu ezmesin
+  const gridReqId = useRef(0);
   // Kayıtlı görünüm okunana kadar hiçbir görünümü render etmiyoruz; aksi halde
   // tablo kayıtlıyken önce grid isteği de atılıyordu (çift istek).
   const [viewModeReady, setViewModeReady] = useState<boolean>(false);
@@ -130,6 +147,7 @@ function AnimePageContent() {
   const fetchGridPage = async (page: number, count: number, reset: boolean) => {
     if (gridFetchInFlight.current && !reset) return;
     gridFetchInFlight.current = true;
+    const reqId = reset ? ++gridReqId.current : gridReqId.current;
     if (reset) {
       setGridLoadingMore(false);
       setDataLoading(true);
@@ -138,7 +156,8 @@ function AnimePageContent() {
     }
     const filters = getFilledFilters(filterStateRef.current);
     try {
-      const res = await AnimeService.getAnimes({ page, count, filters, order: lastFetchParams.current?.order || "asc", orderBy: lastFetchParams.current?.orderBy || "Name" });
+      const res = await AnimeService.getAnimes({ page, count, filters, order: sortRef.current.order, orderBy: sortRef.current.orderBy });
+      if (reqId !== gridReqId.current) return;
       gridCachePage.current = page;
       gridTotalPages.current = res?.pagination?.totalPageCount || Infinity;
       setTotalCount(res?.pagination?.totalItemCount ?? null);
@@ -151,9 +170,11 @@ function AnimePageContent() {
     } catch (err) {
       console.error("Grid fetch error:", err);
     } finally {
-      gridFetchInFlight.current = false;
-      setDataLoading(false);
-      setGridLoadingMore(false);
+      if (reqId === gridReqId.current) {
+        gridFetchInFlight.current = false;
+        setDataLoading(false);
+        setGridLoadingMore(false);
+      }
     }
   };
 
@@ -374,7 +395,7 @@ function AnimePageContent() {
   filterStateRef.current = filterState;
 
   // Grid görünümünde filtre değişince listeyi baştan yükle (tablo kendi isteğini atıyor)
-  const filtersKey = JSON.stringify(getFilledFilters(filterState));
+  const filtersKey = JSON.stringify(getFilledFilters(filterState)) + `|${sortState.orderBy}|${sortState.order}`;
   const lastGridFiltersKey = useRef(filtersKey);
   useEffect(() => {
     if (!viewModeReady || viewMode !== "grid" || lastGridFiltersKey.current === filtersKey) return;
@@ -391,6 +412,16 @@ function AnimePageContent() {
       prev.map((f): TEATable.IFilterType => (f.key === "Name" && f.value !== searchQuery ? ({ ...f, value: searchQuery } as TEATable.IFilterType) : f))
     );
   }, [searchQuery]);
+
+  // Filtre panelinden isim aramasını değiştirince/temizleyince adres çubuğundaki ?q= da güncellenir; yoksa üst bar eski aramayı gösterir
+  const nameFilterValue = String(filterState.find((f) => f.key === "Name")?.value ?? "");
+  const prevNameFilter = useRef(nameFilterValue);
+  useEffect(() => {
+    if (prevNameFilter.current === searchQuery && nameFilterValue !== searchQuery) {
+      navRouter.replace(nameFilterValue ? `/anime?q=${encodeURIComponent(nameFilterValue)}` : "/anime");
+    }
+    prevNameFilter.current = nameFilterValue;
+  }, [nameFilterValue]);
 
   const getGenres = async () => {
     try {
@@ -417,6 +448,9 @@ function AnimePageContent() {
   const getData: TEATable.FetchData = async (params) => {
     setDataLoading(true);
     lastFetchParams.current = { ...params };
+    if (params.orderBy && (params.order === "asc" || params.order === "desc")) {
+      setSortState((prev) => (prev.orderBy === params.orderBy && prev.order === params.order ? prev : { orderBy: params.orderBy!, order: params.order as "asc" | "desc" }));
+    }
     let aborted = false;
     const filters = getFilledFilters(params.filters ?? []);
 
@@ -709,6 +743,7 @@ function AnimePageContent() {
             }
             trailing={
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <SortMenu options={SORT_OPTIONS} sort={sortState.orderBy} order={sortState.order} onChange={(orderBy, order) => setSortState({ orderBy, order })} />
                 {viewMode === "grid" && (
                   <Box sx={{ display: { xs: "none", lg: "flex" }, alignItems: "center", gap: 1.5, width: 150 }}>
                     <MuiTypography variant="caption" sx={{ color: theme.secondary_text, whiteSpace: "nowrap" }}>
@@ -813,6 +848,7 @@ function AnimePageContent() {
                   setSelectionFilters={tableFilterProps.setFilterState}
                   loading={dataLoading}
                   lastFetchParams={lastFetchParams.current}
+                  externalSort={sortState}
                 />
               </Box>
             )}

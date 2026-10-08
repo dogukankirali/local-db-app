@@ -31,10 +31,14 @@
   ],
   "vars": {
     "MAIL_FROM": "Kiroku <onboarding@resend.dev>",
-    "PASSWORD_ITERATIONS": "10000"
+    "PASSWORD_ITERATIONS": "10000",
+    // Tarayıcı bildirimleri (Web Push) için ortak anahtar; özel anahtar secret: VAPID_PRIVATE_KEY
+    "VAPID_PUBLIC_KEY": "BAcyOaFXanFHS_pVv2oHKbq_TjEem-HQ2RuRHfFQiSJdvX8jRe_zPvcAzM0zlF8S_EzTalWaeddgK638h35Jw_M"
   },
+  // Yayın takibi (#19): her 3 saatte bir Kitsu'dan kontrol, yeni bölümde tarayıcı bildirimi (src/airing.ts)
+  "triggers": { "crons": ["17 */3 * * *"] },
   // APP_URL (şifre sıfırlama bağlantısının adresi) verilmezse isteğin geldiği adres kullanılır.
-  // Gizli değerler: `npx wrangler secret put JWT_SECRET_KEY` (ve isteğe bağlı RESEND_API_KEY).
+  // Gizli değerler: `npx wrangler secret put JWT_SECRET_KEY`, VAPID_PRIVATE_KEY (ve isteğe bağlı RESEND_API_KEY).
   // Lokal geliştirmede .dev.vars dosyasından okunur.
   "observability": { "enabled": true }
 }
