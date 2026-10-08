@@ -1,4 +1,4 @@
--- 0015: Kitaplığım. Per-user shelf of physical books and manga, tracked by series and volume.
+-- 0016: Kitaplığım. Per-user shelf of physical books and manga, tracked by series and volume.
 -- A series can optionally point at a catalog entry (manga / books); volumes record what is owned or wanted.
 
 CREATE TABLE IF NOT EXISTS library_series (
