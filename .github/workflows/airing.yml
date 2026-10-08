@@ -1,8 +1,8 @@
 name: Yayın takibi
 
-# #19: yayındaki animelerin durumunu, bölüm sayısını ve MAL puanını AniList'ten günceller,
-# yeni bölüm çıkınca bildirimi açık kullanıcılara mail atar. Zamanlanmış çalıştırmalar yalnızca
-# varsayılan branch'te (main) çalışır; Actions sekmesinden elle de tetiklenebilir.
+# #19 yedeği: asıl yayın takibi artık Worker'ın Cloudflare Cron Trigger'ında Kitsu ile çalışır
+# (worker/src/airing.ts). Bu iş AniList'ten aynı güncellemeyi yapar ve yalnızca elle tetiklenir;
+# yeni bölümde Kiroku içi ve tarayıcı bildirimi gider.
 #
 # Gerekli secret: KIROKU_CRON_SECRET (Worker'daki CRON_SECRET ile aynı).
 # İsteğe bağlı: KIROKU_URL (repo variable), CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET (secret).

@@ -55,6 +55,15 @@ export module ProfileService {
     return (await axios.get(`${path}/profile/recommendations`, { params: { limit } })).data;
   }
 
+  /** Yayın takibi (cron) genel anahtarı; yalnızca admin */
+  export async function airingEnabled(): Promise<boolean> {
+    return (await axios.get(`${path}/admin/airing`)).data.enabled;
+  }
+
+  export async function setAiringEnabled(enabled: boolean): Promise<boolean> {
+    return (await axios.put(`${path}/admin/airing`, { enabled })).data.enabled;
+  }
+
   export async function tokens(): Promise<ApiToken[]> {
     return (await axios.get(`${path}/profile/tokens`)).data;
   }

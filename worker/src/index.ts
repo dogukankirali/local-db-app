@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { airingRoutes } from "./airing";
+import { airingEnabled, airingRoutes, runAiringCheck } from "./airing";
 import { anilistRoutes } from "./anilist";
 import { anime } from "./anime";
 import { coverRoutes } from "./covers";
@@ -72,5 +72,16 @@ export default {
       req = new Request(url, req);
     }
     return app.fetch(req, env, ctx);
+  },
+  // Cloudflare Cron Trigger (wrangler.jsonc → triggers.crons): yayın takibi ve yeni bölüm bildirimleri
+  scheduled(_controller: ScheduledController, env: AppEnv["Bindings"], ctx: ExecutionContext) {
+    ctx.waitUntil(
+      airingEnabled(env)
+        .then(async (on) => {
+          if (on) await runAiringCheck(env, env.APP_URL ?? "");
+          else console.log("[airing] kapalı, atlandı");
+        })
+        .catch((err) => console.error("[airing] cron hatası:", err))
+    );
   },
 };
