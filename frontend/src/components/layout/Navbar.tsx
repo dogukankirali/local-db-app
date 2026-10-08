@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Avatar,
   Box,
@@ -10,9 +10,11 @@ import {
   Divider,
   IconButton,
   InputBase,
+  ListItemButton,
   ListItemIcon,
   Menu,
   MenuItem,
+  Paper,
   Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
@@ -26,7 +28,8 @@ import dynamic from "next/dynamic";
 import { useAuth } from "../../contexts/AuthContext";
 import { getPageTitle } from "../../config/navigation";
 import { palette } from "../../theme/customTheme";
-import { OPEN_COMMAND_PALETTE } from "../CommandPalette";
+import { OPEN_COMMAND_PALETTE, useAnimeSearch } from "../CommandPalette";
+import { sizedCover } from "../../utils/cover";
 
 // Yalnızca admin açar; ilk açılışta yüklenir
 const NotesImportDialog = dynamic(() => import("../anime/NotesImportDialog"), { ssr: false });
@@ -39,17 +42,51 @@ interface NavbarProps {
 
 function SearchBox() {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const pathname = usePathname() || "/";
+  const urlQuery = useSearchParams().get("q") ?? "";
+  const [query, setQuery] = useState(pathname.startsWith("/anime") ? urlQuery : "");
+  const [focused, setFocused] = useState(false);
+  const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { hits, loading } = useAnimeSearch(query, focused);
+
+  // Adres çubuğundaki arama (?q=) değişince (filtre temizlenince vb.) kutu da güncellenir
+  useEffect(() => {
+    if (pathname.startsWith("/anime")) setQuery(urlQuery);
+  }, [urlQuery, pathname]);
+
+  const open = focused && query.trim().length >= 2 && (loading || hits.length > 0);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
+    setFocused(false);
+    if (active >= 0 && hits[active]) return goTo(hits[active].ID);
     router.push(q ? `/anime?q=${encodeURIComponent(q)}` : "/anime");
     inputRef.current?.blur();
   };
 
+  const goTo = (id: number) => {
+    setFocused(false);
+    inputRef.current?.blur();
+    router.push(`/anime/detail?id=${id}`);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown" && hits.length) {
+      e.preventDefault();
+      setActive((i) => (i + 1) % hits.length);
+    } else if (e.key === "ArrowUp" && hits.length) {
+      e.preventDefault();
+      setActive((i) => (i <= 0 ? hits.length - 1 : i - 1));
+    } else if (e.key === "Escape") {
+      setFocused(false);
+      inputRef.current?.blur();
+    }
+  };
+
   return (
+    <Box sx={{ position: "relative", width: { xs: "100%", sm: 280, md: 360 } }}>
     <Box
       component="form"
       onSubmit={submit}
@@ -58,7 +95,7 @@ function SearchBox() {
         display: "flex",
         alignItems: "center",
         gap: 1,
-        width: { xs: "100%", sm: 280, md: 360 },
+        width: "100%",
         height: 40,
         px: 1.5,
         borderRadius: "10px",
@@ -75,9 +112,15 @@ function SearchBox() {
       <InputBase
         inputRef={inputRef}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setActive(-1);
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onKeyDown={onKeyDown}
         placeholder="Anime ara…"
-        inputProps={{ "aria-label": "Anime ara" }}
+        inputProps={{ "aria-label": "Anime ara", autoComplete: "off" }}
         sx={{ flex: 1, fontSize: "0.875rem", color: palette.text }}
       />
       {/* Ctrl/⌘ + K komut paletini açar (CommandPalette) */}
@@ -99,6 +142,44 @@ function SearchBox() {
       >
         Ctrl K
       </Box>
+    </Box>
+    {open && (
+      <Paper
+        elevation={8}
+        sx={{ position: "absolute", top: 46, left: 0, right: 0, zIndex: 10, overflow: "hidden", borderRadius: "12px", backgroundImage: "none", border: `1px solid ${alpha(palette.overlay, 0.08)}` }}
+      >
+        {hits.map((a, i) => (
+          <ListItemButton
+            key={a.ID}
+            selected={i === active}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => goTo(a.ID)}
+            sx={{ gap: 1.25, py: 0.75 }}
+          >
+            <Box sx={{ width: 28, height: 40, borderRadius: "4px", flexShrink: 0, overflow: "hidden", backgroundColor: palette.surfaceRaised }}>
+              {a.Cover && <img src={sizedCover(a.Cover, "small")} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography noWrap sx={{ fontSize: "0.85rem", fontWeight: 600 }}>{a.Name}</Typography>
+              <Typography noWrap sx={{ fontSize: "0.72rem", color: palette.textMuted }}>
+                {[a.IsMovie ? "Film" : a.TotalNumberOfEpisodes ? `${a.TotalNumberOfEpisodes} bölüm` : null, a.AnimeStatus].filter(Boolean).join(" · ")}
+              </Typography>
+            </Box>
+          </ListItemButton>
+        ))}
+        {!hits.length && loading && <Typography sx={{ p: 1.5, fontSize: "0.8rem", color: palette.textMuted }}>Aranıyor…</Typography>}
+        <ListItemButton
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setFocused(false);
+            router.push(`/anime?q=${encodeURIComponent(query.trim())}`);
+          }}
+          sx={{ py: 0.75, borderTop: `1px solid ${alpha(palette.overlay, 0.06)}`, color: palette.primary, fontSize: "0.8rem" }}
+        >
+          Tüm sonuçları göster
+        </ListItemButton>
+      </Paper>
+    )}
     </Box>
   );
 }
@@ -142,7 +223,9 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
       </Typography>
 
       <Box sx={{ flex: 1, display: "flex", justifyContent: { xs: "stretch", sm: "flex-end" } }}>
-        <SearchBox />
+        <Suspense fallback={null}>
+          <SearchBox />
+        </Suspense>
       </Box>
 
       {isAuthenticated && user ? (

@@ -40,6 +40,7 @@ declare namespace TEATableProps {
     tableName?: string;
     resetPage?: boolean; // Sayfa numarasını sıfırlamak için yeni özellik
     lastFetchParams?: TEATable.FetchDataParams; // Son fetch parametreleri
+    externalSort?: { orderBy: string; order: TEATable.Order }; // Sayfadaki sıralama menüsü
   }
 }
 
@@ -95,6 +96,13 @@ export default function TableTemp<T extends {}>(
       }
     }
   }, [props.lastFetchParams]);
+
+  // Sayfadaki sıralama menüsü değişince tablo başlığı da aynı sıralamaya geçer
+  useEffect(() => {
+    if (!props.externalSort) return;
+    setOrderBy(props.externalSort.orderBy);
+    setOrder(props.externalSort.order);
+  }, [props.externalSort?.orderBy, props.externalSort?.order]);
 
   useEffect(() => {
     const abortController = new AbortController();

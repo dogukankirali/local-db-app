@@ -175,7 +175,7 @@ export default function NotesImportDialog({ open, onClose, source = "notes" }: {
     selected.map((r) =>
       fromTabs
         ? // Yalnızca Plan to Watch işaretlenir; arşivdeki kaydın puanı ve bölümü korunur (0/boş alanlar yazılmaz)
-          { ...noteToAnimeRow({ ...r.note, score: null }, r.media!), PlanToWatch: true, AnimeLink: r.note.link ?? "" }
+          { ...noteToAnimeRow({ ...r.note, score: null }, r.media!), PlanToWatch: true }
         : noteToAnimeRow({ ...r.note, score: r.score }, r.media!)
     );
 

@@ -36,6 +36,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
+import SortMenu from "../ui/SortMenu";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import LiveTvOutlinedIcon from "@mui/icons-material/LiveTvOutlined";
 import TheatersOutlinedIcon from "@mui/icons-material/TheatersOutlined";
@@ -107,6 +108,17 @@ function TitleCard({ t, onOpen, onEdit, onTogglePtw }: { t: ScreenTitle; onOpen:
     </Box>
   );
 }
+
+const SORT_OPTIONS = [
+  { value: "name", label: "Ad" },
+  { value: "year", label: "Yıl" },
+  { value: "watch-status", label: "İzleme durumu" },
+  { value: "progress", label: "İzleme ilerlemesi" },
+  { value: "score", label: "Puanım" },
+  { value: "imdb-rating", label: "IMDb puanı" },
+  { value: "updated", label: "Son güncellenen" },
+  { value: "added", label: "Son eklenen" },
+];
 
 type Column = { key: string; label: string; sort?: string; align?: "right"; series?: boolean };
 const COLUMNS: Column[] = [
@@ -240,17 +252,7 @@ export default function ScreenLibrary({ kind }: { kind: ScreenKind }) {
         </TextField>
         <Chip label="Listemdekiler" variant={query.mine ? "filled" : "outlined"} color={query.mine ? "primary" : "default"} onClick={() => patch({ mine: !query.mine })} sx={{ alignSelf: "center" }} />
         <Chip label="Plan to Watch" variant={query.ptw ? "filled" : "outlined"} color={query.ptw ? "primary" : "default"} onClick={() => patch({ ptw: !query.ptw })} sx={{ alignSelf: "center" }} />
-        {view === "grid" && (
-          <TextField size="small" select label="Sırala" value={`${query.sort}:${query.order}`} onChange={(e) => { const [sort, order] = e.target.value.split(":"); patch({ sort, order: order as "asc" | "desc" }); }} sx={filterSx}>
-            <MenuItem value="name:asc">Ad (A-Z)</MenuItem>
-            <MenuItem value="year:desc">Yıl (yeni)</MenuItem>
-            <MenuItem value="score:desc">Puanım</MenuItem>
-            <MenuItem value="imdb-rating:desc">IMDb puanı</MenuItem>
-            {isSeries && <MenuItem value="progress:desc">İlerleme</MenuItem>}
-            <MenuItem value="updated:desc">Son güncellenen</MenuItem>
-            <MenuItem value="added:desc">Son eklenen</MenuItem>
-          </TextField>
-        )}
+        <SortMenu options={SORT_OPTIONS.filter((o) => isSeries || o.value !== "progress")} sort={query.sort ?? "name"} order={query.order ?? "asc"} onChange={(sort, order) => patch({ sort, order })} />
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} action={<Button color="inherit" size="small" onClick={load}>Tekrar dene</Button>}>{error}</Alert>}

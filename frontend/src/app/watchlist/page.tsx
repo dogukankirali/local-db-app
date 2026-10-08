@@ -20,6 +20,7 @@ import DragIndicatorRoundedIcon from "@mui/icons-material/DragIndicatorRounded";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
 import BookmarksOutlinedIcon from "@mui/icons-material/BookmarksOutlined";
 import {
   DndContext,
@@ -52,6 +53,7 @@ interface AnimeData {
   TotalNumberOfEpisodes: number;
   IsMovie: boolean;
   PlanToWatch: boolean;
+  AnimeLink?: string;
 }
 
 interface WatchListItem {
@@ -80,6 +82,9 @@ function WatchlistRow({
   const anime = item.anime;
   const total = Number(anime?.TotalNumberOfEpisodes) || 0;
   const watched = anime?.WatchStatus > 0 ? anime.WatchStatus : 0;
+  const router = useRouter();
+  const watchLink = anime?.AnimeLink && /^https?:\/\//i.test(anime.AnimeLink) ? anime.AnimeLink : "";
+  const openDetail = () => router.push(`/anime/detail?id=${anime.ID}`);
 
   return (
     <Box
@@ -123,7 +128,9 @@ function WatchlistRow({
       </Typography>
 
       <Box
+        onClick={openDetail}
         sx={{
+          cursor: "pointer",
           width: 52,
           height: 74,
           borderRadius: "8px",
@@ -138,7 +145,7 @@ function WatchlistRow({
       </Box>
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography noWrap sx={{ fontWeight: 600, fontSize: "0.95rem", mb: 0.5 }}>
+        <Typography noWrap onClick={openDetail} sx={{ fontWeight: 600, fontSize: "0.95rem", mb: 0.5, cursor: "pointer", "&:hover": { color: palette.primary } }}>
           {anime?.Name ?? "İsimsiz anime"}
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
@@ -170,6 +177,13 @@ function WatchlistRow({
       </Box>
 
       <Box className="row-actions" sx={{ display: "flex", gap: 0.5, opacity: { xs: 1, md: 0.6 }, transition: "opacity .15s ease" }}>
+        {watchLink && (
+          <Tooltip title="İzleme linkini aç">
+            <IconButton component="a" href={watchLink} target="_blank" rel="noopener noreferrer" sx={{ color: palette.primary }}>
+              <PlayCircleOutlineRoundedIcon />
+            </IconButton>
+          </Tooltip>
+        )}
         <Tooltip title="İzledim, tamamla">
           <IconButton onClick={() => onComplete(item.anime.ID)} sx={{ color: palette.success }}>
             <CheckCircleOutlineRoundedIcon />

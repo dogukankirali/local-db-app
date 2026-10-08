@@ -37,6 +37,7 @@ import SyncRoundedIcon from "@mui/icons-material/SyncRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import BookmarkRoundedIcon from "@mui/icons-material/BookmarkRounded";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
+import SortMenu from "../ui/SortMenu";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import { useAuth } from "../../contexts/AuthContext";
@@ -103,6 +104,16 @@ function MangaCard({ m, onOpen, onEdit, onTogglePtr }: { m: Manga; onOpen: Manga
     </Box>
   );
 }
+
+const SORT_OPTIONS = [
+  { value: "name", label: "Ad" },
+  { value: "read-status", label: "Okuma durumu" },
+  { value: "progress", label: "Okuma ilerlemesi" },
+  { value: "score", label: "Puanım" },
+  { value: "mal-score", label: "MAL puanı" },
+  { value: "updated", label: "Son güncellenen" },
+  { value: "added", label: "Son eklenen" },
+];
 
 const COLUMNS: { key: string; label: string; sort?: string; align?: "right" }[] = [
   { key: "name", label: "Ad", sort: "name" },
@@ -285,16 +296,7 @@ export default function MangaLibrary() {
         </TextField>
         <Chip label="Listemdekiler" variant={query.mine ? "filled" : "outlined"} color={query.mine ? "primary" : "default"} onClick={() => patch({ mine: !query.mine })} sx={{ alignSelf: "center" }} />
         <Chip label="Plan to Read" variant={query.ptr ? "filled" : "outlined"} color={query.ptr ? "primary" : "default"} onClick={() => patch({ ptr: !query.ptr })} sx={{ alignSelf: "center" }} />
-        {view === "grid" && (
-          <TextField size="small" select label="Sırala" value={`${query.sort}:${query.order}`} onChange={(e) => { const [sort, order] = e.target.value.split(":"); patch({ sort, order: order as "asc" | "desc" }); }} sx={filterSx}>
-            <MenuItem value="name:asc">Ad (A-Z)</MenuItem>
-            <MenuItem value="score:desc">Puanım</MenuItem>
-            <MenuItem value="mal-score:desc">Ortalama puan</MenuItem>
-            <MenuItem value="progress:desc">İlerleme</MenuItem>
-            <MenuItem value="updated:desc">Son güncellenen</MenuItem>
-            <MenuItem value="added:desc">Son eklenen</MenuItem>
-          </TextField>
-        )}
+        <SortMenu options={SORT_OPTIONS} sort={query.sort ?? "name"} order={query.order ?? "asc"} onChange={(sort, order) => patch({ sort, order })} />
       </Box>
 
       {syncing && <LinearProgress variant="determinate" value={(syncing.done / Math.max(1, syncing.total)) * 100} sx={{ mb: 2 }} />}
