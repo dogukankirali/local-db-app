@@ -1,4 +1,5 @@
-// Kiroku service worker: yalnızca kapak görsellerini önbelleğe alır (cache-first).
+// Kiroku service worker: kapak görsellerini önbelleğe alır (cache-first) ve yeni bölüm bildirimlerini
+// (Web Push) gösterir.
 // İlk yüklemeden sonra kapaklar ağ beklemeden diskten gelir; sayfalar ve API'ye dokunulmaz.
 // Önbellek adı değişirse eski önbellekler silinir.
 
@@ -60,4 +61,35 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (!isCover(url)) return;
   event.respondWith(fromCacheOrNetwork(request));
+});
+
+// Yeni bölüm bildirimi (Worker'dan Web Push): { title, body, url, tag }
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Kiroku", {
+      body: data.body || "",
+      tag: data.tag,
+      icon: "/apple-icon.png",
+      data: { url: data.url || "/" },
+    })
+  );
+});
+
+// Bildirime tıklanınca açık bir Kiroku sekmesi varsa ona geç, yoksa yeni sekmede aç
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      const same = list.find((c) => new URL(c.url).origin === self.location.origin);
+      if (same) return same.focus().then((c) => c.navigate(url));
+      return self.clients.openWindow(url);
+    })
+  );
 });

@@ -27,6 +27,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { getPageTitle } from "../../config/navigation";
 import { palette } from "../../theme/customTheme";
 import { OPEN_COMMAND_PALETTE } from "../CommandPalette";
+import NotificationBell from "./NotificationBell";
 
 // Yalnızca admin açar; ilk açılışta yüklenir
 const NotesImportDialog = dynamic(() => import("../anime/NotesImportDialog"), { ssr: false });
@@ -147,6 +148,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
 
       {isAuthenticated && user ? (
         <>
+          <NotificationBell />
           <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Hesap menüsü" sx={{ p: 0.5 }}>
             <Avatar sx={{ width: 34, height: 34, fontSize: "0.9rem", fontWeight: 700, bgcolor: alpha(palette.primary, 0.25), color: "#fff" }}>
               {user.username?.charAt(0).toUpperCase() || "U"}
