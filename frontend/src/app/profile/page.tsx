@@ -236,6 +236,19 @@ export default function ProfilePage() {
     setAvatarUrl(p.avatarUrl ?? "");
   };
 
+  const [airingOn, setAiringOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (user?.isAdmin) ProfileService.airingEnabled().then(setAiringOn).catch(() => setAiringOn(null));
+  }, [user?.id, user?.isAdmin]);
+  const toggleAiring = async (v: boolean) => {
+    try {
+      setAiringOn(await ProfileService.setAiringEnabled(v));
+      toast.success(v ? "Yayın takibi açıldı" : "Yayın takibi kapatıldı");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Değiştirilemedi");
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     ProfileService.get().then(applyProfile).catch(() => {});
@@ -557,6 +570,17 @@ export default function ProfilePage() {
                 !!profile?.notifyNewEpisodes,
                 (v) => !pushBusy && togglePush(v),
                 <NotificationsActiveRoundedIcon sx={{ color: palette.primary }} />
+              )}
+              {user?.isAdmin && airingOn !== null && (
+                <Box sx={{ mt: 2 }}>
+                  {switchRow(
+                    "Yayın takibi (admin)",
+                    "Her 3 saatte bir yayındaki animeleri Kitsu'dan kontrol edip yeni bölümde herkese bildirim yazar. Varsayılan kapalıdır; açılana kadar arka planda hiçbir şey çalışmaz.",
+                    airingOn,
+                    toggleAiring,
+                    <NotificationsActiveRoundedIcon sx={{ color: palette.warning }} />
+                  )}
+                </Box>
               )}
               {profile?.notifyNewEpisodes && (
                 <Box sx={{ display: "flex", gap: 1, mt: 1 }}>

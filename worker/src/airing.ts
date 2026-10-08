@@ -1,5 +1,5 @@
 import { Hono, type MiddlewareHandler } from "hono";
-import { requireAuth } from "./auth";
+import { requireAdmin, requireAuth } from "./auth";
 import { statusLabel } from "./anilist";
 import { pushConfigured, pushToUser, type PushPayload } from "./push";
 import { bool, field, int, num, readJson, str, type AppEnv, type Env } from "./util";
@@ -189,6 +189,23 @@ async function episodeState(kitsuId: number): Promise<{ aired: number | null; ne
     nextAt: future[0] ? `${future[0].airdate}T00:00:00.000Z` : null,
   };
 }
+
+/** Yayın takibi (cron) yalnızca bir admin açtıysa çalışır; varsayılan kapalı */
+export async function airingEnabled(env: Env) {
+  const row = await env.DB.prepare("SELECT value FROM app_settings WHERE key = 'airing_enabled'").first<{ value: string }>();
+  return row?.value === "1";
+}
+
+airingRoutes.get("/admin/airing", requireAdmin, async (c) => c.json({ enabled: await airingEnabled(c.env) }));
+
+airingRoutes.put("/admin/airing", requireAdmin, async (c) => {
+  const enabled = bool(field(await readJson(c), "enabled"));
+  await c.env.DB.prepare(
+    `INSERT INTO app_settings (key, value) VALUES ('airing_enabled', ?)
+     ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`
+  ).bind(enabled ? "1" : "0").run();
+  return c.json({ enabled });
+});
 
 export async function runAiringCheck(env: Env, origin = "") {
   const db = env.DB;
